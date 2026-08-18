@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36616.10 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LubricentroControl-2026", "LubricentroControl-2026\LubricentroControl-2026.csproj", "{E0B924EC-BD4E-4396-ADE7-5509349FE80F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BIZ", "BIZ\BIZ.csproj", "{915E5943-B84C-49B0-BB0C-7C930661AA21}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E0B924EC-BD4E-4396-ADE7-5509349FE80F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0B924EC-BD4E-4396-ADE7-5509349FE80F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0B924EC-BD4E-4396-ADE7-5509349FE80F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0B924EC-BD4E-4396-ADE7-5509349FE80F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{915E5943-B84C-49B0-BB0C-7C930661AA21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{915E5943-B84C-49B0-BB0C-7C930661AA21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{915E5943-B84C-49B0-BB0C-7C930661AA21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{915E5943-B84C-49B0-BB0C-7C930661AA21}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3260E744-4439-4D5E-AD12-D1347B2D860B}
+	EndGlobalSection
+EndGlobal

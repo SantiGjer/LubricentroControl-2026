@@ -1,0 +1,21 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+[Bb]in/
+[Oo]bj/
+
+# IIS Express
+.vscode/
+
+# Mails de prueba generados por ServicioMail en modo desarrollo
+LubricentroControl-2026/App_Data/MailsEnviados/
+
+# Archivos de base de datos LocalDB si llegan a crearse dentro del repo
+*.mdf
+*.ldf
+*.ndf
