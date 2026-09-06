@@ -176,6 +176,16 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
 - **Numeración de comprobantes** (venta y compra): correlativo interno automático por tipo de comprobante.
 - **Catálogo de servicios:** se asume una lista fija mantenida por Admin/Encargado (nombre, descripción, precio base), sin categorías adicionales por ahora.
 
+### 9.1 Formato de DNI, CUIT y patente (confirmado 2026-09-06)
+
+- **DNI (`Cliente.dni`):** 7 u 8 dígitos, solo números, sin puntos. Se guarda y se muestra tal
+  cual (`12345678`).
+- **CUIT (`Proveedor.cuit`):** 11 dígitos. Se guarda **sin guiones** (`20123456786`) y se
+  **muestra en pantalla con guiones**, formato `NN-NNNNNNNN-N` (`20-12345678-6`).
+- **Patente (`Vehiculo.patente`):** acepta **ambos formatos** vigentes en Argentina —
+  el viejo (3 letras + 3 números, ej. `ABC123`) y el Mercosur (2 letras + 3 números + 2 letras,
+  ej. `AB123CD`). Se guarda en mayúsculas.
+
 ---
 
 ## 10. Fuera de alcance (por ahora)

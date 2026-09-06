@@ -64,6 +64,32 @@ no tienen funcionalidad.
 
 ## 2. Historial de sesiones
 
+### 2026-09-06 — Patrón de validación de formularios confirmado
+
+Se resolvió el pendiente sobre criterio de validaciones de formulario (sección 4). Se evaluaron
+tres opciones: (1) dejar el patrón actual, donde formato/unicidad solo se valida server-side y se
+muestra con el banner genérico; (2) `RegularExpressionValidator` client-side, duplicando la regex
+entre el `.aspx` y el `Modelo`; (3) `CustomValidator` con `OnServerValidate` en el code-behind,
+que llama a un método estático del `Modelo` (sin duplicar la regex, pero sin feedback antes del
+postback). **Se eligió la opción 3.** Detalle y ejemplo de código en `CLAUDE.md` («Patrón de
+validación de formularios»).
+
+Con esto, DNI/CUIT/patente/mail se validan igual en todos los ABM nuevos, con error inline junto
+al campo (mismo estilo visual que `RequiredFieldValidator`) en vez del banner genérico que usa
+hoy `Usuario.Validar()`. Las reglas que necesitan ir a la base (unicidad, no quedarse sin admins)
+quedan fuera de este patrón y se siguen resolviendo como hasta ahora.
+
+### 2026-09-06 — Formato de DNI, CUIT y patente confirmado
+
+Se resolvió el supuesto pendiente sobre formato de estos tres campos, necesario para escribir
+las validaciones de Cliente, Proveedor y Vehiculo en Fase 2 (quedaba anotado sin decidir en la
+sección 3 de este documento). Decisión completa y regex de referencia en
+`Docs/Lubricentro_Requerimientos.md` §9.1 y `CLAUDE.md` («Formato de DNI, CUIT y patente»):
+
+- DNI: 7 u 8 dígitos, sin puntos.
+- CUIT: se guarda sin guiones, se muestra en pantalla con guiones (`NN-NNNNNNNN-N`).
+- Patente: acepta los dos formatos vigentes (viejo y Mercosur).
+
 ### 2026-09-06 — Se desarma la capa `Negocio/` como capa separada
 
 El diseño de 3 capas dentro de `BIZ` (`Modelo`/`Data`/`Negocio`) venía generando una clase
@@ -256,7 +282,8 @@ sesión 2026-09-06), y la pantalla heredando de `PaginaSegura`. Las que tienen m
 Proveedores, Servicios) deben deshabilitar sus acciones de escritura cuando `EsSoloLectura`
 es verdadero.
 
-Además, validaciones de formulario: campos obligatorios y formato de mail, DNI, CUIT y patente.
+Además, validaciones de formulario: campos obligatorios, formato de mail, y formato de DNI, CUIT
+y patente según lo confirmado arriba.
 
 ### Repaso de redacción, pendiente
 
@@ -289,8 +316,3 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   pantallas reales a HTML sin esas clases (ver sesión 2026-08-17 — Simplificación de estilos)
   para no anticipar estilo antes de confirmar la lógica de negocio. Evaluar si reintroducirlos
   una vez que cada pantalla esté probada — candidato natural: al cerrar la Fase 2.
-- **Definir tratamiento uniforme de las validaciones de formulario.** Hoy cada pantalla usa
-  `RequiredFieldValidator`/`CompareValidator` de ASP.NET tal cual, sin unificar mensajes ni
-  estilo, y sin decidir si conviene sumar validación adicional del lado del servidor en el DAL
-  correspondiente (`BIZ/Data`). Quedan como están por ahora; evaluar el criterio antes de escribir
-  los ABMs de Fase 2.

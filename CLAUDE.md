@@ -197,6 +197,67 @@ La aplicación **no debe mencionar fases de desarrollo, el roadmap ni el estado 
 la interfaz. Las pantallas sin implementar dicen solo «Pendiente». El seguimiento del avance vive
 en `Docs/EstadoActual.md`, no en la UI.
 
+### Formato de DNI, CUIT y patente (Fase 2)
+
+Decisión de negocio en `Docs/Lubricentro_Requerimientos.md` §9.1. Regex de referencia para los
+validadores de Cliente, Proveedor y Vehiculo:
+
+| Campo | Guardado | Regex | Ejemplo |
+|---|---|---|---|
+| `Cliente.dni` | tal cual, sin puntos | `^\d{7,8}$` | `12345678` |
+| `Proveedor.cuit` | sin guiones | `^\d{11}$` | guarda `20123456786`, muestra `20-12345678-6` |
+| `Vehiculo.patente` | mayúsculas | `^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$` | `ABC123` o `AB123CD` |
+
+El CUIT es el único de los tres que necesita una función de formateo para mostrar (insertar los
+guiones en las posiciones 2 y 10 sobre los 11 dígitos guardados); DNI y patente se muestran igual
+que se guardan.
+
+### Patrón de validación de formularios (Fase 2)
+
+Las reglas de formato (DNI, CUIT, patente, mail) se validan con **`CustomValidator` +
+`OnServerValidate`**, no con `RegularExpressionValidator`: la regex vive una sola vez, como
+método estático en la entidad de `Modelo`, y el validador del `.aspx` solo lo llama. Evita
+duplicar cada regex entre el markup y el modelo (que fue el problema con
+`Usuario.Validar()`/`FormatoEmail`, que hoy no tiene ningún validator equivalente en
+`Usuarios.aspx`).
+
+Patrón a seguir:
+
+```csharp
+// BIZ/Modelo/Cliente.cs
+public static bool EsDniValido(string dni)
+{
+    return DniRegex.IsMatch(dni ?? "");
+}
+```
+
+```html
+<!-- Clientes.aspx -->
+<asp:CustomValidator runat="server" ControlToValidate="txtDni" OnServerValidate="valDni_ServerValidate"
+    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
+    ErrorMessage="El DNI debe tener 7 u 8 números, sin puntos." />
+```
+
+```csharp
+// Clientes.aspx.cs
+protected void valDni_ServerValidate(object source, ServerValidateEventArgs args)
+{
+    args.IsValid = Cliente.EsDniValido(args.Value);
+}
+```
+
+Consecuencias de esta elección, para tenerlas presentes al escribir los ABM:
+
+- **No hay chequeo de formato en el navegador** (no hay `ClientValidationFunction`): el error
+  aparece recién después del postback, igual que `RequiredFieldValidator` tarda 0 viajes al
+  servidor pero esto tarda 1. Sí queda con el mismo estilo visual inline (`text-danger small`,
+  pegado al campo) que los validators declarativos — no es el banner genérico de arriba.
+- **Alcance: solo formato, no reglas que necesitan la base.** Unicidad (DNI/CUIT/patente
+  repetidos) y reglas cruzadas (ej. "no dejar el sistema sin admins") siguen resolviéndose en
+  `Validar()` del DAL correspondiente y se siguen mostrando con el banner genérico
+  (`ResultadoOperacion.Error(...)` → `MostrarMensaje`), tal como hoy: no son responsabilidad de
+  `CustomValidator`, que valida campo por campo sin ir a la base.
+
 La entidad `Menu` del diagrama E/R se llama `ItemMenu` en C# (`BIZ\Modelo\ItemMenu.cs`) para no
 chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue llamándose `Menu`.
 
