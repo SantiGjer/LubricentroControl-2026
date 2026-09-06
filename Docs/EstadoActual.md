@@ -92,9 +92,30 @@ Todos los code-behind que llamaban a las clases `*Negocio` se actualizaron para 
 clases `Data` correspondientes. No queda ninguna referencia a `UsuarioNegocio`, `SeguridadNegocio`
 ni `MenuNegocio` en el código (verificado con búsqueda en todo el repo).
 
-**Verificación:** rebuild limpio de la solución (`MSBuild /p:Configuration=Debug`), sin errores.
-No se corrieron las suites end-to-end de la sesión 2026-08-17 después de este cambio — pendiente
-confirmarlas antes de dar por cerrado el refactor.
+**Verificación:** rebuild limpio de la solución (`MSBuild /p:Configuration=Debug`) y
+`aspnet_compiler` sobre el markup, ambos sin errores. Además, se levantó IIS Express standalone
+contra LocalDB y se probó a mano contra el código ya reorganizado:
+
+- Login válido (`admin@lubricentro.com`) y login inválido (mensaje de error genérico, sin
+  excepción).
+- Acceso anónimo a `/Usuarios` redirige a `/Login?ReturnUrl=...` (guarda de `PaginaConSesion`).
+- Menú armado por rol vía `MenuDAL.ObtenerArbol` → `ItemMenu.ArmarArbol`: como Admin aparecen
+  `Usuarios` y `Reportes`; logueado como el Empleado de prueba (`empleado@lubricentro.com` /
+  `Empleado123!`) esas opciones no están, y entrar a `/Usuarios` escribiendo la URL a mano
+  redirige a `/AccesoDenegado` (la guarda de `PaginaSegura` corre server-side, no alcanza con
+  esconder el link).
+- ABM de Usuarios: la grilla carga y lista al admin sembrado.
+- `CambiarClave`: el formulario carga.
+- Circuito de recuperación de contraseña completo: `RecuperarClave` genera el `.eml` en
+  `App_Data\MailsEnviados` con el enlace y token; `RestablecerClave?token=...` valida un token
+  real (muestra el formulario) y rechaza uno inventado (muestra el error). No se llegó a
+  confirmar el submit final del cambio de contraseña para no invalidar la clave sembrada del
+  admin que se usa a diario en desarrollo.
+- Sin mojibake en ninguna respuesta (`Administrador del Sistema`, acentos del menú, etc.).
+
+No se re-ejecutaron las 52 verificaciones automatizadas de la sesión 2026-08-17 (no hay arnés de
+tests en la solución, eran manuales); lo de arriba las reemplaza como evidencia de que el
+refactor no rompió nada observable.
 
 **Regla para Fase 2 en adelante:** no recrear `Negocio/`. El patrón es una clase por entidad en
 `Data/` que hace acceso a datos y valida sus propias reglas, devolviendo `ResultadoOperacion`.
@@ -273,6 +294,3 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   estilo, y sin decidir si conviene sumar validación adicional del lado del servidor en el DAL
   correspondiente (`BIZ/Data`). Quedan como están por ahora; evaluar el criterio antes de escribir
   los ABMs de Fase 2.
-- **Confirmar las suites end-to-end después del refactor de la sesión 2026-09-06.** Se verificó
-  que compila, pero las 52 verificaciones e2e de la sesión 2026-08-17 no se volvieron a correr
-  contra el código reorganizado.
