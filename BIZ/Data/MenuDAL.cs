@@ -6,10 +6,8 @@ namespace BIZ.Data
 {
     public static class MenuDAL
     {
-        /// <summary>
-        /// Devuelve, en plano, las opciones de menú visibles para un rol.
-        /// El armado del árbol lo hace MenuNegocio.
-        /// </summary>
+        // Devuelve, en plano, las opciones de menú visibles para un rol.
+        // El armado del árbol lo hace ItemMenu.ArmarArbol.
         public static List<ItemMenu> ListarPorNivel(int idNivel)
         {
             const string sql = @"
@@ -37,10 +35,14 @@ namespace BIZ.Data
             return lista;
         }
 
-        /// <summary>
-        /// Permiso de un rol sobre una pantalla concreta. Devuelve null si el rol
-        /// no tiene acceso — es lo que usa la guarda de PaginaSegura.
-        /// </summary>
+        // Menú de un rol, ya armado como árbol y listo para renderizar.
+        public static List<ItemMenu> ObtenerArbol(int idNivel)
+        {
+            return ItemMenu.ArmarArbol(ListarPorNivel(idNivel));
+        }
+
+        // Permiso de un rol sobre una pantalla concreta. Devuelve null si el rol
+        // no tiene acceso — es lo que usa la guarda de PaginaSegura.
         public static ItemMenu ObtenerPermiso(int idNivel, string path)
         {
             const string sql = @"
@@ -69,7 +71,7 @@ namespace BIZ.Data
             };
         }
 
-        /// <summary>True si la pantalla está registrada en Url (esté o no permitida para el rol).</summary>
+        // True si la pantalla está registrada en Url (esté o no permitida para el rol).
         public static bool ExisteUrl(string path)
         {
             var cantidad = AccesoDatos.Escalar(

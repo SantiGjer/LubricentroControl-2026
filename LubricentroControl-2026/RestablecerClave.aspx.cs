@@ -1,7 +1,7 @@
 using System;
 using System.Web;
 using System.Web.UI;
-using BIZ.Negocio;
+using BIZ.Data;
 
 namespace LubricentroControl_2026
 {
@@ -17,7 +17,7 @@ namespace LubricentroControl_2026
             if (IsPostBack) return;
 
             // Se valida el token antes de mostrar el formulario, sin consumirlo.
-            var validacion = SeguridadNegocio.ValidarToken(Token);
+            var validacion = RecuperacionClaveDAL.ValidarToken(Token);
             if (!validacion.Exito)
                 MostrarMensaje(validacion.Mensaje, false, ocultarFormulario: true);
         }
@@ -26,7 +26,7 @@ namespace LubricentroControl_2026
         {
             if (!Page.IsValid) return;
 
-            var resultado = SeguridadNegocio.RestablecerPassword(Token, txtPassword.Text, txtRepetir.Text);
+            var resultado = RecuperacionClaveDAL.RestablecerPassword(Token, txtPassword.Text, txtRepetir.Text);
             MostrarMensaje(resultado.Mensaje, resultado.Exito, ocultarFormulario: resultado.Exito);
         }
 

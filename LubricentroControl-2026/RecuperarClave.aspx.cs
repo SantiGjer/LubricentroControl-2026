@@ -1,7 +1,7 @@
 using System;
 using System.Web;
 using System.Web.UI;
-using BIZ.Negocio;
+using BIZ.Data;
 
 namespace LubricentroControl_2026
 {
@@ -11,7 +11,7 @@ namespace LubricentroControl_2026
         {
             if (!Page.IsValid) return;
 
-            var resultado = SeguridadNegocio.SolicitarRecuperacion(txtEmail.Text, ArmarEnlace);
+            var resultado = RecuperacionClaveDAL.SolicitarRecuperacion(txtEmail.Text, ArmarEnlace);
 
             pnlMensaje.CssClass = "alert " + (resultado.Exito ? "alert-success" : "alert-danger");
             litMensaje.Text = HttpUtility.HtmlEncode(resultado.Mensaje);
@@ -21,7 +21,7 @@ namespace LubricentroControl_2026
             pnlFormulario.Visible = !resultado.Exito;
         }
 
-        /// <summary>Enlace absoluto al formulario de restablecimiento, con el token.</summary>
+        // Enlace absoluto al formulario de restablecimiento, con el token.
         private string ArmarEnlace(string token)
         {
             var baseUri = new Uri(Request.Url, ResolveUrl("~/RestablecerClave"));

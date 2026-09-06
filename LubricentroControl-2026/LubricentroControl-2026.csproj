@@ -206,8 +206,12 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Seguridad\PaginaConSesion.cs" />
-    <Compile Include="Seguridad\PaginaSegura.cs" />
+    <Compile Include="Seguridad\PaginaConSesion.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Seguridad\PaginaSegura.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="Seguridad\SesionUsuario.cs" />
     <Compile Include="Site.Master.cs">
       <DependentUpon>Site.Master</DependentUpon>

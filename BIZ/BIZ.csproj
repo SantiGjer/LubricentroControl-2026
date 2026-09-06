@@ -46,18 +46,15 @@
     <Compile Include="Data\MenuDAL.cs" />
     <Compile Include="Data\NivelDAL.cs" />
     <Compile Include="Data\RecuperacionClaveDAL.cs" />
+    <Compile Include="Data\ServicioMail.cs" />
     <Compile Include="Data\UsuarioDAL.cs" />
     <Compile Include="Modelo\ItemMenu.cs" />
     <Compile Include="Modelo\Nivel.cs" />
     <Compile Include="Modelo\RecuperacionClave.cs" />
+    <Compile Include="Modelo\ResultadoOperacion.cs" />
     <Compile Include="Modelo\Url.cs" />
     <Compile Include="Modelo\Usuario.cs" />
-    <Compile Include="Negocio\MenuNegocio.cs" />
     <Compile Include="Negocio\PasswordHasher.cs" />
-    <Compile Include="Negocio\ResultadoOperacion.cs" />
-    <Compile Include="Negocio\SeguridadNegocio.cs" />
-    <Compile Include="Negocio\ServicioMail.cs" />
-    <Compile Include="Negocio\UsuarioNegocio.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -2,14 +2,13 @@ using System;
 using System.Configuration;
 using System.IO;
 using System.Net.Mail;
+using BIZ.Modelo;
 
-namespace BIZ.Negocio
+namespace BIZ.Data
 {
-    /// <summary>
-    /// Envío de mails. La configuración vive en &lt;system.net&gt;/&lt;mailSettings&gt; de Web.config.
-    /// En desarrollo está apuntado a una carpeta local (SpecifiedPickupDirectory): los mails
-    /// se escriben como archivos .eml en App_Data\MailsEnviados en vez de salir a Internet.
-    /// </summary>
+    // Envío de mails. La configuración vive en <system.net>/<mailSettings> de Web.config.
+    // En desarrollo está apuntado a una carpeta local (SpecifiedPickupDirectory): los mails
+    // se escriben como archivos .eml en App_Data\MailsEnviados en vez de salir a Internet.
     public static class ServicioMail
     {
         private static string Remitente
@@ -21,11 +20,9 @@ namespace BIZ.Negocio
             }
         }
 
-        /// <summary>
-        /// Con MailModoDesarrollo=true los mails se guardan como .eml en
-        /// App_Data\MailsEnviados en lugar de salir por SMTP. Así el circuito de
-        /// recuperación de clave se puede probar entero sin un servidor de correo.
-        /// </summary>
+        // Con MailModoDesarrollo=true los mails se guardan como .eml en
+        // App_Data\MailsEnviados en lugar de salir por SMTP. Así el circuito de
+        // recuperación de clave se puede probar entero sin un servidor de correo.
         private static bool ModoDesarrollo
         {
             get
@@ -58,10 +55,8 @@ namespace BIZ.Negocio
             };
         }
 
-        /// <summary>
-        /// Envía el mail. Devuelve el resultado en vez de propagar la excepción:
-        /// que falle el SMTP no debe tumbar la pantalla que lo pidió.
-        /// </summary>
+        // Envía el mail. Devuelve el resultado en vez de propagar la excepción:
+        // que falle el SMTP no debe tumbar la pantalla que lo pidió.
         public static ResultadoOperacion Enviar(string destinatario, string asunto, string cuerpoHtml)
         {
             try

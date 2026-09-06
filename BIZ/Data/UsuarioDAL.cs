@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Data;
 using BIZ.Modelo;
+using BIZ.Negocio;
 
 namespace BIZ.Data
 {
@@ -69,8 +70,7 @@ namespace BIZ.Data
             return System.Convert.ToInt32(cantidad) > 0;
         }
 
-        /// <summary>Inserta el usuario y devuelve el id generado.</summary>
-        public static int Insertar(Usuario usuario)
+        private static int Insertar(Usuario usuario)
         {
             const string sql = @"
                 INSERT INTO Usuario (nombre, apellido, email, passwordHash, passwordSalt, idNivel, activo)
@@ -89,9 +89,49 @@ namespace BIZ.Data
             return System.Convert.ToInt32(id);
         }
 
-        /// <summary>Actualiza los datos del usuario. No toca la contraseña.</summary>
-        public static void Actualizar(Usuario usuario)
+        // Da de alta el usuario con una contraseña temporal y se la manda por mail.
+        // La contraseña generada vuelve en passwordTemporal para poder mostrarla en
+        // pantalla si el mail no sale.
+        public static ResultadoOperacion Crear(Usuario usuario, out string passwordTemporal)
         {
+            passwordTemporal = null;
+
+            var validacion = usuario.Validar();
+            if (!validacion.Exito) return validacion;
+
+            if (ExisteEmail(usuario.Email))
+                return ResultadoOperacion.Error("Ya existe un usuario con ese mail.");
+
+            passwordTemporal = PasswordHasher.GenerarPasswordTemporal();
+            usuario.PasswordSalt = PasswordHasher.GenerarSalt();
+            usuario.PasswordHash = PasswordHasher.Hashear(passwordTemporal, usuario.PasswordSalt);
+
+            usuario.IdUsuario = Insertar(usuario);
+
+            ServicioMail.Enviar(usuario.Email, "Tu cuenta en LubricentroControl",
+                ServicioMail.ArmarCuerpoAltaUsuario(usuario.NombreCompleto, usuario.Email, passwordTemporal));
+
+            return ResultadoOperacion.Ok("Usuario creado.");
+        }
+
+        // No dejar el sistema sin ningún administrador activo, ni permitir mail duplicado.
+        public static ResultadoOperacion Actualizar(Usuario usuario)
+        {
+            var validacion = usuario.Validar();
+            if (!validacion.Exito) return validacion;
+
+            if (ExisteEmail(usuario.Email, usuario.IdUsuario))
+                return ResultadoOperacion.Error("Ya existe otro usuario con ese mail.");
+
+            var actual = ObtenerPorId(usuario.IdUsuario);
+            if (actual == null)
+                return ResultadoOperacion.Error("El usuario no existe.");
+
+            var dejaDeSerAdminActivo = actual.EsAdmin && (usuario.IdNivel != Nivel.Admin || !usuario.Activo);
+            if (dejaDeSerAdminActivo && ContarAdminsActivos() <= 1)
+                return ResultadoOperacion.Error(
+                    "Es el único administrador activo: asigná otro administrador antes de cambiarlo.");
+
             const string sql = @"
                 UPDATE Usuario
                 SET nombre = @nombre, apellido = @apellido, email = @email,
@@ -105,6 +145,8 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idNivel", usuario.IdNivel),
                 AccesoDatos.Param("@activo", usuario.Activo),
                 AccesoDatos.Param("@idUsuario", usuario.IdUsuario));
+
+            return ResultadoOperacion.Ok("Usuario actualizado.");
         }
 
         public static void ActualizarPassword(int idUsuario, string hash, string salt)
@@ -116,18 +158,59 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idUsuario", idUsuario));
         }
 
-        /// <summary>
-        /// Baja lógica: el usuario puede estar referenciado por órdenes y pagos,
-        /// así que nunca se borra físicamente.
-        /// </summary>
-        public static void Desactivar(int idUsuario)
+        // Genera hash y salt nuevos y los guarda. La usan CambiarPassword, BlanquearPassword
+        // y RecuperacionClaveDAL.RestablecerPassword.
+        public static void EstablecerPassword(int idUsuario, string passwordNueva)
         {
+            var salt = PasswordHasher.GenerarSalt();
+            var hash = PasswordHasher.Hashear(passwordNueva, salt);
+            ActualizarPassword(idUsuario, hash, salt);
+        }
+
+        // Baja lógica: el usuario puede estar referenciado por órdenes y pagos,
+        // así que nunca se borra físicamente. No se permite desactivarse a uno
+        // mismo ni al último Admin.
+        public static ResultadoOperacion Desactivar(int idUsuario, int idUsuarioLogueado)
+        {
+            if (idUsuario == idUsuarioLogueado)
+                return ResultadoOperacion.Error("No podés desactivar tu propio usuario.");
+
+            var usuario = ObtenerPorId(idUsuario);
+            if (usuario == null)
+                return ResultadoOperacion.Error("El usuario no existe.");
+
+            if (!usuario.Activo)
+                return ResultadoOperacion.Ok("El usuario ya estaba desactivado.");
+
+            if (usuario.EsAdmin && ContarAdminsActivos() <= 1)
+                return ResultadoOperacion.Error("Es el único administrador activo: no se puede desactivar.");
+
             AccesoDatos.Ejecutar(
                 "UPDATE Usuario SET activo = 0 WHERE idUsuario = @idUsuario",
                 AccesoDatos.Param("@idUsuario", idUsuario));
+
+            return ResultadoOperacion.Ok("Usuario desactivado.");
         }
 
-        /// <summary>Cantidad de administradores activos — evita quedarse sin ningún Admin.</summary>
+        // Blanquea la contraseña y manda la nueva por mail.
+        public static ResultadoOperacion BlanquearPassword(int idUsuario, out string passwordTemporal)
+        {
+            passwordTemporal = null;
+
+            var usuario = ObtenerPorId(idUsuario);
+            if (usuario == null)
+                return ResultadoOperacion.Error("El usuario no existe.");
+
+            passwordTemporal = PasswordHasher.GenerarPasswordTemporal();
+            EstablecerPassword(idUsuario, passwordTemporal);
+
+            ServicioMail.Enviar(usuario.Email, "Tu contraseña de LubricentroControl fue restablecida",
+                ServicioMail.ArmarCuerpoAltaUsuario(usuario.NombreCompleto, usuario.Email, passwordTemporal));
+
+            return ResultadoOperacion.Ok("Contraseña restablecida.");
+        }
+
+        // Cantidad de administradores activos — evita quedarse sin ningún Admin.
         public static int ContarAdminsActivos()
         {
             var cantidad = AccesoDatos.Escalar(
@@ -135,6 +218,45 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idNivel", Nivel.Admin));
 
             return System.Convert.ToInt32(cantidad);
+        }
+
+        // Valida las credenciales. Devuelve el usuario en "usuario" solo si el login fue correcto.
+        public static ResultadoOperacion Autenticar(string email, string password, out Usuario usuario)
+        {
+            usuario = null;
+
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+                return ResultadoOperacion.Error("Ingresá tu mail y tu contraseña.");
+
+            var encontrado = ObtenerPorEmail(email.Trim());
+
+            // Mensaje único para usuario inexistente y contraseña incorrecta:
+            // no queremos que el login sirva para averiguar qué mails existen.
+            if (encontrado == null || !PasswordHasher.Verificar(password, encontrado.PasswordSalt, encontrado.PasswordHash))
+                return ResultadoOperacion.Error("Mail o contraseña incorrectos.");
+
+            if (!encontrado.Activo)
+                return ResultadoOperacion.Error("Tu usuario está desactivado. Consultá con un administrador.");
+
+            usuario = encontrado;
+            return ResultadoOperacion.Ok();
+        }
+
+        public static ResultadoOperacion CambiarPassword(int idUsuario, string passwordActual,
+                                                          string passwordNueva, string repeticion)
+        {
+            var usuario = ObtenerPorId(idUsuario);
+            if (usuario == null)
+                return ResultadoOperacion.Error("El usuario no existe.");
+
+            if (!PasswordHasher.Verificar(passwordActual, usuario.PasswordSalt, usuario.PasswordHash))
+                return ResultadoOperacion.Error("La contraseña actual no es correcta.");
+
+            var validacion = Usuario.ValidarPassword(passwordNueva, repeticion);
+            if (!validacion.Exito) return validacion;
+
+            EstablecerPassword(idUsuario, passwordNueva);
+            return ResultadoOperacion.Ok("Contraseña actualizada.");
         }
     }
 }

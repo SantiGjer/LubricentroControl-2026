@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 17 de agosto de 2026
+**Última actualización:** 6 de septiembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -63,6 +63,41 @@ no tienen funcionalidad.
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-06 — Se desarma la capa `Negocio/` como capa separada
+
+El diseño de 3 capas dentro de `BIZ` (`Modelo`/`Data`/`Negocio`) venía generando una clase
+`XNegocio` casi en espejo de cada clase `XDAL`, sin aportar una separación real: las reglas de
+negocio (validar antes de guardar, no quedarse sin ningún admin activo, mail duplicado, mensajes
+genéricos anti-enumeración de cuentas) terminaban llamando a un método del DAL casi homónimo. Se
+decidió fusionar ambas responsabilidades en una sola clase por entidad, dentro de `Data/`.
+
+Cambios:
+
+- Se eliminaron `BIZ/Negocio/UsuarioNegocio.cs`, `SeguridadNegocio.cs` y `MenuNegocio.cs`. Su
+  lógica pasó a `UsuarioDAL`, `RecuperacionClaveDAL` y `MenuDAL` respectivamente (incluye
+  `Autenticar`, `Crear`, `Actualizar`, `Desactivar`, `BlanquearPassword`, `CambiarPassword`,
+  `SolicitarRecuperacion`, `ValidarToken`, `RestablecerPassword`, `ObtenerArbol`).
+- `ResultadoOperacion.cs` se movió de `Negocio/` a `Modelo/` (es un tipo de dato, no una regla).
+- `ServicioMail.cs` se movió de `Negocio/` a `Data/` (es I/O externo — envío de mail —, no una
+  regla de negocio).
+- Se agregaron validaciones nuevas que antes no existían separadas: `Usuario.Validar()` y
+  `Usuario.ValidarPassword()` (Modelo), y `ItemMenu.ArmarArbol()` (Modelo, antes vivía en
+  `MenuNegocio`).
+- `BIZ/Negocio/` quedó con una sola clase: `PasswordHasher.cs`.
+- Se reescribieron los comentarios XML-doc (`/// <summary>`) como comentarios de línea (`//`) en
+  todos los archivos tocados — cambio de estilo, sin efecto funcional.
+
+Todos los code-behind que llamaban a las clases `*Negocio` se actualizaron para llamar a las
+clases `Data` correspondientes. No queda ninguna referencia a `UsuarioNegocio`, `SeguridadNegocio`
+ni `MenuNegocio` en el código (verificado con búsqueda en todo el repo).
+
+**Verificación:** rebuild limpio de la solución (`MSBuild /p:Configuration=Debug`), sin errores.
+No se corrieron las suites end-to-end de la sesión 2026-08-17 después de este cambio — pendiente
+confirmarlas antes de dar por cerrado el refactor.
+
+**Regla para Fase 2 en adelante:** no recrear `Negocio/`. El patrón es una clase por entidad en
+`Data/` que hace acceso a datos y valida sus propias reglas, devolviendo `ResultadoOperacion`.
 
 ### 2026-08-17 — Simplificación de estilos en pantallas reales
 
@@ -194,9 +229,9 @@ tienen su tabla creada y su cascarón enlazado en el menú, así que se pueden e
 - Insumos (catálogo y stock inicial)
 - Servicios (catálogo y precio base)
 
-Cada una necesita su entidad en `BIZ/Modelo`, su DAL en `BIZ/Data` siguiendo el patrón de
-`UsuarioDAL`, sus reglas en `BIZ/Negocio` devolviendo `ResultadoOperacion`, y la pantalla
-heredando de `PaginaSegura`. Las que tienen modo consulta para el rol Empleado (Insumos,
+Cada una necesita su entidad en `BIZ/Modelo`, y su DAL en `BIZ/Data` siguiendo el patrón de
+`UsuarioDAL` (acceso a datos y reglas de negocio juntos, devolviendo `ResultadoOperacion` — ver
+sesión 2026-09-06), y la pantalla heredando de `PaginaSegura`. Las que tienen modo consulta para el rol Empleado (Insumos,
 Proveedores, Servicios) deben deshabilitar sus acciones de escritura cuando `EsSoloLectura`
 es verdadero.
 
@@ -235,6 +270,9 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   una vez que cada pantalla esté probada — candidato natural: al cerrar la Fase 2.
 - **Definir tratamiento uniforme de las validaciones de formulario.** Hoy cada pantalla usa
   `RequiredFieldValidator`/`CompareValidator` de ASP.NET tal cual, sin unificar mensajes ni
-  estilo, y sin decidir si conviene sumar validación adicional del lado del servidor en
-  `BIZ/Negocio`. Quedan como están por ahora; evaluar el criterio antes de escribir los ABMs de
-  Fase 2.
+  estilo, y sin decidir si conviene sumar validación adicional del lado del servidor en el DAL
+  correspondiente (`BIZ/Data`). Quedan como están por ahora; evaluar el criterio antes de escribir
+  los ABMs de Fase 2.
+- **Confirmar las suites end-to-end después del refactor de la sesión 2026-09-06.** Se verificó
+  que compila, pero las 52 verificaciones e2e de la sesión 2026-08-17 no se volvieron a correr
+  contra el código reorganizado.

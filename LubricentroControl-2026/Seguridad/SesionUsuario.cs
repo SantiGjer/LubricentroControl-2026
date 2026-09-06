@@ -3,7 +3,7 @@ using BIZ.Modelo;
 
 namespace LubricentroControl_2026.Seguridad
 {
-    /// <summary>Guarda el usuario logueado en la sesión. Único punto que toca Session["..."].</summary>
+    // Guarda el usuario logueado en la sesión. Único punto que toca Session["..."].
     public static class SesionUsuario
     {
         private const string ClaveSesion = "UsuarioLogueado";
@@ -30,7 +30,7 @@ namespace LubricentroControl_2026.Seguridad
             HttpContext.Current.Session[ClaveSesion] = usuario;
         }
 
-        /// <summary>Refresca los datos en sesión después de editar el propio perfil.</summary>
+        // Refresca los datos en sesión después de editar el propio perfil.
         public static void Actualizar(Usuario usuario)
         {
             HttpContext.Current.Session[ClaveSesion] = usuario;

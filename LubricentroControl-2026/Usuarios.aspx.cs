@@ -1,16 +1,14 @@
 using System;
 using System.Web;
 using System.Web.UI.WebControls;
+using BIZ.Data;
 using BIZ.Modelo;
-using BIZ.Negocio;
 using LubricentroControl_2026.Seguridad;
 
 namespace LubricentroControl_2026
 {
-    /// <summary>
-    /// ABM de usuarios y asignación de rol. En el menú solo la ve Admin;
-    /// PaginaSegura vuelve a chequearlo por si se entra escribiendo la URL.
-    /// </summary>
+    // ABM de usuarios y asignación de rol. En el menú solo la ve Admin;
+    // PaginaSegura vuelve a chequearlo por si se entra escribiendo la URL.
     public partial class Usuarios : PaginaSegura
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -23,7 +21,7 @@ namespace LubricentroControl_2026
 
         private void CargarNiveles()
         {
-            ddlNivel.DataSource = UsuarioNegocio.ListarNiveles();
+            ddlNivel.DataSource = NivelDAL.Listar();
             ddlNivel.DataTextField = "Nombre";
             ddlNivel.DataValueField = "IdNivel";
             ddlNivel.DataBind();
@@ -31,7 +29,7 @@ namespace LubricentroControl_2026
 
         private void CargarGrilla()
         {
-            gvUsuarios.DataSource = UsuarioNegocio.Listar();
+            gvUsuarios.DataSource = UsuarioDAL.Listar();
             gvUsuarios.DataBind();
         }
 
@@ -66,7 +64,7 @@ namespace LubricentroControl_2026
             if (usuario.IdUsuario == 0)
             {
                 string passwordTemporal;
-                resultado = UsuarioNegocio.Crear(usuario, out passwordTemporal);
+                resultado = UsuarioDAL.Crear(usuario, out passwordTemporal);
 
                 if (resultado.Exito)
                     MostrarMensaje(resultado.Mensaje + " Contraseña temporal: <b>" +
@@ -74,7 +72,7 @@ namespace LubricentroControl_2026
             }
             else
             {
-                resultado = UsuarioNegocio.Actualizar(usuario);
+                resultado = UsuarioDAL.Actualizar(usuario);
                 if (resultado.Exito) MostrarMensaje(resultado.Mensaje, true);
             }
 
@@ -101,14 +99,14 @@ namespace LubricentroControl_2026
                     break;
 
                 case "Desactivar":
-                    var baja = UsuarioNegocio.Desactivar(idUsuario, UsuarioActual.IdUsuario);
+                    var baja = UsuarioDAL.Desactivar(idUsuario, UsuarioActual.IdUsuario);
                     MostrarMensaje(baja.Mensaje, baja.Exito);
                     CargarGrilla();
                     break;
 
                 case "Blanquear":
                     string passwordTemporal;
-                    var blanqueo = UsuarioNegocio.BlanquearPassword(idUsuario, out passwordTemporal);
+                    var blanqueo = UsuarioDAL.BlanquearPassword(idUsuario, out passwordTemporal);
                     MostrarMensaje(
                         blanqueo.Exito
                             ? blanqueo.Mensaje + " Contraseña temporal: <b>" +
@@ -121,7 +119,7 @@ namespace LubricentroControl_2026
 
         private void Editar(int idUsuario)
         {
-            var usuario = UsuarioNegocio.ObtenerPorId(idUsuario);
+            var usuario = UsuarioDAL.ObtenerPorId(idUsuario);
             if (usuario == null)
             {
                 MostrarMensaje("El usuario no existe.", false);
@@ -150,7 +148,7 @@ namespace LubricentroControl_2026
             if (ddlNivel.Items.Count > 0) ddlNivel.SelectedIndex = 0;
         }
 
-        /// <summary>El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.</summary>
+        // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.
         private void MostrarMensaje(string mensajeHtml, bool exito)
         {
             pnlMensaje.CssClass = "alert " + (exito ? "alert-success" : "alert-danger");

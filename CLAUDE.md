@@ -87,12 +87,21 @@ Dos proyectos en la solución:
 Dentro de `BIZ` hay tres carpetas, **no proyectos aparte** (decisión explícita de los
 requerimientos §4 — no partir `BIZ`):
 
-- `Modelo/` — entidades (`Usuario`, `Nivel`, `Url`, `ItemMenu`, `RecuperacionClave`).
-- `Data/` — el DAL. Todo pasa por `AccesoDatos.cs`, que centraliza la cadena de conexión y expone
-  `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`, `LeerInt`, etc. para mapear
-  `DataRow`. **Nunca concatenar SQL**: siempre `AccesoDatos.Param("@x", valor)`.
-- `Negocio/` — reglas y validaciones. Las operaciones devuelven `ResultadoOperacion` (`Ok`/`Error`)
-  en vez de tirar excepciones para validaciones esperables.
+- `Modelo/` — entidades (`Usuario`, `Nivel`, `Url`, `ItemMenu`, `RecuperacionClave`,
+  `ResultadoOperacion`).
+- `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
+  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`). Todo pasa por `AccesoDatos.cs`, que centraliza
+  la cadena de conexión y expone `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`,
+  `LeerInt`, etc. para mapear `DataRow`. **Nunca concatenar SQL**: siempre
+  `AccesoDatos.Param("@x", valor)`. Las operaciones devuelven `ResultadoOperacion` (`Ok`/`Error`) en
+  vez de tirar excepciones para validaciones esperables (mail duplicado, sin admins activos,
+  credenciales inválidas, etc.).
+- `Negocio/` — hoy solo `PasswordHasher.cs`. Se desarmó como capa separada de reglas de negocio
+  (ver «Historial de decisiones» abajo): `UsuarioNegocio`, `SeguridadNegocio` y `MenuNegocio` se
+  fusionaron dentro de `Data/` (`UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`), y
+  `ResultadoOperacion`/`ServicioMail` se reubicaron en `Modelo/`/`Data/` respectivamente.
+  **No recrear esa capa** al agregar módulos nuevos — seguir el patrón: una clase por entidad en
+  `Data/` que hace acceso a datos y valida sus propias reglas.
 
 Reglas transversales de la capa web:
 
@@ -106,7 +115,9 @@ Reglas transversales de la capa web:
 - `PaginaSegura` expone `EsSoloLectura` para los casos "👁️ Solo consulta" de la matriz de permisos.
   **Una pantalla nueva debe deshabilitar sus acciones de escritura cuando vale true.**
 - La sesión se toca solo a través de `Seguridad/SesionUsuario.cs`, nunca `Session["..."]` directo.
-- El menú se arma en `Site.Master.cs` desde `MenuNegocio.ObtenerArbol(idNivel)`. Para agregar una
+- El menú se arma en `Site.Master.cs` desde `MenuDAL.ObtenerArbol(idNivel)` (que a su vez arma el
+  árbol con `ItemMenu.ArmarArbol`, en `Modelo/`, a partir de la lista plana de
+  `MenuDAL.ListarPorNivel`). Para agregar una
   pantalla al menú hay que insertar filas en `Url`, `Menu` y `MenuNivel` — ver el patrón en
   `Database\02_DatosIniciales.sql`. Una pantalla sin fila en `MenuNivel` es inaccesible para ese rol.
 - **FriendlyUrls está activo** (`App_Start/RouteConfig.cs`): los links y los `path` de la tabla
@@ -188,3 +199,22 @@ en `Docs/EstadoActual.md`, no en la UI.
 
 La entidad `Menu` del diagrama E/R se llama `ItemMenu` en C# (`BIZ\Modelo\ItemMenu.cs`) para no
 chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue llamándose `Menu`.
+
+## Historial de decisiones
+
+- **Se desarmó la capa `Negocio/` como capa separada (sesión 2026-09-06).** El diseño original de
+  3 capas (`Modelo`/`Data`/`Negocio`) generaba una clase `Negocio` por cada clase `DAL` casi en
+  espejo, sin aportar separación real: las reglas de negocio (validar antes de guardar, no
+  quedarse sin admins, mensajes anti-enumeración de cuentas) quedaron fusionadas dentro de la
+  misma clase `Data` que hace el acceso a datos. Se eliminaron `UsuarioNegocio.cs`,
+  `SeguridadNegocio.cs` y `MenuNegocio.cs`; su lógica pasó a `UsuarioDAL`, `RecuperacionClaveDAL` y
+  `MenuDAL` respectivamente. `ResultadoOperacion.cs` se movió a `Modelo/` (es un tipo de dato, no
+  una regla) y `ServicioMail.cs` a `Data/` (es I/O externo, no una regla de negocio).
+  `BIZ\Negocio\` quedó solo con `PasswordHasher.cs`. Los módulos de Fase 2 en adelante deben seguir
+  este patrón de 2 capas, no recrear `Negocio/`.
+
+  Esto además **alinea el código con `Docs/Lubricentro_Requerimientos.md` §4**, que siempre
+  describió `BIZ` como `Modelo` + `Data` (2 carpetas) con la lógica de negocio *dentro* de `Data`
+  ("acceso a datos... y reglas de validación... todo dentro del mismo proyecto"). La carpeta
+  `Negocio/` como capa separada nunca estuvo en el requerimiento original: fue una interpretación
+  de la Fase 1 que se revierte con este cambio.

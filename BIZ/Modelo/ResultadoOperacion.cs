@@ -1,9 +1,7 @@
-namespace BIZ.Negocio
+namespace BIZ.Modelo
 {
-    /// <summary>
-    /// Resultado de una operación de negocio. Evita usar excepciones para
-    /// comunicar validaciones esperables (mail duplicado, credenciales inválidas, etc.).
-    /// </summary>
+    // Resultado de una operación. Evita usar excepciones para comunicar
+    // validaciones esperables (mail duplicado, credenciales inválidas, etc.).
     public class ResultadoOperacion
     {
         public bool Exito { get; private set; }

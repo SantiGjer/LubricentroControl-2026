@@ -1,8 +1,8 @@
 using System;
 using System.Web;
 using System.Web.UI;
+using BIZ.Data;
 using BIZ.Modelo;
-using BIZ.Negocio;
 using LubricentroControl_2026.Seguridad;
 
 namespace LubricentroControl_2026
@@ -21,7 +21,7 @@ namespace LubricentroControl_2026
             if (!Page.IsValid) return;
 
             Usuario usuario;
-            var resultado = SeguridadNegocio.Autenticar(txtEmail.Text, txtPassword.Text, out usuario);
+            var resultado = UsuarioDAL.Autenticar(txtEmail.Text, txtPassword.Text, out usuario);
 
             if (!resultado.Exito)
             {
@@ -40,10 +40,8 @@ namespace LubricentroControl_2026
             pnlMensaje.Visible = true;
         }
 
-        /// <summary>
-        /// Vuelve a la pantalla que disparó el login, pero solo si es una URL local:
-        /// un ReturnUrl externo permitiría usar el login como redirector a otro sitio.
-        /// </summary>
+        // Vuelve a la pantalla que disparó el login, pero solo si es una URL local:
+        // un ReturnUrl externo permitiría usar el login como redirector a otro sitio.
         private string DestinoPostLogin()
         {
             var returnUrl = Request.QueryString["ReturnUrl"];

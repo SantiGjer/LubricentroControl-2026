@@ -5,10 +5,8 @@ using BIZ.Modelo;
 
 namespace LubricentroControl_2026.Seguridad
 {
-    /// <summary>
-    /// Página que exige usuario logueado, sin mirar permisos de menú.
-    /// La usan las pantallas que no figuran en el menú (cambio de clave, acceso denegado).
-    /// </summary>
+    // Página que exige usuario logueado, sin mirar permisos de menú.
+    // La usan las pantallas que no figuran en el menú (cambio de clave, acceso denegado).
     public class PaginaConSesion : Page
     {
         protected Usuario UsuarioActual
@@ -16,7 +14,7 @@ namespace LubricentroControl_2026.Seguridad
             get { return SesionUsuario.Actual; }
         }
 
-        /// <summary>Ruta de la pantalla tal como está registrada en la tabla Url (sin .aspx).</summary>
+        // Ruta de la pantalla tal como está registrada en la tabla Url (sin .aspx).
         protected string RutaLogica
         {
             get
@@ -41,17 +39,15 @@ namespace LubricentroControl_2026.Seguridad
             VerificarPermisos();
         }
 
-        /// <summary>
-        /// Redirige cortando el request. Se usa endResponse=true a propósito:
-        /// con endResponse=false el ciclo de vida sigue y Page_Load igual se ejecuta
-        /// sin usuario en sesión, que fue justo el bug que esto evita.
-        /// </summary>
+        // Redirige cortando el request. Se usa endResponse=true a propósito:
+        // con endResponse=false el ciclo de vida sigue y Page_Load igual se ejecuta
+        // sin usuario en sesión, que fue justo el bug que esto evita.
         protected void Redirigir(string destino)
         {
             Response.Redirect(destino, true);
         }
 
-        /// <summary>Punto de extensión: PaginaSegura lo usa para chequear el menú.</summary>
+        // Punto de extensión: PaginaSegura lo usa para chequear el menú.
         protected virtual void VerificarPermisos()
         {
         }

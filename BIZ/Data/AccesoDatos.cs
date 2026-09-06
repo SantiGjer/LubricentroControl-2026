@@ -5,11 +5,9 @@ using System.Data.SqlClient;
 
 namespace BIZ.Data
 {
-    /// <summary>
-    /// Helper de acceso a datos con ADO.NET puro. Toda la capa Data pasa por acá:
-    /// centraliza la cadena de conexión y garantiza que el SQL vaya parametrizado.
-    /// No usar concatenación de strings para armar consultas.
-    /// </summary>
+    // Helper de acceso a datos con ADO.NET puro. Toda la capa Data pasa por acá:
+    // centraliza la cadena de conexión y garantiza que el SQL vaya parametrizado.
+    // No usar concatenación de strings para armar consultas.
     public static class AccesoDatos
     {
         public const string NombreConexion = "LubricentroDB";
@@ -33,13 +31,13 @@ namespace BIZ.Data
             return cn;
         }
 
-        /// <summary>Arma un parámetro traduciendo null a DBNull.</summary>
+        // Arma un parámetro traduciendo null a DBNull.
         public static SqlParameter Param(string nombre, object valor)
         {
             return new SqlParameter(nombre, valor ?? DBNull.Value);
         }
 
-        /// <summary>Ejecuta un SELECT y devuelve el resultado en memoria.</summary>
+        // Ejecuta un SELECT y devuelve el resultado en memoria.
         public static DataTable Consultar(string sql, params SqlParameter[] parametros)
         {
             using (var cn = new SqlConnection(CadenaConexion))
@@ -55,7 +53,7 @@ namespace BIZ.Data
             }
         }
 
-        /// <summary>Ejecuta un INSERT/UPDATE/DELETE y devuelve las filas afectadas.</summary>
+        // Ejecuta un INSERT/UPDATE/DELETE y devuelve las filas afectadas.
         public static int Ejecutar(string sql, params SqlParameter[] parametros)
         {
             using (var cn = new SqlConnection(CadenaConexion))
@@ -67,7 +65,7 @@ namespace BIZ.Data
             }
         }
 
-        /// <summary>Ejecuta una consulta que devuelve un único valor.</summary>
+        // Ejecuta una consulta que devuelve un único valor.
         public static object Escalar(string sql, params SqlParameter[] parametros)
         {
             using (var cn = new SqlConnection(CadenaConexion))
@@ -113,7 +111,7 @@ namespace BIZ.Data
             return fila.IsNull(columna) ? (DateTime?)null : Convert.ToDateTime(fila[columna]);
         }
 
-        /// <summary>Prueba la conexión contra la base. Se usa desde la pantalla de diagnóstico.</summary>
+        // Prueba la conexión contra la base. Se usa desde la pantalla de diagnóstico.
         public static bool ProbarConexion(out string mensaje)
         {
             try

@@ -1,6 +1,6 @@
 namespace BIZ.Modelo
 {
-    /// <summary>Pantalla del sistema. El path va sin extensión porque FriendlyUrls está activo.</summary>
+    // Pantalla del sistema. El path va sin extensión porque FriendlyUrls está activo.
     public class Url
     {
         public int IdUrl { get; set; }

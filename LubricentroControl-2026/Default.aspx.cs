@@ -1,8 +1,8 @@
 using System;
 using System.Text;
 using System.Web;
+using BIZ.Data;
 using BIZ.Modelo;
-using BIZ.Negocio;
 using LubricentroControl_2026.Seguridad;
 
 namespace LubricentroControl_2026
@@ -21,7 +21,7 @@ namespace LubricentroControl_2026
         {
             var html = new StringBuilder("<ul>");
 
-            foreach (var opcion in MenuNegocio.ObtenerArbol(UsuarioActual.IdNivel))
+            foreach (var opcion in MenuDAL.ObtenerArbol(UsuarioActual.IdNivel))
             {
                 if (opcion.EsGrupo)
                 {

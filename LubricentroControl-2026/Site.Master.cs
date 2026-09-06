@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Web;
 using System.Web.UI;
+using BIZ.Data;
 using BIZ.Modelo;
-using BIZ.Negocio;
 using LubricentroControl_2026.Seguridad;
 
 namespace LubricentroControl_2026
@@ -23,7 +23,7 @@ namespace LubricentroControl_2026
                               " <span class=\"badge bg-secondary\">" +
                               HttpUtility.HtmlEncode(usuario.NombreNivel) + "</span>";
 
-            litMenu.Text = RenderizarMenu(MenuNegocio.ObtenerArbol(usuario.IdNivel));
+            litMenu.Text = RenderizarMenu(MenuDAL.ObtenerArbol(usuario.IdNivel));
         }
 
         protected void lnkCerrarSesion_Click(object sender, EventArgs e)
@@ -89,7 +89,7 @@ namespace LubricentroControl_2026
                    string.Equals(opcion.Path, rutaActual, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>Ruta de la pantalla actual sin .aspx, para marcar la opción activa.</summary>
+        // Ruta de la pantalla actual sin .aspx, para marcar la opción activa.
         private string RutaLogicaActual()
         {
             var ruta = Request.AppRelativeCurrentExecutionFilePath ?? string.Empty;

@@ -1,9 +1,9 @@
 namespace BIZ.Modelo
 {
-    /// <summary>Rol de usuario. Jerarquía: Admin(1) > Encargado(2) > Empleado(3).</summary>
+    // Rol de usuario. Jerarquía: Admin(1) > Encargado(2) > Empleado(3).
     public class Nivel
     {
-        /// <summary>Ids fijos que carga 02_DatosIniciales.sql.</summary>
+        // Ids fijos que carga 02_DatosIniciales.sql.
         public const int Admin = 1;
         public const int Encargado = 2;
         public const int Empleado = 3;
@@ -11,7 +11,7 @@ namespace BIZ.Modelo
         public int IdNivel { get; set; }
         public string Nombre { get; set; }
 
-        /// <summary>Menor número = más permisos.</summary>
+        // Menor número = más permisos.
         public int Jerarquia { get; set; }
 
         public override string ToString()

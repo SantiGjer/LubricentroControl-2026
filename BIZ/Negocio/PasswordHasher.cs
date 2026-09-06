@@ -3,11 +3,9 @@ using System.Security.Cryptography;
 
 namespace BIZ.Negocio
 {
-    /// <summary>
-    /// Hash de contraseñas con PBKDF2-SHA256, salt aleatorio por usuario.
-    /// Si se cambia cualquiera de estas constantes, los hashes existentes
-    /// (incluido el del admin sembrado en 02_DatosIniciales.sql) dejan de validar.
-    /// </summary>
+    // Hash de contraseñas con PBKDF2-SHA256, salt aleatorio por usuario.
+    // Si se cambia cualquiera de estas constantes, los hashes existentes
+    // (incluido el del admin sembrado en 02_DatosIniciales.sql) dejan de validar.
     public static class PasswordHasher
     {
         private const int Iteraciones = 25000;
@@ -54,7 +52,7 @@ namespace BIZ.Negocio
             }
         }
 
-        /// <summary>Comparación en tiempo constante, para no filtrar información por el tiempo de respuesta.</summary>
+        // Comparación en tiempo constante, para no filtrar información por el tiempo de respuesta.
         private static bool SonIguales(string a, string b)
         {
             if (a.Length != b.Length) return false;
@@ -66,7 +64,7 @@ namespace BIZ.Negocio
             return diferencia == 0;
         }
 
-        /// <summary>Genera una contraseña aleatoria legible, para el alta de usuarios.</summary>
+        // Genera una contraseña aleatoria legible, para el alta de usuarios.
         public static string GenerarPasswordTemporal()
         {
             const string alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
