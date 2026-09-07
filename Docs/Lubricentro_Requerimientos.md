@@ -186,6 +186,21 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
   el viejo (3 letras + 3 números, ej. `ABC123`) y el Mercosur (2 letras + 3 números + 2 letras,
   ej. `AB123CD`). Se guarda en mayúsculas.
 
+### 9.2 Diseño de Clientes y Vehículos (confirmado 2026-09-06)
+
+- **Dos pantallas independientes, no maestro-detalle.** `Clientes` y `Vehiculos` quedan
+  separadas tal como ya estaban en el menú (§6.2 habla de "clientes con sus vehículos asociados",
+  pero eso se resuelve con navegación cruzada, no con una grilla anidada).
+- **Búsqueda rápida (§6.2) partida en dos:** el buscador por nombre/apellido/DNI vive en
+  `Clientes`; el de patente/marca/modelo vive en `Vehiculos`. Cada pantalla tiene un botón por
+  fila para saltar a la otra ya filtrada (ej. "Ver vehículos" en la fila del cliente, "Ver
+  cliente" en la fila del vehículo).
+- **El mismo buscador de clientes se reutiliza como selector de dueño** en el alta de un
+  Vehículo, en vez de un `DropDownList` con todos los clientes (no escala igual que el de roles
+  en `Usuarios`, que es una lista fija de 3).
+- **Tipo de combustible:** `DropDownList` con lista fija — Nafta, Diésel, GNC, Eléctrico,
+  Híbrido.
+
 ---
 
 ## 10. Fuera de alcance (por ahora)

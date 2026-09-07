@@ -8,18 +8,20 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1 terminada.** Andan el login, la recuperación de contraseña por
-mail, el ABM de usuarios, el menú dinámico por rol y la capa `BIZ/Data` de punta a punta contra
-SQL Server. Las 21 tablas ya existen (`Database\01_Esquema.sql`), pero **las pantallas de negocio
-son cascarones vacíos**: solo muestran su título y en qué fase se implementan.
+**Estado real del código: Fase 1 terminada, Fase 2 en curso (2 de 5).** Andan el login, la
+recuperación de contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa
+`BIZ/Data` de punta a punta contra SQL Server, y los ABM de **Clientes** y **Vehículos**. Las 21
+tablas ya existen (`Database\01_Esquema.sql`). **Proveedores, Insumos, Servicios y el resto de
+las pantallas de negocio siguen siendo cascarones vacíos**: solo muestran su título y "Pendiente".
 
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
 - `Docs/Lubricentro_Requerimientos.md` — alcance, matriz de permisos por rol, las 21 entidades,
-  reglas de negocio, y qué quedó explícitamente fuera de alcance.
-- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue la Fase 2:** ABM de Clientes,
-  Vehículos, Proveedores, Insumos y Servicios. Son independientes entre sí, se pueden hacer en
-  paralelo, y todas tienen ya su tabla y su cascarón.
+  reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con los supuestos/formatos
+  ya confirmados en Fase 2 (DNI/CUIT/patente, diseño de Clientes/Vehículos).
+- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue la Fase 2:** faltan Proveedores,
+  Insumos y Servicios. Son independientes entre sí, se pueden hacer en paralelo, y todas tienen
+  ya su tabla y su cascarón. Clientes y Vehículos ya están — usarlos como referencia de patrón.
 
 ## Restricciones del stack (no negociables)
 
@@ -88,9 +90,10 @@ Dentro de `BIZ` hay tres carpetas, **no proyectos aparte** (decisión explícita
 requerimientos §4 — no partir `BIZ`):
 
 - `Modelo/` — entidades (`Usuario`, `Nivel`, `Url`, `ItemMenu`, `RecuperacionClave`,
-  `ResultadoOperacion`).
+  `ResultadoOperacion`, `Cliente`, `Vehiculo`).
 - `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
-  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`). Todo pasa por `AccesoDatos.cs`, que centraliza
+  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `ClienteDAL`, `VehiculoDAL`). Todo pasa por
+  `AccesoDatos.cs`, que centraliza
   la cadena de conexión y expone `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`,
   `LeerInt`, etc. para mapear `DataRow`. **Nunca concatenar SQL**: siempre
   `AccesoDatos.Param("@x", valor)`. Las operaciones devuelven `ResultadoOperacion` (`Ok`/`Error`) en
@@ -121,7 +124,9 @@ Reglas transversales de la capa web:
   pantalla al menú hay que insertar filas en `Url`, `Menu` y `MenuNivel` — ver el patrón en
   `Database\02_DatosIniciales.sql`. Una pantalla sin fila en `MenuNivel` es inaccesible para ese rol.
 - **FriendlyUrls está activo** (`App_Start/RouteConfig.cs`): los links y los `path` de la tabla
-  `Url` van sin extensión — `~/Clientes`, no `~/Clientes.aspx`.
+  `Url` van sin extensión — `~/Clientes`, no `~/Clientes.aspx`. Rompe el cross-page posting
+  clásico de Web Forms (`PostBackUrl`/`PreviousPage`) — ver «Cross-page posting no funciona con
+  FriendlyUrls» más abajo antes de usar esa técnica.
 - Cada página `.aspx` tiene su code-behind `.aspx.cs` y un `.aspx.designer.cs` que declara los
   controles. Editando fuera de Visual Studio **hay que actualizar el designer a mano**; si falta un
   control, MSBuild compila igual y el error recién aparece con `aspnet_compiler` o en runtime.
@@ -187,6 +192,25 @@ pasaron y están arregladas; lo que sigue es para no repetirlas.
 - Para verificar que un texto de la base está sano, mirar los codepoints, no el texto:
   `í` tiene que ser `237`, no la pareja `195,173`.
 - Los `.cs` **no** están afectados: el compilador de C# asume UTF-8 cuando no hay BOM.
+
+## Cross-page posting no funciona con FriendlyUrls (ya mordió una vez)
+
+El mecanismo clásico de ASP.NET Web Forms para pasar datos de una página a otra vía ViewState —
+`<asp:Button PostBackUrl="~/Otra.aspx">` + `Page.PreviousPage` (opcionalmente con
+`<%@ PreviousPageType %>` para tiparlo) — **no anda en este proyecto**. `PreviousPage`
+reconstruye la página de origen a partir de la ruta con la que se accedió, y como acá todo se
+navega con FriendlyUrls (`~/Vehiculos`, sin extensión — ver más abajo), `BuildManager` no
+encuentra ningún archivo físico en esa ruta y tira `HttpException: El archivo '/Vehiculos' no
+existe`. Pasa apenas se lee `PreviousPage` en la página destino, incluso si el `PostBackUrl`
+apunta a la ruta amigable en vez de al `.aspx` (que además tiene su propio problema: el
+`AutoRedirectMode = RedirectMode.Permanent` de `RouteConfig.cs` hace un 301 de `Algo.aspx` a
+`Algo`, y ese redirect **pierde el POST** — se vuelve GET).
+
+**Para llevar datos de una pantalla a otra, usar `Response.Redirect` con query string** (ver
+`Vehiculos.aspx.cs` → `btnNuevoCliente_Click` y `Clientes.aspx.cs` → `ArmarUrlVuelta`/
+`btnGuardar_Click`, el flujo de "Nuevo cliente" desde Vehículos). Si el control que dispara la
+navegación vive dentro de un `UpdatePanel`, declararlo como `<asp:PostBackTrigger>` explícito en
+`<Triggers>` — un trigger async normal no deja que `Response.Redirect` navegue de verdad.
 
 ## Convenciones
 

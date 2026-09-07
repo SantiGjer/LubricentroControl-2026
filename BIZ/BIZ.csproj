@@ -43,17 +43,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\AccesoDatos.cs" />
+    <Compile Include="Data\ClienteDAL.cs" />
     <Compile Include="Data\MenuDAL.cs" />
     <Compile Include="Data\NivelDAL.cs" />
     <Compile Include="Data\RecuperacionClaveDAL.cs" />
     <Compile Include="Data\ServicioMail.cs" />
     <Compile Include="Data\UsuarioDAL.cs" />
+    <Compile Include="Data\VehiculoDAL.cs" />
+    <Compile Include="Modelo\Cliente.cs" />
     <Compile Include="Modelo\ItemMenu.cs" />
     <Compile Include="Modelo\Nivel.cs" />
     <Compile Include="Modelo\RecuperacionClave.cs" />
     <Compile Include="Modelo\ResultadoOperacion.cs" />
     <Compile Include="Modelo\Url.cs" />
     <Compile Include="Modelo\Usuario.cs" />
+    <Compile Include="Modelo\Vehiculo.cs" />
     <Compile Include="Negocio\PasswordHasher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

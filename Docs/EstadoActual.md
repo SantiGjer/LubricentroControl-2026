@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 6 de septiembre de 2026
+**Última actualización:** 7 de septiembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -29,12 +29,13 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1 completa y verificada.** Las fases 2 a 6 no están empezadas.
+**Fase 1 completa. Fase 2 en curso: Clientes y Vehículos terminados, faltan Proveedores,
+Insumos y Servicios.**
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
-| 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ⬜ No empezada |
+| 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | 🟨 En curso (2/5) |
 | 3 | Turnos y Órdenes de trabajo | ⬜ No empezada |
 | 4 | Compras, Ventas, Pagos, Cuentas corrientes | ⬜ No empezada |
 | 5 | Reportes | ⬜ No empezada |
@@ -52,17 +53,103 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
   no alcanza, la guarda corre en cada request.
 - Las 21 tablas del diagrama E/R creadas, con los datos semilla de seguridad.
 - Capa `BIZ/Data` funcionando de punta a punta contra SQL Server.
+- **ABM de Clientes**: alta/baja lógica/edición, búsqueda por nombre/apellido/DNI, validación de
+  formato de DNI. Layout de dos columnas (buscador+grilla a la izquierda, formulario siempre
+  visible a la derecha).
+- **ABM de Vehículos**: alta/baja lógica/edición, búsqueda por patente/marca/modelo, selector de
+  dueño con buscador desplegable (reutiliza el buscador de Clientes, no un `DropDownList` con
+  todos los clientes), validación de formato de patente, dropdown fijo de tipo de combustible.
+- **"Nuevo cliente" desde Vehículos**: si al cargar un vehículo el dueño todavía no existe como
+  cliente, se puede crear sin perder los datos del vehículo ya tipeados; al crearlo se vuelve
+  automáticamente con ese cliente ya seleccionado como dueño.
 
 ### Qué NO funciona todavía
 
-Las 15 pantallas de negocio (Clientes, Vehículos, Turnos, Órdenes, Servicios, Proveedores,
-Insumos, Compras, Ventas, Pagos, las dos cuentas corrientes y los tres reportes) son
-**cascarones**: existen, están enlazadas desde el menú y respetan los permisos por rol, pero
-no tienen funcionalidad.
+Quedan 13 pantallas de negocio como **cascarones** (Proveedores, Insumos, Servicios, Turnos,
+Órdenes, Compras, Ventas, Pagos, las dos cuentas corrientes y los tres reportes): existen, están
+enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-07 — Clientes y Vehículos implementados (Fase 2)
+
+Se escribieron las dos primeras pantallas de Fase 2 sobre el diseño confirmado el 2026-09-06.
+
+**Capa BIZ:** `Modelo/Cliente.cs` y `Modelo/Vehiculo.cs` (con `Validar()`, `EsDniValido()`/
+`EsPatenteValida()` estáticos, y `Vehiculo.TiposCombustible` como fuente única para el
+`DropDownList` y su validación). `Data/ClienteDAL.cs` y `Data/VehiculoDAL.cs` siguiendo el
+patrón de `UsuarioDAL`: `Listar`, `Buscar`, `ObtenerPorId`, `Existe*` (unicidad), `Crear`,
+`Actualizar`, `Desactivar` (baja lógica). `VehiculoDAL` suma `ListarPorCliente` (para un futuro
+botón "Ver vehículos" en Clientes, todavía no construido).
+
+**Pantallas**, layout de dos columnas (buscador+grilla izquierda, formulario siempre visible
+derecha, sin mostrar/ocultar):
+
+- `Clientes.aspx`: sin checkbox "Activo" en el formulario — un botón **"Borrar"** aparece solo
+  al seleccionar un cliente activo existente y hace la baja lógica directo desde ahí. Buscador
+  con checkbox "Incluir inactivos" (`AutoPostBack`, sin necesitar tocar "Buscar").
+- `Vehiculos.aspx`: mismo patrón. El campo "Dueño" es un buscador desplegable dentro de un
+  `UpdatePanel` (busca clientes activos por nombre/apellido/DNI, lista resultados, seleccionar
+  uno cierra la lista) en vez de un `DropDownList` con todos los clientes — decisión del
+  2026-09-06, no escala igual que el de roles de `Usuarios`.
+
+**Bug encontrado y corregido en el camino:** al reemplazar el checkbox "Activo" por un
+`HiddenField`, `bool.Parse(hdnActivo.Value)` (y el `int.Parse` equivalente sobre IDs ocultos)
+rompía con un error 500 si ese campo llegaba vacío o manipulado (ej. un POST armado a mano). Se
+resolvió con `TryParse` + valor por defecto seguro, aplicado de entrada en `Vehiculos.aspx.cs` y
+retroactivamente en `Clientes.aspx.cs`.
+
+**"Nuevo cliente" desde Vehículos, y el problema real que apareció:** el botón (ubicado al lado
+del buscador de clientes dentro del formulario, no del buscador de vehículos) manda a
+`Clientes.aspx` con los datos del vehículo en curso; al crear el cliente ahí, se vuelve
+automático a `Vehiculos.aspx` con esos datos repuestos y el cliente nuevo ya seleccionado como
+dueño (o, si se cancela con "Volver sin crear", con el dueño que ya estaba elegido antes).
+
+Se intentó primero con el mecanismo clásico de ASP.NET para esto — `PostBackUrl` +
+`PreviousPage`, que es la forma estándar de pasar datos entre páginas vía ViewState —, pero
+**no funciona en este proyecto**: `PreviousPage` reconstruye la página de origen a partir de la
+ruta con la que se accedió, y como acá todo se navega con FriendlyUrls (`/Vehiculos`, sin
+extensión), `BuildManager` no encuentra ningún archivo en esa ruta y tira
+`HttpException: El archivo '/Vehiculos' no existe`. No hay manera de arreglarlo solo cambiando
+el `RedirectMode` de FriendlyUrls: el error es por cómo `PreviousPage` resuelve la ruta, no por
+la redirección en sí. Se resolvió con `Response.Redirect` pasando los datos por query string en
+las dos direcciones — mismo resultado para el usuario, sin pelearse con el ruteo. Ver
+`CLAUDE.md` («Cross-page posting no funciona con FriendlyUrls»).
+
+Como el botón vive dentro de un `UpdatePanel` (es parte del buscador de dueño), hizo falta
+declararlo como `PostBackTrigger` explícito: un trigger async normal no deja que
+`Response.Redirect` navegue de verdad.
+
+**Verificación:** rebuild limpio + `aspnet_compiler` sin errores. Probado a mano contra IIS
+Express con requests HTTP (sin navegador disponible en la sesión, así que la experiencia real
+del `UpdatePanel`/desplegable sin recargar página no se confirmó visualmente, solo la lógica de
+servidor): alta/edición/baja de Cliente y Vehículo, unicidad de DNI y patente, formato de DNI y
+patente rechazado correctamente, acceso completo del rol Empleado, y el circuito completo de
+"Nuevo cliente" (ida con datos preservados, alta y vuelta automática con dueño seleccionado,
+"volver sin crear" preservando el dueño original, guardado final del vehículo).
+
+### 2026-09-06 — Diseño de Clientes y Vehículos para arrancar Fase 2
+
+Antes de escribir código se cerró el diseño de las dos primeras pantallas de Fase 2. Decisiones
+completas en `Docs/Lubricentro_Requerimientos.md` §9.2:
+
+- `Clientes` y `Vehiculos` quedan como **dos pantallas separadas** (no maestro-detalle), tal como
+  ya estaban en el menú.
+- La búsqueda rápida del §6.2 se resuelve **partida en dos**: nombre/apellido/DNI en `Clientes`,
+  patente/marca/modelo en `Vehiculos`. Cada pantalla tiene un botón por fila para saltar a la
+  otra ya filtrada.
+- El buscador de clientes se reutiliza como **selector de dueño** al dar de alta un Vehículo
+  (no un `DropDownList` con todos los clientes — no escala).
+- Tipo de combustible: `DropDownList` fijo — Nafta, Diésel, GNC, Eléctrico, Híbrido.
+
+Según la matriz de permisos (§5), estas dos pantallas tienen acceso completo para los 3 roles:
+a diferencia de Insumos/Proveedores/Compras/Ctas. ctes., acá `EsSoloLectura` nunca da `true`, no
+hace falta lógica de deshabilitado de campos.
+
+**Sigue:** escribir `BIZ/Modelo/Cliente.cs` y `Vehiculo.cs`, `BIZ/Data/ClienteDAL.cs` y
+`VehiculoDAL.cs` (patrón `UsuarioDAL`), y recién después las pantallas.
 
 ### 2026-09-06 — Patrón de validación de formularios confirmado
 
@@ -270,8 +357,9 @@ Los `.cs` nunca estuvieron afectados: el compilador de C# asume UTF-8 cuando no 
 **Fase 2 — ABM de entidades maestras.** Las cinco pantallas son independientes entre sí, ya
 tienen su tabla creada y su cascarón enlazado en el menú, así que se pueden encarar en paralelo:
 
-- Clientes (con sus vehículos asociados)
-- Vehículos
+- Clientes (pantalla propia; el vínculo con sus vehículos es por navegación cruzada, ver diseño
+  confirmado arriba, no maestro-detalle)
+- Vehículos (pantalla propia; usa el buscador de Clientes como selector de dueño)
 - Proveedores
 - Insumos (catálogo y stock inicial)
 - Servicios (catálogo y precio base)
