@@ -1,6 +1,8 @@
 ﻿/* ============================================================================
    LubricentroControl 2026 — Esquema de base de datos
-   Las 21 entidades del diagrama E/R (16 de negocio + 5 de seguridad).
+   Las 21 entidades del diagrama E/R (16 de negocio + 5 de seguridad) más
+   MovimientoStock, agregada en Fase 2 (kardex de stock, no está en el
+   diagrama original — ver Docs/Lubricentro_Requerimientos.md §8 y §9.3).
 
    Idempotente: se puede correr varias veces. Borra y recrea todas las tablas,
    por lo que PIERDE LOS DATOS. Correr 02_DatosIniciales.sql a continuación.
@@ -17,6 +19,7 @@ USE LubricentroControl;
 GO
 
 /* --- Borrado en orden inverso a las dependencias ------------------------- */
+DROP TABLE IF EXISTS MovimientoStock;
 DROP TABLE IF EXISTS CuentaCorrienteProveedor;
 DROP TABLE IF EXISTS CuentaCorrienteCliente;
 DROP TABLE IF EXISTS Pago;
@@ -189,7 +192,9 @@ CREATE TABLE Insumo (
     precioVenta   DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Insumo_precioVenta DEFAULT (0),
     activo        BIT               NOT NULL CONSTRAINT DF_Insumo_activo DEFAULT (1),
     CONSTRAINT PK_Insumo PRIMARY KEY (idInsumo),
-    CONSTRAINT CK_Insumo_precioVenta CHECK (precioVenta >= 0)
+    CONSTRAINT CK_Insumo_precioVenta CHECK (precioVenta >= 0),
+    CONSTRAINT CK_Insumo_stockActual CHECK (stockActual >= 0),
+    CONSTRAINT CK_Insumo_stockMinimo CHECK (stockMinimo >= 0)
 );
 GO
 
@@ -400,6 +405,42 @@ CREATE TABLE CuentaCorrienteProveedor (
 );
 GO
 
+/* ==========================================================================
+   CONTROL DE STOCK (KARDEX)
+   Depende de Insumo (Maestros), OrdenDeTrabajo (Operación), ComprobanteCompra
+   (Circuito de dinero) y Usuario (Seguridad) — por eso va al final del
+   archivo, después de las cuatro secciones de las que depende.
+   ========================================================================== */
+
+CREATE TABLE MovimientoStock (
+    idMovimiento    INT IDENTITY(1,1) NOT NULL,
+    idInsumo        INT               NOT NULL,
+    fecha           DATETIME          NOT NULL CONSTRAINT DF_MovStock_fecha DEFAULT (GETDATE()),
+    /* Compra | Orden | CancelacionOrden | AjusteManual */
+    tipoMovimiento  NVARCHAR(30)      NOT NULL,
+    idCompra        INT               NULL,
+    idOrden         INT               NULL,
+    idUsuario       INT               NOT NULL,
+    entrada         DECIMAL(12,2)     NOT NULL CONSTRAINT DF_MovStock_entrada DEFAULT (0),
+    salida          DECIMAL(12,2)     NOT NULL CONSTRAINT DF_MovStock_salida DEFAULT (0),
+    stockResultante DECIMAL(12,2)     NOT NULL,
+    descripcion     NVARCHAR(300)     NULL,
+    CONSTRAINT PK_MovimientoStock PRIMARY KEY (idMovimiento),
+    CONSTRAINT FK_MovStock_Insumo FOREIGN KEY (idInsumo) REFERENCES Insumo(idInsumo),
+    CONSTRAINT FK_MovStock_Compra FOREIGN KEY (idCompra) REFERENCES ComprobanteCompra(idCompra),
+    CONSTRAINT FK_MovStock_Orden FOREIGN KEY (idOrden) REFERENCES OrdenDeTrabajo(idOrden),
+    CONSTRAINT FK_MovStock_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
+    CONSTRAINT CK_MovStock_entrada CHECK (entrada >= 0),
+    CONSTRAINT CK_MovStock_salida CHECK (salida >= 0),
+    CONSTRAINT CK_MovStock_unSentido CHECK (
+        (entrada > 0 AND salida = 0) OR (salida > 0 AND entrada = 0)),
+    CONSTRAINT CK_MovStock_origen CHECK (
+        (tipoMovimiento = 'Compra' AND idCompra IS NOT NULL AND idOrden IS NULL) OR
+        (tipoMovimiento IN ('Orden','CancelacionOrden') AND idOrden IS NOT NULL AND idCompra IS NULL) OR
+        (tipoMovimiento = 'AjusteManual' AND idCompra IS NULL AND idOrden IS NULL))
+);
+GO
+
 /* --- Índices de apoyo a las búsquedas más frecuentes --------------------- */
 CREATE INDEX IX_Vehiculo_idCliente        ON Vehiculo(idCliente);
 CREATE INDEX IX_Turno_fechaHoraAsignada   ON Turno(fechaHoraAsignada);
@@ -409,6 +450,8 @@ CREATE INDEX IX_Venta_fecha               ON ComprobanteVenta(fecha);
 CREATE INDEX IX_CCCli_idCliente           ON CuentaCorrienteCliente(idCliente);
 CREATE INDEX IX_CCProv_idProveedor        ON CuentaCorrienteProveedor(idProveedor);
 CREATE INDEX IX_Menu_idMenuPadre          ON Menu(idMenuPadre);
+CREATE INDEX IX_MovStock_idInsumo         ON MovimientoStock(idInsumo);
+CREATE INDEX IX_MovStock_fecha            ON MovimientoStock(fecha);
 GO
 
 PRINT 'Esquema creado correctamente.';

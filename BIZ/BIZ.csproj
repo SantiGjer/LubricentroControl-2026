@@ -44,19 +44,25 @@
   <ItemGroup>
     <Compile Include="Data\AccesoDatos.cs" />
     <Compile Include="Data\ClienteDAL.cs" />
+    <Compile Include="Data\InsumoDAL.cs" />
     <Compile Include="Data\MenuDAL.cs" />
+    <Compile Include="Data\MovimientoStockDAL.cs" />
     <Compile Include="Data\NivelDAL.cs" />
     <Compile Include="Data\ProveedorDAL.cs" />
     <Compile Include="Data\RecuperacionClaveDAL.cs" />
+    <Compile Include="Data\ServicioDAL.cs" />
     <Compile Include="Data\ServicioMail.cs" />
     <Compile Include="Data\UsuarioDAL.cs" />
     <Compile Include="Data\VehiculoDAL.cs" />
     <Compile Include="Modelo\Cliente.cs" />
+    <Compile Include="Modelo\Insumo.cs" />
     <Compile Include="Modelo\ItemMenu.cs" />
+    <Compile Include="Modelo\MovimientoStock.cs" />
     <Compile Include="Modelo\Nivel.cs" />
     <Compile Include="Modelo\Proveedor.cs" />
     <Compile Include="Modelo\RecuperacionClave.cs" />
     <Compile Include="Modelo\ResultadoOperacion.cs" />
+    <Compile Include="Modelo\Servicio.cs" />
     <Compile Include="Modelo\Url.cs" />
     <Compile Include="Modelo\Usuario.cs" />
     <Compile Include="Modelo\Vehiculo.cs" />

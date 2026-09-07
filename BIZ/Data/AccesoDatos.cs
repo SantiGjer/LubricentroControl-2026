@@ -101,6 +101,11 @@ namespace BIZ.Data
             return !fila.IsNull(columna) && Convert.ToBoolean(fila[columna]);
         }
 
+        public static decimal LeerDecimal(DataRow fila, string columna)
+        {
+            return fila.IsNull(columna) ? 0m : Convert.ToDecimal(fila[columna]);
+        }
+
         public static DateTime LeerFecha(DataRow fila, string columna)
         {
             return fila.IsNull(columna) ? DateTime.MinValue : Convert.ToDateTime(fila[columna]);

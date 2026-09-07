@@ -139,15 +139,20 @@ Login por mail + contraseña (hasheada). Recuperación de contraseña vía mail 
 ### 6.9 Reportes
 Reportes prioritarios definidos por el dueño del negocio:
 - **Stock bajo / a reponer:** insumos con `stockActual` por debajo de `stockMinimo`.
+  `InsumoDAL.ListarStockBajo()` ya existe para este reporte.
 - **Ventas por período:** total vendido en un rango de fechas.
 - **Cuentas corrientes:** deudas de clientes y deudas a proveedores, con saldo actual.
+
+Nota (2026-09-07): con `MovimientoStock` (§9.3) ya existente, un futuro reporte de historial de
+movimientos de stock (kardex completo, no solo el de stock bajo) es viable sin cambios de esquema
+— queda pendiente de priorizar, no comprometido para Fase 5 todavía.
 
 ---
 
 ## 7. Reglas de negocio clave
 
 1. Toda orden de trabajo puede o no estar asociada a un turno (participación opcional).
-2. El stock de insumos se actualiza automáticamente en ambos sentidos: baja al usarse en una orden, sube al cargarse una compra.
+2. El stock de insumos se actualiza automáticamente en ambos sentidos: baja al usarse en una orden, sube al cargarse una compra. **Cancelar una orden de trabajo repone el stock de los insumos que no llegaron a usarse.** Cada cambio de stock (compra, orden, cancelación, ajuste manual) queda registrado con fecha, usuario y motivo — ver §9.3.
 3. La venta no se carga manualmente: nace automáticamente al cerrar una orden de trabajo.
 4. Tanto clientes como proveedores pueden operar "a cuenta" (saldo pendiente permitido en ambos casos).
 5. El acceso a compras, cuentas corrientes y reportes financieros está restringido para el rol Empleado (solo consulta o sin acceso, según el módulo).
@@ -164,6 +169,10 @@ Basado en el diagrama E/R provisto (`01__Modelo_Conceptual_Diagrama_ER.pdf`, not
 **Seguridad / Login / Menú:** Usuario, Nivel, Url, Menu, RecuperacionClave.
 
 *(21 entidades en total, 17 normales y 4 débiles; 28 vínculos, según el diagrama original.)*
+
+**Nota (2026-09-07):** se sumó `MovimientoStock` en Fase 2, como entidad adicional a las 21 del
+diagrama original — kardex de stock, ver §9.3. No es parte del diagrama entregado por la
+cátedra; es un agregado posterior justificado por una necesidad real de trazabilidad.
 
 ---
 
@@ -200,6 +209,25 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
   en `Usuarios`, que es una lista fija de 3).
 - **Tipo de combustible:** `DropDownList` con lista fija — Nafta, Diésel, GNC, Eléctrico,
   Híbrido.
+
+### 9.3 Kardex de stock (confirmado 2026-09-07)
+
+- **Cada cambio de stock queda registrado** en una entidad nueva, `MovimientoStock` (no estaba en
+  el diagrama original — ver nota en §8): quién, cuándo, cuánto y por qué.
+- **Invariante:** `Insumo.stockActual` siempre es igual a la suma de `entrada - salida` de todos
+  sus movimientos. Se mantiene desde el primer insumo: al dar de alta uno con stock inicial, se
+  inserta con `stockActual = 0` y se registra un ajuste manual aparte por el valor cargado.
+- **Tipos de movimiento:** `Compra` (sube stock, futura Fase 4), `Orden` (baja stock, futura
+  Fase 3), `CancelacionOrden` (repone el stock no utilizado si se cancela una orden, futura
+  Fase 3), `AjusteManual` (alta con stock inicial, o corrección manual con motivo obligatorio —
+  disponible desde ya en la capa BIZ de Insumos).
+- **`idUsuario` es obligatorio** en `MovimientoStock` (a diferencia de `CuentaCorrienteCliente`/
+  `Proveedor`, que no lo tienen): se pidió explícitamente poder saber quién hizo cada ajuste
+  manual.
+- **Stock insuficiente para una salida se rechaza** con un mensaje de error — no se permite que
+  el stock quede negativo.
+- **Unidad de medida** (`Insumo.unidadMedida`): `DropDownList` con lista fija — Unidad, Litro,
+  Kilogramo, Caja, Metro.
 
 ---
 

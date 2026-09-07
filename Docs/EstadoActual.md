@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 7 de septiembre de 2026 (tarde)
+**Última actualización:** 7 de septiembre de 2026 (noche, cont.)
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -29,13 +29,12 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1 completa. Fase 2 en curso: Clientes, Vehículos y Proveedores terminados, faltan
-Insumos y Servicios.**
+**Fase 1 y Fase 2 completas.** Sigue Fase 3 (Turnos y Órdenes de trabajo).
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
-| 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | 🟨 En curso (3/5) |
+| 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
 | 3 | Turnos y Órdenes de trabajo | ⬜ No empezada |
 | 4 | Compras, Ventas, Pagos, Cuentas corrientes | ⬜ No empezada |
 | 5 | Reportes | ⬜ No empezada |
@@ -51,7 +50,8 @@ Insumos y Servicios.**
 - Menú principal armado dinámicamente desde la base según el rol del usuario.
 - Control de acceso por pantalla verificado del lado del servidor: esconder la opción del menú
   no alcanza, la guarda corre en cada request.
-- Las 21 tablas del diagrama E/R creadas, con los datos semilla de seguridad.
+- Las 21 tablas del diagrama E/R creadas, con los datos semilla de seguridad, más
+  `MovimientoStock` (kardex de stock, agregada en Fase 2 — 22 tablas en total hoy).
 - Capa `BIZ/Data` funcionando de punta a punta contra SQL Server.
 - **ABM de Clientes**: alta/baja lógica/edición, búsqueda por nombre/apellido/DNI, validación de
   formato de DNI. Layout de dos columnas (buscador+grilla a la izquierda, formulario siempre
@@ -66,16 +66,169 @@ Insumos y Servicios.**
   guiones en ambos sentidos), CUIT formateado en la grilla. Primera pantalla real en modo
   **solo consulta para el rol Empleado**: se le esconde el formulario entero y la columna de
   acciones de la grilla, no solo los botones — solo ve el buscador y los resultados.
+- **ABM de Insumos + kardex de stock**: alta con stock inicial (registra un ajuste automático),
+  búsqueda por nombre/marca, ajuste manual de stock (un solo campo con signo — positivo suma,
+  negativo resta, sin radio Entrada/Salida) e historial de movimientos, ambos en una franja
+  debajo del ABM (historial a la izquierda, ajuste a la derecha, ratio 60/40 igual que el
+  buscador/formulario de arriba) que solo aparece al editar un insumo existente. Grilla principal
+  con estilo de tabla de Bootstrap (rayada, con bordes, hover) y resaltado en rojo de las filas
+  con stock por debajo del mínimo; paginada a 30 filas con pie "Página X de Y" +
+  Anterior/Siguiente centrado. Modo solo-consulta para Empleado igual que Proveedores.
+- **ABM de Servicios**: alta/baja lógica/edición, búsqueda por nombre. El más simple de los cinco
+  (nombre, descripción, precio base) — mismo patrón que Proveedores. Modo solo-consulta para
+  Empleado.
 
 ### Qué NO funciona todavía
 
-Quedan 12 pantallas de negocio como **cascarones** (Insumos, Servicios, Turnos, Órdenes, Compras,
-Ventas, Pagos, las dos cuentas corrientes y los tres reportes): existen, están enlazadas desde el
-menú y respetan los permisos por rol, pero no tienen funcionalidad.
+Quedan 10 pantallas de negocio como **cascarones** (Turnos, Órdenes, Compras, Ventas, Pagos, las
+dos cuentas corrientes y los tres reportes): existen, están enlazadas desde el menú y respetan
+los permisos por rol, pero no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-07 (noche, cont. 2) — Refinamiento de UI en Insumos, Fase 2 cerrada
+
+Serie de ajustes de UX sobre `Insumos.aspx` pedidos después de ver la pantalla funcionando:
+
+- **Ajuste de stock simplificado**: se sacó el radio Entrada/Salida — un solo campo de cantidad
+  con signo (positivo suma, negativo resta). El code-behind traduce a `Math.Abs(cantidad)` +
+  `esEntrada = cantidad > 0` antes de llamar a `MovimientoStockDAL.RegistrarAjusteManual`, que no
+  cambió. El validador pasó de `GreaterThan 0` a `NotEqual 0` (rechaza cero, acepta negativos).
+- **Franja Historial/Ajuste**: estaba `col-6`/`col-6` (50/50); pasó a `col-7`/`col-5` (60/40),
+  igual ratio que el buscador/formulario de arriba — Historial (la grilla de datos) del lado
+  grande, Ajustar stock (el formulario) del lado chico. También se invirtió qué va a la izquierda:
+  Historial ahora a la izquierda, Ajuste a la derecha.
+- **Grillas con estilo de tabla**: `CssClass="table table-striped table-bordered table-hover"` en
+  `gvInsumos` y `gvHistorial` — Bootstrap ya está cargado en el proyecto, no es una dependencia
+  nueva. El resaltado inline de stock bajo (`style="background-color:#f8d7da"` en
+  `RowDataBound`) convive sin problema: un estilo inline siempre gana por especificidad sobre una
+  clase CSS. **Solo se aplicó en Insumos por ahora** — decidir después si se replica en
+  Clientes/Vehículos/Proveedores/Servicios para consistencia.
+- **Paginado real en `gvInsumos`** (no en `gvHistorial`): `AllowPaging="true" PageSize="30"`. Se
+  evaluó explícitamente contra un contenedor con scroll (que no reduce lo que viaja al navegador
+  y no resuelve el problema de fondo) — se eligió paginado nativo. Hace falta resetear
+  `gvInsumos.PageIndex = 0` en cualquier acción que cambie qué se está mirando (buscar, incluir
+  inactivos, guardar, borrar, ajustar) para no quedar apuntando a una página que ya no existe.
+- **Pager custom**: el pager numérico automático de `GridView` (links "1 2 3...") se reemplazó
+  por un `PagerTemplate` con texto **"Página X de Y"** centrado (`PagerStyle-HorizontalAlign`) y
+  dos `LinkButton` Anterior/Siguiente (`CommandName="Page"`, `CommandArgument="Prev"/"Next"` —
+  comandos que `GridView` ya reconoce, disparan el mismo `OnPageIndexChanging` de siempre). Se
+  perdió el salto directo a una página puntual (no hacía falta para la cantidad de páginas de
+  este proyecto). **Bug de test, no de la app**: al simular el click de "Siguiente" a mano con
+  `__EVENTTARGET=gvInsumos` y `__EVENTARGUMENT=Page$Next` (el formato del pager viejo) saltó
+  "Argumento de postback no válido" — la validación de eventos lo rechazó correctamente, porque
+  un `PagerTemplate` con `LinkButton`s propios postea con el `UniqueID` real de cada botón, no con
+  ese formato. Se resolvió usando el `__doPostBack(...)` real que renderiza la página.
+
+Se cargaron **35 insumos genéricos de prueba** ("Insumo generico 01".."35", stock variado) para
+poder ver el paginado con datos reales — quedan en la base a propósito, ver pendiente abajo.
+
+**Verificación:** `aspnet_compiler` en cada paso (son todos cambios de markup, sin tocar
+`InsumoDAL`/`MovimientoStockDAL`/esquema). Contra IIS Express: ajuste positivo y negativo,
+cantidad cero rechazada, ratio 60/40 confirmado leyendo las clases `col-7`/`col-5` del HTML
+renderizado, clases de tabla presentes, paginado con "Página 1 de 2" → "Página 2 de 2" navegando
+con los botones reales, búsqueda desde la página 2 vuelve a página 1 sin error.
+
+### 2026-09-07 (noche, cont.) — Insumos y Servicios: Fase 2 completa
+
+Últimas dos pantallas de Fase 2, sobre la capa BIZ de Insumo ya escrita en la sesión anterior.
+
+**`Insumos.aspx`**: mismo layout de dos columnas que las demás, con una franja de ancho completo
+debajo (decisión confirmada con el usuario) que solo aparece al seleccionar un insumo existente
+— nunca en "Nuevo insumo" ni para el rol Empleado:
+
+- Izquierda: "Ajustar stock" — radio Entrada/Salida, cantidad, motivo obligatorio. Llama a
+  `MovimientoStockDAL.RegistrarAjusteManual`.
+- Derecha: grilla de historial (`MovimientoStockDAL.ListarPorInsumo`), más reciente primero.
+
+El campo "Stock inicial" del formulario principal solo se usa una vez, al crear (dispara el
+ajuste de alta en `InsumoDAL.Crear`); al editar se reemplaza por un `Label` de solo lectura con
+el stock actual — todo cambio posterior pasa por el ajuste, no por "Guardar".
+
+La grilla principal resalta con fondo rojo (`#f8d7da`, inline `style`, no clase de Bootstrap —
+el `GridView` no usa `class="table"` en ningún lado del proyecto, así que `.table-danger` no
+hubiera aplicado) las filas con `stockActual < stockMinimo` (decisión confirmada con el usuario,
+conecta con el reporte "Stock bajo" de Requerimientos §6.9).
+
+**`Servicios.aspx`**: el más simple de los cinco ABM de Fase 2 (nombre, descripción, precio
+base) — sin campos con formato especial, sin unicidad. Calco directo de `Proveedores.aspx` con
+menos campos.
+
+Ambas, modo solo-consulta para Empleado con el mismo patrón ya establecido (esconder
+`pnlFormulario` entero + columna "Acciones", chequeo de `EsSoloLectura` al principio de cada
+método de escritura).
+
+**Verificación:** rebuild limpio + `aspnet_compiler`. Probado contra IIS Express: alta de insumo
+con stock inicial (y su movimiento de alta visible en el historial), ajuste de entrada y de
+salida, rechazo de ajuste que dejaría stock negativo, resaltado de stock bajo, ABM completo de
+Servicios, y modo solo-consulta/acceso completo para Empleado/Encargado en las dos pantallas.
+
+Al recrear el esquema en la sesión anterior había corrido solo `02_DatosIniciales.sql` y no
+`03_UsuariosDePrueba.sql` — Encargado/Empleado no existían y el login fallaba. Se repuso
+corriendo el script opcional; quedó anotado acá para no repetir la confusión.
+
+### 2026-09-07 (noche) — Kardex de stock (`MovimientoStock`) y capa BIZ de Insumo
+
+Antes de escribir la pantalla de Insumos, surgió que `stockActual` era un número que se pisaba sin
+dejar rastro. El usuario pidió explícitamente: ajustes manuales de stock con historial (quién,
+cuándo, cuánto, motivo), y que cancelar una orden de trabajo reponga el stock no utilizado. Se
+resolvió con una entidad nueva y su capa BIZ — **sin tocar ninguna pantalla todavía** (eso es el
+siguiente paso, al construir `Insumos.aspx`).
+
+**Entidad nueva `MovimientoStock`** (`Database/01_Esquema.sql`): kardex con `entrada`/`salida`/
+`stockResultante` (mismo patrón que `CuentaCorrienteCliente`/`Proveedor`: fecha, tipo, FKs
+opcionales al origen, descripción libre). Dos diferencias deliberadas respecto de ese patrón:
+
+- **`idUsuario NOT NULL`**: las `CuentaCorriente*` no lo tienen, pero acá se pidió explícitamente
+  poder saber quién hizo cada ajuste — hay precedente directo en `Pago`, que tampoco es una
+  `CuentaCorriente*` y sí guarda `idUsuario`.
+- **`CK_MovStock_unSentido`**: fuerza que cada fila sea o entrada o salida, nunca las dos a la vez
+  ni ninguna — pensado para que los reportes de Fase 5 puedan sumar columnas sin filas ambiguas.
+
+También se agregó `CK_MovStock_origen` (mismo criterio que `CK_Pago_titular`: ata el tipo de
+movimiento a qué FK debe estar poblada), que de paso vuelve innecesario un `CHECK` aparte sobre
+los 4 valores literales de `tipoMovimiento` — cualquier valor fuera de esos 4 falla las tres
+ramas del `OR`. Se sumaron además `CK_Insumo_stockActual`/`stockMinimo >= 0` (red de seguridad;
+`Insumo` ya tenía `CK_Insumo_precioVenta` y le faltaban estos dos).
+
+**Atomicidad:** `AccesoDatos.cs` no expone transacciones (cada método abre su propia conexión).
+`MovimientoStockDAL.Registrar` arma un solo batch de texto SQL con
+`SET XACT_ABORT ON; BEGIN TRANSACTION; ...; COMMIT TRANSACTION;`, sin tocar esa API. Verificado a
+mano con `sqlcmd`, reproduciendo el SQL exacto que genera el DAL (sin `TRY/CATCH`, igual que el
+código real): un `INSERT` que viola un `CHECK` revierte el `UPDATE` anterior — confirmado leyendo
+el stock desde una conexión separada después del fallo. (Un primer intento de verificación con
+`TRY/CATCH` alrededor del batch dio un falso negativo — el `TRY/CATCH` posterga el rollback hasta
+el final del batch en vez de dispararlo con `XACT_ABORT`; no es un problema del código real, que
+no envuelve nada en `try/catch`, solo del script de prueba ad-hoc.)
+
+**Validación de stock insuficiente:** en C#, antes del batch (mismo patrón que `ExisteDni`/
+`ExisteCuit` — validación de negocio en C#, no en el `WHERE` del SQL). El `CHECK` en `Insumo`
+queda como red de seguridad para carreras entre requests concurrentes, no como mecanismo
+principal.
+
+**Alta de insumo con stock inicial:** `InsumoDAL.Crear` inserta siempre con `stockActual = 0` y,
+si se pidió stock inicial, dispara un `AjusteManual` aparte por ese valor — mantiene el invariante
+`stockActual == Σ(entrada - salida)` desde el primer insumo. `InsumoDAL.Actualizar` no toca
+`stockActual` en absoluto: todo cambio de stock pasa por `MovimientoStockDAL`.
+
+**Deliberadamente no se agregaron** wrappers (`RegistrarEntradaPorCompra`, etc.) para que Fase 3/4
+los usen — no tienen ningún caller hoy, hubiera sido diseñar para un requerimiento hipotético
+futuro. Cuando se construyan `CompraDAL`/`OrdenDeTrabajoDAL`, van a llamar directo a
+`MovimientoStockDAL.Registrar(...)` con las constantes `MovimientoStock.Tipo*` ya definidas.
+
+**Nota operativa:** recrear el esquema (`01_Esquema.sql` es idempotente, borra y recrea) para
+agregar las tablas/constraints nuevas **borró los datos de prueba que el usuario había cargado a
+mano** (clientes, un vehículo) sin pedir confirmación antes — a tener en cuenta para la próxima
+vez que haga falta tocar el esquema con datos reales cargados.
+
+**Verificación:** rebuild limpio de la solución. Recreación de LocalDB desde
+`01_Esquema.sql`/`02_DatosIniciales.sql` sin errores. Smoke test manual vía `sqlcmd`: ajuste
+manual de entrada válido, rechazo de `CK_MovStock_unSentido` (entrada y salida a la vez), rechazo
+de `CK_MovStock_origen` (tipo `Compra` sin `idCompra`), rechazo de `CK_Insumo_stockActual`
+(stock negativo directo), y la prueba de atomicidad descrita arriba. No hay verificación funcional
+de punta a punta todavía — no existe pantalla; eso queda para cuando se construya `Insumos.aspx`.
 
 ### 2026-09-07 (tarde) — Proveedores implementado; primer modo solo-consulta real
 
@@ -386,24 +539,15 @@ Los `.cs` nunca estuvieron afectados: el compilador de C# asume UTF-8 cuando no 
 
 ## 3. Planificado para la próxima sesión
 
-**Fase 2 — ABM de entidades maestras.** Las cinco pantallas son independientes entre sí, ya
-tienen su tabla creada y su cascarón enlazado en el menú, así que se pueden encarar en paralelo:
+**Fase 2 terminada.** Las cinco pantallas maestras (Clientes, Vehículos, Proveedores, Insumos,
+Servicios) están hechas, verificadas contra IIS Express y con su modo solo-consulta para
+Empleado donde corresponde.
 
-- Clientes (pantalla propia; el vínculo con sus vehículos es por navegación cruzada, ver diseño
-  confirmado arriba, no maestro-detalle)
-- Vehículos (pantalla propia; usa el buscador de Clientes como selector de dueño)
-- Proveedores
-- Insumos (catálogo y stock inicial)
-- Servicios (catálogo y precio base)
-
-Cada una necesita su entidad en `BIZ/Modelo`, y su DAL en `BIZ/Data` siguiendo el patrón de
-`UsuarioDAL` (acceso a datos y reglas de negocio juntos, devolviendo `ResultadoOperacion` — ver
-sesión 2026-09-06), y la pantalla heredando de `PaginaSegura`. Las que tienen modo consulta para el rol Empleado (Insumos,
-Proveedores, Servicios) deben deshabilitar sus acciones de escritura cuando `EsSoloLectura`
-es verdadero.
-
-Además, validaciones de formulario: campos obligatorios, formato de mail, y formato de DNI, CUIT
-y patente según lo confirmado arriba.
+**Sigue Fase 3 — Turnos y Órdenes de trabajo** según el Roadmap del proyecto (`CLAUDE.md` /
+`Docs/Lubricentro_Requerimientos.md`). Nota: lo que el usuario mencionó como "compras, turnos y
+cuentas corrientes" en realidad cruza dos fases del roadmap original — Turnos es Fase 3, pero
+Compras y Cuentas Corrientes son Fase 4 (junto con Ventas y Pagos). Falta acordar con el usuario
+si se respeta ese orden o se reprioriza.
 
 ### Repaso de redacción, pendiente
 
@@ -428,11 +572,18 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   configurar `<system.net>/<mailSettings>`.
 - **`customErrors`:** con `debug="true"` y sin `customErrors`, un error muestra el stack trace
   completo en pantalla. Antes de entregar conviene una página de error propia.
-- **El esquema de negocio nunca se ejerció.** Las 16 tablas de negocio están creadas pero
-  ninguna se usó todavía: es esperable que en la Fase 2 aparezcan ajustes de tipos o de
-  restricciones al escribir los primeros ABM.
-- **Reevaluar el uso de estilos Bootstrap más elaborados** (cards, badges, tablas con clases,
-  `form-control`/`form-select`, layout centrado). Se simplificaron a propósito todas las
-  pantallas reales a HTML sin esas clases (ver sesión 2026-08-17 — Simplificación de estilos)
-  para no anticipar estilo antes de confirmar la lógica de negocio. Evaluar si reintroducirlos
-  una vez que cada pantalla esté probada — candidato natural: al cerrar la Fase 2.
+- **El esquema de negocio nunca se ejerció por completo.** Con Fase 2 cerrada ya se ejercitaron
+  Cliente, Vehiculo, Proveedor, Insumo y Servicio (más el `MovimientoStock` agregado en Fase 2);
+  las tablas de Turnos, Órdenes, Compras, Ventas, Pagos y Cuentas Corrientes siguen sin usar —
+  esperable que aparezcan ajustes de tipos o restricciones al escribir esas pantallas.
+- **Estilos Bootstrap más elaborados (tablas, paginado) — parcialmente resuelto.** Se aplicaron
+  clases de tabla (`table table-striped table-bordered table-hover`) y paginado real con pager
+  custom en `Insumos.aspx` (ver sesión 2026-09-07 cont. 2). Queda pendiente: (a) decidir si se
+  replica en Clientes, Vehículos, Proveedores y Servicios para consistencia visual; (b) la
+  alineación de columnas numéricas (stock, precio) a la derecha, mencionada pero no encarada
+  ("opción 2", diferida explícitamente por el usuario).
+- **Borrar los 35 "Insumo generico" de prueba** cargados para poder ver el paginado con datos
+  reales — no deben llegar a la entrega final.
+- **Botones de navegación cruzada Cliente↔Vehículo pendientes**: hoy solo existe "Nuevo cliente"
+  desde Vehículos. Falta un botón "Ver vehículos" desde la ficha de un Cliente (la consulta
+  `VehiculoDAL.ListarPorCliente` ya existe, sin usar, pensada para esto).

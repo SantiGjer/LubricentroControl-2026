@@ -8,20 +8,25 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1 terminada, Fase 2 en curso (2 de 5).** Andan el login, la
-recuperación de contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa
-`BIZ/Data` de punta a punta contra SQL Server, y los ABM de **Clientes** y **Vehículos**. Las 21
-tablas ya existen (`Database\01_Esquema.sql`). **Proveedores, Insumos, Servicios y el resto de
-las pantallas de negocio siguen siendo cascarones vacíos**: solo muestran su título y "Pendiente".
+**Estado real del código: Fase 1 y Fase 2 terminadas.** Andan el login, la recuperación de
+contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa `BIZ/Data` de punta a
+punta contra SQL Server, y los 5 ABM de Fase 2: **Clientes**, **Vehículos**, **Proveedores**,
+**Insumos** (con kardex de stock) y **Servicios**. Las 21 tablas del diagrama original ya existen
+(`Database\01_Esquema.sql`), más `MovimientoStock` (kardex de stock, agregada en Fase 2 — ver
+§9.3 de los Requerimientos). **El resto de las pantallas de negocio (Turnos, Órdenes, Compras,
+Ventas, Pagos, cuentas corrientes, reportes) siguen siendo cascarones vacíos**: solo muestran su
+título y "Pendiente".
 
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
-- `Docs/Lubricentro_Requerimientos.md` — alcance, matriz de permisos por rol, las 21 entidades,
-  reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con los supuestos/formatos
-  ya confirmados en Fase 2 (DNI/CUIT/patente, diseño de Clientes/Vehículos).
-- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue la Fase 2:** faltan Proveedores,
-  Insumos y Servicios. Son independientes entre sí, se pueden hacer en paralelo, y todas tienen
-  ya su tabla y su cascarón. Clientes y Vehículos ya están — usarlos como referencia de patrón.
+- `Docs/Lubricentro_Requerimientos.md` — alcance, matriz de permisos por rol, las 21 entidades
+  (+ `MovimientoStock`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
+  los supuestos/formatos ya confirmados en Fase 2 (DNI/CUIT/patente, diseño de
+  Clientes/Vehículos, kardex de stock).
+- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue la Fase 3** (Turnos y Órdenes de
+  trabajo). Los 5 ABM de Fase 2 quedan como referencia de patrón — Proveedores/Insumos/Servicios
+  para el modo solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador
+  desplegable.
 
 ## Restricciones del stack (no negociables)
 
@@ -90,9 +95,10 @@ Dentro de `BIZ` hay tres carpetas, **no proyectos aparte** (decisión explícita
 requerimientos §4 — no partir `BIZ`):
 
 - `Modelo/` — entidades (`Usuario`, `Nivel`, `Url`, `ItemMenu`, `RecuperacionClave`,
-  `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`).
+  `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`, `Insumo`, `MovimientoStock`, `Servicio`).
 - `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
-  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `ClienteDAL`, `VehiculoDAL`, `ProveedorDAL`). Todo pasa por
+  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `ClienteDAL`, `VehiculoDAL`, `ProveedorDAL`,
+  `InsumoDAL`, `MovimientoStockDAL`, `ServicioDAL`). Todo pasa por
   `AccesoDatos.cs`, que centraliza
   la cadena de conexión y expone `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`,
   `LeerInt`, etc. para mapear `DataRow`. **Nunca concatenar SQL**: siempre
@@ -145,7 +151,11 @@ Reglas transversales de la capa web:
 Estas no se ven leyendo un solo archivo:
 
 - **Stock automático en los dos sentidos:** baja al cargar una orden de trabajo con insumos, sube
-  al registrar una compra a proveedor.
+  al registrar una compra a proveedor. **Cancelar una orden de trabajo repone el stock de los
+  insumos no utilizados.** Cada cambio de stock (compra, orden, cancelación de orden, ajuste
+  manual) queda registrado en `MovimientoStock` (kardex) con quién y por qué —
+  `MovimientoStockDAL.Registrar` es el único camino para tocar `Insumo.stockActual`; ver
+  «Historial de decisiones» para el mecanismo de atomicidad.
 - **La venta no se carga a mano:** el comprobante de venta se genera automáticamente al cerrar la
   orden de trabajo. Es un comprobante interno, sin validez fiscal.
 - **El vínculo Turno–Orden es opcional:** una orden puede nacer de un turno previo o de un walk-in
@@ -162,8 +172,13 @@ Estas no se ven leyendo un solo archivo:
 ## Base de datos
 
 `Database\01_Esquema.sql` crea las 21 entidades del diagrama E/R más `MenuNivel` (tabla de
-relación menú↔rol, no es una entidad). Los estados de `Turno` y `OrdenDeTrabajo` están fijados por
-`CHECK` — usar exactamente esos literales.
+relación menú↔rol, no es una entidad) y `MovimientoStock` (kardex de stock, agregada en Fase 2 —
+no estaba en el diagrama original, ver Requerimientos §8 y §9.3). Los estados de `Turno` y
+`OrdenDeTrabajo` están fijados por `CHECK` — usar exactamente esos literales. `MovimientoStock`
+usa un patrón distinto para su `tipoMovimiento`: sin `CHECK` sobre los valores literales (igual
+que `CuentaCorrienteCliente`/`Proveedor`), pero con `CK_MovStock_origen`, que ata cada tipo a qué
+FK debe estar poblada (mismo criterio que `CK_Pago_titular`) — entre los dos, cualquier valor
+fuera de los 4 esperados ya queda rechazado sin necesitar un CHECK aparte.
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`). Para pasar al
 SQL Server del lubricentro por VPN Radmin alcanza con cambiar la cadena `LubricentroDB` en
@@ -309,3 +324,28 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   ("acceso a datos... y reglas de validación... todo dentro del mismo proyecto"). La carpeta
   `Negocio/` como capa separada nunca estuvo en el requerimiento original: fue una interpretación
   de la Fase 1 que se revierte con este cambio.
+
+- **`MovimientoStock` (kardex de stock, sesión 2026-09-07).** Entidad nueva, agregada más allá de
+  las 21 del diagrama E/R original, para poder trazar cada cambio de stock (compra, orden,
+  cancelación, ajuste manual) con quién, cuándo y por qué — ver
+  `Docs/Lubricentro_Requerimientos.md` §9.3. A diferencia de `CuentaCorrienteCliente`/`Proveedor`
+  (el patrón de "tabla de movimientos" ya existente, que no llevan `idUsuario`), `MovimientoStock`
+  **sí** lo lleva como `NOT NULL`: hay precedente directo en `Pago` (que tampoco es una
+  `CuentaCorriente*` y sí guarda `idUsuario`) — el criterio es "si el 'quién' importa como dato
+  operativo, se guarda", y acá se pidió explícitamente poder saber quién ajustó el stock.
+
+  **Atomicidad sin tocar `AccesoDatos.cs`:** actualizar `Insumo.stockActual` e insertar la fila en
+  `MovimientoStock` tienen que pasar juntos o ninguno. Como `AccesoDatos.cs` no expone
+  transacciones (cada método abre su propia conexión), `MovimientoStockDAL.Registrar` arma un solo
+  batch de texto SQL con `SET XACT_ABORT ON; BEGIN TRANSACTION; ...; COMMIT TRANSACTION;` — el
+  `XACT_ABORT` es imprescindible, sin él un `BEGIN TRAN`/`COMMIT` no revierte automáticamente el
+  `UPDATE` si el `INSERT` falla a mitad de camino. Verificado a mano con `sqlcmd`: sin
+  `TRY/CATCH` alrededor (igual que en el código real, que no envuelve `AccesoDatos.Ejecutar` en
+  ningún `try/catch`), un `INSERT` que viola un `CHECK` revierte el `UPDATE` anterior — confirmado
+  leyendo el valor desde una conexión separada.
+
+  Fase 3/4 (`CompraDAL`, `OrdenDeTrabajoDAL`) van a llamar directo a
+  `MovimientoStockDAL.Registrar(...)` con las constantes `MovimientoStock.TipoCompra`/`TipoOrden`/
+  `TipoCancelacionOrden` ya definidas en el Modelo — a propósito **no** se agregaron wrappers
+  (`RegistrarEntradaPorCompra`, etc.) sin caller todavía: hubiera sido diseñar para un
+  requerimiento hipotético futuro.
