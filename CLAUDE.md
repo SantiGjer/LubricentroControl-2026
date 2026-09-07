@@ -90,9 +90,9 @@ Dentro de `BIZ` hay tres carpetas, **no proyectos aparte** (decisión explícita
 requerimientos §4 — no partir `BIZ`):
 
 - `Modelo/` — entidades (`Usuario`, `Nivel`, `Url`, `ItemMenu`, `RecuperacionClave`,
-  `ResultadoOperacion`, `Cliente`, `Vehiculo`).
+  `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`).
 - `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
-  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `ClienteDAL`, `VehiculoDAL`). Todo pasa por
+  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `ClienteDAL`, `VehiculoDAL`, `ProveedorDAL`). Todo pasa por
   `AccesoDatos.cs`, que centraliza
   la cadena de conexión y expone `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`,
   `LeerInt`, etc. para mapear `DataRow`. **Nunca concatenar SQL**: siempre
@@ -116,7 +116,13 @@ Reglas transversales de la capa web:
   igual exigen login heredan de `PaginaConSesion`; `Login`, `RecuperarClave` y `RestablecerClave`
   son `Page` común.
 - `PaginaSegura` expone `EsSoloLectura` para los casos "👁️ Solo consulta" de la matriz de permisos.
-  **Una pantalla nueva debe deshabilitar sus acciones de escritura cuando vale true.**
+  **Una pantalla nueva debe deshabilitar sus acciones de escritura cuando vale true.** Patrón ya
+  implementado en `Proveedores.aspx` (primera pantalla real que lo necesita, aplica igual a
+  Insumos y Servicios): esconder el `Panel` del formulario entero
+  (`pnlFormulario.Visible = !EsSoloLectura`) y la columna "Acciones" de la grilla
+  (`gvX.Columns[n].Visible = false`), no solo deshabilitar botones — y además cada método de
+  escritura (`Guardar`/`Borrar`/`RowCommand`) chequea `EsSoloLectura` y corta al principio, por si
+  alguien fuerza el request aunque el control esté escondido.
 - La sesión se toca solo a través de `Seguridad/SesionUsuario.cs`, nunca `Session["..."]` directo.
 - El menú se arma en `Site.Master.cs` desde `MenuDAL.ObtenerArbol(idNivel)` (que a su vez arma el
   árbol con `ItemMenu.ArmarArbol`, en `Modelo/`, a partir de la lista plana de

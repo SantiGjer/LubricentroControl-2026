@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 7 de septiembre de 2026
+**Última actualización:** 7 de septiembre de 2026 (tarde)
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -29,13 +29,13 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1 completa. Fase 2 en curso: Clientes y Vehículos terminados, faltan Proveedores,
+**Fase 1 completa. Fase 2 en curso: Clientes, Vehículos y Proveedores terminados, faltan
 Insumos y Servicios.**
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
-| 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | 🟨 En curso (2/5) |
+| 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | 🟨 En curso (3/5) |
 | 3 | Turnos y Órdenes de trabajo | ⬜ No empezada |
 | 4 | Compras, Ventas, Pagos, Cuentas corrientes | ⬜ No empezada |
 | 5 | Reportes | ⬜ No empezada |
@@ -62,16 +62,48 @@ Insumos y Servicios.**
 - **"Nuevo cliente" desde Vehículos**: si al cargar un vehículo el dueño todavía no existe como
   cliente, se puede crear sin perder los datos del vehículo ya tipeados; al crearlo se vuelve
   automáticamente con ese cliente ya seleccionado como dueño.
+- **ABM de Proveedores**: alta/baja lógica/edición, búsqueda por razón social o CUIT (tolera
+  guiones en ambos sentidos), CUIT formateado en la grilla. Primera pantalla real en modo
+  **solo consulta para el rol Empleado**: se le esconde el formulario entero y la columna de
+  acciones de la grilla, no solo los botones — solo ve el buscador y los resultados.
 
 ### Qué NO funciona todavía
 
-Quedan 13 pantallas de negocio como **cascarones** (Proveedores, Insumos, Servicios, Turnos,
-Órdenes, Compras, Ventas, Pagos, las dos cuentas corrientes y los tres reportes): existen, están
-enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcionalidad.
+Quedan 12 pantallas de negocio como **cascarones** (Insumos, Servicios, Turnos, Órdenes, Compras,
+Ventas, Pagos, las dos cuentas corrientes y los tres reportes): existen, están enlazadas desde el
+menú y respetan los permisos por rol, pero no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-07 (tarde) — Proveedores implementado; primer modo solo-consulta real
+
+`BIZ/Modelo/Proveedor.cs` + `BIZ/Data/ProveedorDAL.cs` (patrón `UsuarioDAL`) y `Proveedores.aspx`
+con el mismo layout de dos columnas de Clientes/Vehículos.
+
+- **CUIT tolerante a guiones en los dos sentidos**: se puede cargar y buscar con o sin guiones
+  (`ProveedorDAL` separa los dígitos del texto de búsqueda antes de armar el `LIKE`); se guarda
+  siempre sin guiones y se muestra formateado (`Proveedor.FormatearCuit`) en la grilla.
+- **Primera pantalla real en modo solo-consulta** (Empleado, según la matriz de permisos §5:
+  Insumos/Proveedores/Compras son solo consulta para ese rol). Decisión explícita del usuario:
+  no alcanza con deshabilitar los botones — se esconde el `Panel` del formulario entero
+  (`pnlFormulario.Visible = false`) y la columna "Acciones" de la grilla
+  (`gvProveedores.Columns[5].Visible = false`); el Empleado ve únicamente el buscador y los
+  resultados. Los métodos de escritura del DAL (`Guardar`/`Borrar`/`RowCommand`) además chequean
+  `EsSoloLectura` y rechazan la operación aunque alguien fuerce el request — mismo criterio que ya
+  usa `PaginaSegura` para el menú. **Este es el patrón a repetir en Insumos y Servicios**, que
+  tienen la misma restricción para Empleado.
+- Se agregó `Proveedor.EsEmailValido` con su propio `CustomValidator` en el formulario — a
+  diferencia de `Usuario`/`Cliente`, que validan el formato de mail en `Validar()` pero nunca
+  tuvieron el `CustomValidator` correspondiente en el `.aspx` (gap identificado, no corregido
+  retroactivamente ahí por quedar fuera de alcance de esa sesión).
+
+**Verificación:** rebuild limpio + `aspnet_compiler`. Probado contra IIS Express: alta con CUIT
+con guiones, búsqueda con y sin guiones, búsqueda por razón social, CUIT duplicado y formato
+inválido rechazados, editar/borrar como Admin, acceso completo confirmado para Encargado, y el
+modo solo-consulta confirmado para Empleado (sin formulario, sin columna de acciones, grilla
+visible).
 
 ### 2026-09-07 — Clientes y Vehículos implementados (Fase 2)
 
