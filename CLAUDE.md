@@ -8,25 +8,27 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1 y Fase 2 terminadas.** Andan el login, la recuperación de
+**Estado real del código: Fase 1, Fase 2 y Fase 3 terminadas.** Andan el login, la recuperación de
 contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa `BIZ/Data` de punta a
-punta contra SQL Server, y los 5 ABM de Fase 2: **Clientes**, **Vehículos**, **Proveedores**,
-**Insumos** (con kardex de stock) y **Servicios**. Las 21 tablas del diagrama original ya existen
-(`Database\01_Esquema.sql`), más `MovimientoStock` (kardex de stock, agregada en Fase 2 — ver
-§9.3 de los Requerimientos). **El resto de las pantallas de negocio (Turnos, Órdenes, Compras,
-Ventas, Pagos, cuentas corrientes, reportes) siguen siendo cascarones vacíos**: solo muestran su
-título y "Pendiente".
+punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**, **Proveedores**,
+**Insumos** con kardex de stock, y **Servicios**), y las 2 pantallas de Fase 3 (**Turnos** y
+**Órdenes de trabajo**, esta última con descuento/reposición automática de stock). Las 21 tablas
+del diagrama original ya existen (`Database\01_Esquema.sql`), más `MovimientoStock` (kardex de
+stock, agregada en Fase 2 — ver §9.3 de los Requerimientos). **El resto de las pantallas de
+negocio (Compras, Ventas, Pagos, cuentas corrientes, reportes) siguen siendo cascarones vacíos**:
+solo muestran su título y "Pendiente".
 
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
 - `Docs/Lubricentro_Requerimientos.md` — alcance, matriz de permisos por rol, las 21 entidades
   (+ `MovimientoStock`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
-  los supuestos/formatos ya confirmados en Fase 2 (DNI/CUIT/patente, diseño de
-  Clientes/Vehículos, kardex de stock).
-- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue la Fase 3** (Turnos y Órdenes de
-  trabajo). Los 5 ABM de Fase 2 quedan como referencia de patrón — Proveedores/Insumos/Servicios
-  para el modo solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador
-  desplegable.
+  los supuestos/formatos ya confirmados en Fase 2/3 (DNI/CUIT/patente, diseño de
+  Clientes/Vehículos, kardex de stock, estados de Turno/Orden).
+- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue la Fase 4** (Compras, Ventas,
+  Pagos, Cuentas corrientes). Los ABM de Fase 2 y las pantallas de Fase 3 quedan como referencia
+  de patrón — Proveedores/Insumos/Servicios para el modo solo-consulta, Clientes/Vehículos para
+  el layout de dos columnas y el buscador desplegable, Turnos/Órdenes para pantallas con
+  cliente/vehículo fijo post-alta y (en Órdenes) franja de detalle con líneas.
 
 ## Restricciones del stack (no negociables)
 
@@ -95,10 +97,12 @@ Dentro de `BIZ` hay tres carpetas, **no proyectos aparte** (decisión explícita
 requerimientos §4 — no partir `BIZ`):
 
 - `Modelo/` — entidades (`Usuario`, `Nivel`, `Url`, `ItemMenu`, `RecuperacionClave`,
-  `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`, `Insumo`, `MovimientoStock`, `Servicio`).
+  `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`, `Insumo`, `MovimientoStock`, `Servicio`,
+  `Turno`, `OrdenDeTrabajo`, `DetalleOrdenServicio`, `DetalleOrdenInsumo`).
 - `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
   `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `ClienteDAL`, `VehiculoDAL`, `ProveedorDAL`,
-  `InsumoDAL`, `MovimientoStockDAL`, `ServicioDAL`). Todo pasa por
+  `InsumoDAL`, `MovimientoStockDAL`, `ServicioDAL`, `TurnoDAL`, `OrdenDeTrabajoDAL`,
+  `DetalleOrdenServicioDAL`, `DetalleOrdenInsumoDAL`). Todo pasa por
   `AccesoDatos.cs`, que centraliza
   la cadena de conexión y expone `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`,
   `LeerInt`, etc. para mapear `DataRow`. **Nunca concatenar SQL**: siempre
@@ -150,12 +154,17 @@ Reglas transversales de la capa web:
 
 Estas no se ven leyendo un solo archivo:
 
-- **Stock automático en los dos sentidos:** baja al cargar una orden de trabajo con insumos, sube
-  al registrar una compra a proveedor. **Cancelar una orden de trabajo repone el stock de los
-  insumos no utilizados.** Cada cambio de stock (compra, orden, cancelación de orden, ajuste
-  manual) queda registrado en `MovimientoStock` (kardex) con quién y por qué —
-  `MovimientoStockDAL.Registrar` es el único camino para tocar `Insumo.stockActual`; ver
-  «Historial de decisiones» para el mecanismo de atomicidad.
+- **Stock automático en los dos sentidos:** baja al agregar una línea de insumo a una orden de
+  trabajo (`DetalleOrdenInsumoDAL.Agregar`, Fase 3, ya implementado), sube al registrar una compra
+  a proveedor (Fase 4, todavía sin implementar). **Cancelar una orden de trabajo repone el stock
+  de los insumos cargados** (`OrdenDeTrabajoDAL.Cancelar`, ya implementado). Cada cambio de stock
+  (orden, cancelación de orden, ajuste manual, y compra cuando exista) queda registrado en
+  `MovimientoStock` (kardex) con quién y por qué. `MovimientoStockDAL.Registrar` es el camino para
+  tocar `Insumo.stockActual` **excepto** cuando la escritura de stock tiene que ir atómicamente
+  junto con una tercera tabla (`DetalleOrdenInsumoDAL.Agregar` arma su propio batch
+  `XACT_ABORT`/`BEGIN TRAN`/`COMMIT` en vez de llamar a `Registrar`, para no dejar un movimiento de
+  kardex sin su línea de detalle si esa tercera escritura fallara — ver «Historial de decisiones»
+  para el detalle y el mecanismo de atomicidad).
 - **La venta no se carga a mano:** el comprobante de venta se genera automáticamente al cerrar la
   orden de trabajo. Es un comprobante interno, sin validez fiscal.
 - **El vínculo Turno–Orden es opcional:** una orden puede nacer de un turno previo o de un walk-in
@@ -344,8 +353,50 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   ningún `try/catch`), un `INSERT` que viola un `CHECK` revierte el `UPDATE` anterior — confirmado
   leyendo el valor desde una conexión separada.
 
-  Fase 3/4 (`CompraDAL`, `OrdenDeTrabajoDAL`) van a llamar directo a
-  `MovimientoStockDAL.Registrar(...)` con las constantes `MovimientoStock.TipoCompra`/`TipoOrden`/
-  `TipoCancelacionOrden` ya definidas en el Modelo — a propósito **no** se agregaron wrappers
-  (`RegistrarEntradaPorCompra`, etc.) sin caller todavía: hubiera sido diseñar para un
-  requerimiento hipotético futuro.
+  Fase 4 (`CompraDAL`, todavía sin implementar) va a llamar directo a
+  `MovimientoStockDAL.Registrar(...)` con `MovimientoStock.TipoCompra` — a propósito **no** se
+  agregaron wrappers (`RegistrarEntradaPorCompra`, etc.) sin caller todavía: hubiera sido diseñar
+  para un requerimiento hipotético futuro. En Fase 3, `OrdenDeTrabajoDAL.Cancelar` sí terminó
+  llamando directo a `Registrar` con `TipoCancelacionOrden` como estaba previsto acá, pero
+  **agregar una línea de insumo a una orden no** — ver la entrada de Fase 3 más abajo para la
+  única excepción real a "`Registrar` es el único camino".
+
+- **Turnos y Órdenes de trabajo (Fase 3, sesión 2026-09-11/2026-09-14).** Las dos pantallas de
+  agenda/taller, sobre `Turno`/`TurnoDAL` y `OrdenDeTrabajo`+`DetalleOrdenServicio`+
+  `DetalleOrdenInsumo` (con sus DAL). Detalle completo de sesión en `Docs/EstadoActual.md`; acá
+  solo lo que deja precedente para módulos futuros:
+
+  **Cliente/vehículo (y en Órdenes, turno) quedan fijos una vez creada la fila.** Se eligen al dar
+  de alta, nunca se reasignan después — evita el problema de qué hacer cuando un `DropDownList`
+  poblado en el momento de la creación ya no refleja la realidad al editar (un vehículo dado de
+  baja después, un turno que pasó a `Completado`). Editando una fila existente, esos datos se
+  muestran como texto de solo lectura, no como controles editables. Los módulos de Fase 4 que
+  referencien una entidad ya creada (`ComprobanteCompra.idProveedor`, `Pago.idCliente`/
+  `idProveedor`, etc.) deberían seguir el mismo criterio salvo que el requerimiento pida
+  explícitamente poder reasignar.
+
+  **Bug real encontrado dos veces, mismo patrón: un `DropDownList` sin ningún `<option>`
+  renderizado rechaza cualquier valor posteado — incluso `""` — con `HttpUnhandledException:
+  Argumento de postback no válido`.** Pasó primero con `ddlVehiculo` en Turnos (se poblaba recién
+  al elegir cliente, nunca en el primer `Page_Load`) y de nuevo con `ddlEstado` en Órdenes (vive
+  dentro de un `Panel` que arranca invisible, así que nunca se renderiza en el alta). La solución
+  en los dos casos: asegurar que el control tenga **al menos su placeholder** cargado ya en el
+  primer `Page_Load`, no solo en el flujo que lo repuebla más tarde. Cualquier `DropDownList`
+  poblado dinámicamente en una pantalla nueva tiene que revisarse contra este mismo problema.
+
+  **`DetalleOrdenInsumoDAL.Agregar` es la única excepción a "`MovimientoStockDAL.Registrar` es el
+  único camino para tocar `Insumo.stockActual`".** Agregar una línea de insumo son tres escrituras
+  atómicas (`UPDATE Insumo`, `INSERT MovimientoStock`, `INSERT DetalleOrdenInsumo`), y `Registrar`
+  solo cubre las primeras dos. Se replicó el mismo patrón `XACT_ABORT`/`BEGIN TRAN`/`COMMIT`
+  directo ahí (duplicando ~15 líneas de SQL) en vez de acoplar `Data/MovimientoStockDAL` a
+  `Data/DetalleOrdenInsumoDAL` con un parámetro extra especulativo. La reposición de stock al
+  cancelar una orden no tiene este problema (no inserta detalle nuevo) y sí llama a `Registrar`
+  directo, tal como se había anticipado en la entrada anterior.
+
+  **Walk-in con cliente y vehículo nuevos, sin salir de la pantalla.** Como `OrdenDeTrabajo.
+  idVehiculo` es `NOT NULL`, se extendió el mecanismo de `Response.Redirect` + query string que ya
+  conectaba `Vehiculos.aspx` ↔ `Clientes.aspx` (ver «Cross-page posting no funciona con
+  FriendlyUrls» más abajo) agregando un tercer origen `"orden"` en paralelo al `"vehiculo"`
+  existente — sin tocar esa lógica. Cualquier pantalla futura que necesite el mismo atajo de alta
+  en cascada sigue este patrón: un origen nuevo, hidden fields propios (prefijo distinto, acá
+  `hdnOr*`), nunca reescribir la rama existente.

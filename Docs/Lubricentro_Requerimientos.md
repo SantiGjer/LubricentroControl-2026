@@ -180,8 +180,6 @@ cátedra; es un agregado posterior justificado por una necesidad real de trazabi
 
 Detalles menores que se resuelven con una propuesta razonable, pendientes de validar con el dueño del negocio:
 
-- **Estados de Turno:** Solicitado, Confirmado, Completado, Cancelado.
-- **Estados de Orden de Trabajo:** Abierta, En proceso, Cerrada, Cancelada.
 - **Numeración de comprobantes** (venta y compra): correlativo interno automático por tipo de comprobante.
 - **Catálogo de servicios:** se asume una lista fija mantenida por Admin/Encargado (nombre, descripción, precio base), sin categorías adicionales por ahora.
 
@@ -217,10 +215,11 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
 - **Invariante:** `Insumo.stockActual` siempre es igual a la suma de `entrada - salida` de todos
   sus movimientos. Se mantiene desde el primer insumo: al dar de alta uno con stock inicial, se
   inserta con `stockActual = 0` y se registra un ajuste manual aparte por el valor cargado.
-- **Tipos de movimiento:** `Compra` (sube stock, futura Fase 4), `Orden` (baja stock, futura
-  Fase 3), `CancelacionOrden` (repone el stock no utilizado si se cancela una orden, futura
-  Fase 3), `AjusteManual` (alta con stock inicial, o corrección manual con motivo obligatorio —
-  disponible desde ya en la capa BIZ de Insumos).
+- **Tipos de movimiento:** `Compra` (sube stock, Fase 4, todavía sin implementar), `Orden` (baja
+  stock, implementado en Fase 3 — `DetalleOrdenInsumoDAL.Agregar`), `CancelacionOrden` (repone el
+  stock no utilizado si se cancela una orden, implementado en Fase 3 —
+  `OrdenDeTrabajoDAL.Cancelar`), `AjusteManual` (alta con stock inicial, o corrección manual con
+  motivo obligatorio, implementado en Fase 2).
 - **`idUsuario` es obligatorio** en `MovimientoStock` (a diferencia de `CuentaCorrienteCliente`/
   `Proveedor`, que no lo tienen): se pidió explícitamente poder saber quién hizo cada ajuste
   manual.
@@ -228,6 +227,31 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
   el stock quede negativo.
 - **Unidad de medida** (`Insumo.unidadMedida`): `DropDownList` con lista fija — Unidad, Litro,
   Kilogramo, Caja, Metro.
+
+### 9.4 Turnos y Órdenes de trabajo (confirmado 2026-09-11/2026-09-14)
+
+- **Estados de Turno:** `Solicitado` (default al crear) → `Confirmado` → `Completado` /
+  `Cancelado`, fijados por `CHECK`. Sin reglas de transición forzadas — el estado es un campo
+  editable más, no hay una máquina de estados que impida, por ejemplo, volver de `Completado` a
+  `Solicitado`.
+- **Estados de Orden de Trabajo:** `Abierta` (default al crear) → `En proceso` → `Cerrada` /
+  `Cancelada`, fijados por `CHECK`. A diferencia de Turno, acá `Cancelada` **sí** tiene un efecto
+  colateral (repone el stock de los insumos cargados) y por eso no se ofrece en el mismo
+  `DropDownList` que los otros tres estados: se llega solo por una acción "Cancelar orden"
+  separada, con confirmación.
+- **Cliente/vehículo (y en Orden, turno) quedan fijos una vez creada la fila** — no se pueden
+  reasignar editando. En Turno el vehículo es opcional; en Orden el vehículo es obligatorio
+  (`idVehiculo NOT NULL`) y el turno es opcional (walk-in vs. turno previo, §6.4).
+- **"Nuevo cliente" desde Turnos: fuera de alcance.** El alta de cliente en el momento es
+  específicamente del flujo walk-in de Órdenes (§6.4); si un turno es para un cliente que no
+  existe todavía, se lo da de alta primero en `Clientes.aspx`.
+- **Walk-in de Órdenes con cliente y vehículo nuevos:** al ser `idVehiculo NOT NULL`, un walk-in
+  genuinamente nuevo permite crear cliente **y** vehículo sin salir de la pantalla de Órdenes
+  (atajos "Nuevo cliente"/"Nuevo vehículo" que redirigen a `Clientes.aspx`/`Vehiculos.aspx` y
+  vuelven con los datos de la orden en curso preservados).
+- **Sin "deshacer" una línea de insumo individual** en una Orden: si hace falta corregir una
+  cantidad cargada mal, se cancela la orden completa (que repone todo el stock) y se rehace. Las
+  líneas de servicio sí se pueden quitar libremente (no tienen efecto sobre stock).
 
 ---
 
