@@ -24,6 +24,17 @@
             OnClick="btnVolverAVehiculos_Click" CausesValidation="false" />
     </asp:Panel>
 
+    <asp:HiddenField ID="hdnVieneDeOrden" runat="server" />
+    <asp:HiddenField ID="hdnOrKilometraje" runat="server" />
+    <asp:HiddenField ID="hdnOrObservaciones" runat="server" />
+    <asp:HiddenField ID="hdnOrIdTurno" runat="server" />
+
+    <asp:Panel ID="pnlVieneDeOrden" runat="server" Visible="false" role="alert" CssClass="alert alert-info">
+        Estás creando un cliente para una orden de trabajo nueva.
+        <asp:Button ID="btnVolverAOrdenes" runat="server" Text="Volver a Órdenes sin crear"
+            OnClick="btnVolverAOrdenes_Click" CausesValidation="false" />
+    </asp:Panel>
+
     <div class="row">
         <div class="col-7">
             <div class="row border border-1">

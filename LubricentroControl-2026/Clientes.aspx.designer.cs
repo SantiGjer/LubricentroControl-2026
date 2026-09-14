@@ -47,6 +47,24 @@ namespace LubricentroControl_2026
         /// <summary>Control btnVolverAVehiculos.</summary>
         protected global::System.Web.UI.WebControls.Button btnVolverAVehiculos;
 
+        /// <summary>Control hdnVieneDeOrden.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnVieneDeOrden;
+
+        /// <summary>Control hdnOrKilometraje.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnOrKilometraje;
+
+        /// <summary>Control hdnOrObservaciones.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnOrObservaciones;
+
+        /// <summary>Control hdnOrIdTurno.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnOrIdTurno;
+
+        /// <summary>Control pnlVieneDeOrden.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlVieneDeOrden;
+
+        /// <summary>Control btnVolverAOrdenes.</summary>
+        protected global::System.Web.UI.WebControls.Button btnVolverAOrdenes;
+
         /// <summary>Control txtBuscar.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtBuscar;
 

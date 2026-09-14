@@ -21,6 +21,23 @@ namespace LubricentroControl_2026
 
             if (Request.QueryString["idClienteNuevo"] != null)
                 RehidratarDesdeRetorno();
+
+            // Se llegó con "Nuevo vehículo" desde OrdenesDeTrabajo.aspx (origen "orden"):
+            // guardamos los datos sueltos de la orden en curso para devolverlos intactos, y
+            // preseleccionamos el dueño si ya estaba elegido en Órdenes (sigue siendo editable
+            // acá — si se cambia, se vuelve con el dueño real del vehículo creado, no con este).
+            if (Request.QueryString["origen"] == "orden")
+            {
+                hdnVieneDeOrden.Value = bool.TrueString;
+                hdnOrKilometraje.Value = Request.QueryString["kilometraje"];
+                hdnOrObservaciones.Value = Request.QueryString["observaciones"];
+                hdnOrIdTurno.Value = Request.QueryString["idTurno"];
+                pnlVieneDeOrden.Visible = true;
+
+                var idClienteActual = LeerIdOculto(Request.QueryString["idClienteActual"]);
+                if (idClienteActual > 0)
+                    SeleccionarCliente(idClienteActual);
+            }
         }
 
         // Vuelta de "Nuevo cliente" en Clientes.aspx (ver Clientes.aspx.cs, ArmarUrlVuelta):
@@ -64,6 +81,27 @@ namespace LubricentroControl_2026
                 + "&tipoCombustible=" + Server.UrlEncode(ddlTipoCombustible.SelectedValue);
 
             Response.Redirect(url);
+        }
+
+        protected void btnVolverAOrdenes_Click(object sender, EventArgs e)
+        {
+            Response.Redirect(ArmarUrlVueltaOrden(0, 0));
+        }
+
+        // Arma la URL de vuelta a OrdenesDeTrabajo.aspx con los datos de la orden en curso más
+        // el cliente/vehículo a seleccionar (los recién creados, o ninguno si se vuelve sin
+        // crear). Usa el dueño real del vehículo creado, no el que vino en la query string por
+        // si se cambió el desplegable de dueño ya estando en esta pantalla.
+        private string ArmarUrlVueltaOrden(int idCliente, int idVehiculo)
+        {
+            var url = "~/OrdenesDeTrabajo"
+                + "?kilometraje=" + Server.UrlEncode(hdnOrKilometraje.Value)
+                + "&observaciones=" + Server.UrlEncode(hdnOrObservaciones.Value)
+                + "&idTurno=" + Server.UrlEncode(hdnOrIdTurno.Value);
+
+            return idVehiculo > 0
+                ? url + "&idCliente=" + idCliente + "&idVehiculoNuevo=" + idVehiculo
+                : url;
         }
 
         private void CargarTiposCombustible()
@@ -160,13 +198,22 @@ namespace LubricentroControl_2026
                 Activo = ActivoDesdeHidden()
             };
 
-            var resultado = vehiculo.IdVehiculo == 0
+            var esAlta = vehiculo.IdVehiculo == 0;
+            var resultado = esAlta
                 ? VehiculoDAL.Crear(vehiculo)
                 : VehiculoDAL.Actualizar(vehiculo);
 
             if (!resultado.Exito)
             {
                 MostrarMensaje(resultado.Mensaje, false);
+                return;
+            }
+
+            // Se creó (no editó) un vehículo durante una visita desde "Nuevo vehículo" en
+            // OrdenesDeTrabajo.aspx: se vuelve directo con este vehículo ya seleccionado.
+            if (esAlta && hdnVieneDeOrden.Value == bool.TrueString)
+            {
+                Response.Redirect(ArmarUrlVueltaOrden(vehiculo.IdCliente, vehiculo.IdVehiculo));
                 return;
             }
 

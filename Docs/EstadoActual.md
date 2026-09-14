@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 7 de septiembre de 2026 (noche, cont.)
+**Última actualización:** 14 de septiembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -29,13 +29,13 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1 y Fase 2 completas.** Sigue Fase 3 (Turnos y Órdenes de trabajo).
+**Fase 1 y Fase 2 completas. Fase 3 completa:** Turnos y Órdenes de trabajo, las dos hechas.
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
 | 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
-| 3 | Turnos y Órdenes de trabajo | ⬜ No empezada |
+| 3 | Turnos y Órdenes de trabajo | ✅ Completa |
 | 4 | Compras, Ventas, Pagos, Cuentas corrientes | ⬜ No empezada |
 | 5 | Reportes | ⬜ No empezada |
 | 6 | Integración, pruebas y pulido | ⬜ No empezada |
@@ -77,16 +77,160 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 - **ABM de Servicios**: alta/baja lógica/edición, búsqueda por nombre. El más simple de los cinco
   (nombre, descripción, precio base) — mismo patrón que Proveedores. Modo solo-consulta para
   Empleado.
+- **Turnos** (primera pantalla de Fase 3): alta/edición, sin baja lógica (no aplica — `Turno` no
+  tiene columna `activo`; "cancelar" es simplemente llevar el campo `estado` a `Cancelado` desde
+  el mismo formulario). Selector de cliente con el mismo buscador desplegable de
+  Clientes/Vehículos, **sin** el atajo "Nuevo cliente" (decisión de alcance: no está en el
+  requerimiento de Turnos, sí lo está en el walk-in de Órdenes). Selector de vehículo opcional,
+  poblado con los vehículos activos del cliente elegido. Búsqueda por nombre/apellido/DNI del
+  cliente más filtro por estado. Acceso completo para los 3 roles (Admin/Encargado/Empleado),
+  sin modo solo-consulta.
+- **Órdenes de trabajo** (segunda y última pantalla de Fase 3, cierra la fase): alta walk-in o
+  con turno previo, cliente/vehículo/turno fijos una vez creada la orden (se ven como texto de
+  solo lectura al editar, no como desplegables). Franja de detalle (aparece solo editando una
+  orden ya creada) con dos columnas Servicios/Insumos, cada una con su mini-alta + grilla —
+  agregar un insumo descuenta stock automáticamente (kardex con `MovimientoStock.TipoOrden`) y
+  agregar un servicio no toca stock. "Cancelar orden" (botón aparte de "Guardar", con confirmación)
+  repone el stock de todos los insumos cargados (`TipoCancelacionOrden`) y es irreversible. Sin
+  "Quitar" en líneas de insumo (si hay que corregir, se cancela la orden entera); sí en líneas de
+  servicio (`DELETE` simple, sin efecto colateral). El walk-in con cliente **y vehículo** nuevos
+  funciona de punta a punta: "Nuevo cliente"/"Nuevo vehículo" desde Órdenes reutilizan y extienden
+  el mecanismo de `Response.Redirect` + query string que ya conectaba Vehículos↔Clientes (un
+  tercer origen `"orden"` agregado en paralelo al `"vehiculo"` existente, sin tocarlo). Acceso
+  completo para los 3 roles, sin modo solo-consulta.
 
 ### Qué NO funciona todavía
 
-Quedan 10 pantallas de negocio como **cascarones** (Turnos, Órdenes, Compras, Ventas, Pagos, las
-dos cuentas corrientes y los tres reportes): existen, están enlazadas desde el menú y respetan
-los permisos por rol, pero no tienen funcionalidad.
+Quedan 8 pantallas de negocio como **cascarones** (Compras, Ventas, Pagos, las dos cuentas
+corrientes y los tres reportes): existen, están enlazadas desde el menú y respetan los permisos
+por rol, pero no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-14 — Órdenes de trabajo, cierra Fase 3
+
+Segunda y última pantalla de Fase 3, sobre 3 entidades nuevas (`OrdenDeTrabajo`,
+`DetalleOrdenServicio`, `DetalleOrdenInsumo`, cada una con su Modelo + DAL) más un método nuevo en
+`TurnoDAL` (`ListarPorCliente`, filtrado a `Solicitado`/`Confirmado`, para el selector de turno).
+La pantalla más compleja hasta ahora: primera con líneas de detalle, primera que mueve stock
+automáticamente desde una pantalla de negocio (no solo desde el ajuste manual de Insumos), y
+primera que necesita un alta en cascada (cliente → vehículo → orden) para el walk-in.
+
+**Decisión de diseño: cliente/vehículo/turno quedan fijos una vez creada la orden.** Se eligen al
+crear, no se pueden reasignar después — evita todo el problema de "¿qué pasa si el desplegable de
+vehículo ya no tiene la opción que tenía la orden?" (el mismo tipo de dolor de cabeza que las
+sesiones de Turnos ya habían dejado documentado). Consecuencia directa: editando una orden ya
+creada, cliente/vehículo/turno se muestran como texto de solo lectura (`litVehiculoInfo`/
+`litTurnoInfo`), no como los desplegables interactivos que sí aparecen en "Nueva orden".
+
+**Mismo bug de Turnos, en un control distinto — event validation en `ddlEstado`.** El
+`DropDownList` de estado vive dentro de un `Panel` (`pnlEstado`) que arranca `Visible="false"` en
+el markup (el estado no aplica al alta, la orden nace `Abierta`); si el panel nunca pasa a
+visible en un request, `ddlEstado` no se renderiza y ASP.NET no registra ningún `<option>` suyo
+para la validación de eventos — postear cualquier valor para ese control (aunque sea uno que
+normalmente sería válido) tira el mismo `HttpUnhandledException: Argumento de postback no válido`
+que ya había aparecido con `ddlVehiculo` en Turnos. No es un bug del código real (ningún browser
+real envía el valor de un control que nunca estuvo en el DOM), pero sí una trampa a tener presente
+para probar con requests HTTP crudos: cualquier control dentro de un `Panel`/sección condicional
+hay que omitirlo del POST si esa sección no estuvo visible en el render que se está simulando.
+
+**Atomicidad de "agregar línea de insumo": batch propio en `DetalleOrdenInsumoDAL.Agregar`, no
+reutiliza `MovimientoStockDAL.Registrar` tal cual.** Agregar una línea de insumo son tres
+escrituras que tienen que ir juntas (`UPDATE Insumo.stockActual`, `INSERT MovimientoStock`,
+`INSERT DetalleOrdenInsumo`), y `Registrar` solo atomiza las primeras dos. Se replicó el mismo
+patrón `SET XACT_ABORT ON; BEGIN TRANSACTION; ...; COMMIT;` directo en `DetalleOrdenInsumoDAL`,
+duplicando ~15 líneas de SQL en vez de acoplar `Data/MovimientoStockDAL` a
+`Data/DetalleOrdenInsumoDAL`. La reposición de stock al **cancelar** una orden no tiene este
+problema (no inserta detalle nuevo, solo revierte los movimientos existentes) y sí llama
+directo a `MovimientoStockDAL.Registrar`, una vez por cada línea de insumo cargada.
+
+**Walk-in con cliente y vehículo nuevos, de punta a punta.** Como `OrdenDeTrabajo.idVehiculo` es
+`NOT NULL`, un walk-in genuinamente nuevo necesita poder crear cliente **y** vehículo sin salir de
+la pantalla — más allá de lo que hizo falta en Turnos. Se extendió el mecanismo ya existente entre
+`Vehiculos.aspx` y `Clientes.aspx` (`Response.Redirect` + query string, `CLAUDE.md` → "Cross-page
+posting no funciona con FriendlyUrls") agregando un tercer origen `"orden"` en paralelo al
+`"vehiculo"` que ya tenían esas dos pantallas — **sin modificar la lógica de ese flujo
+existente**, solo sumando ramas nuevas (`else if (origen == "orden")`) con sus propios hidden
+fields (`hdnVieneDeOrden`, `hdnOrKilometraje`, `hdnOrObservaciones`, `hdnOrIdTurno`) y su propio
+panel de "volver sin crear". Probado el circuito completo: Órdenes → Clientes (crear cliente) →
+Órdenes (cliente preseleccionado, `ddlVehiculo` vacío) → Vehículos (crear vehículo, dueño
+preseleccionado) → Órdenes (cliente y vehículo ya seleccionados) → Guardar. También se probó
+explícitamente que el flujo `"vehiculo"` original (Vehículos → Clientes → Vehículos) sigue
+funcionando exactamente igual que antes de este cambio.
+
+**Verificación:** rebuild limpio + `aspnet_compiler` sin errores. Contra IIS Express + LocalDB con
+requests HTTP armados a mano (mismo método que la sesión de Turnos — sin navegador disponible en
+el entorno; lanzado con la herramienta PowerShell en background y `dangerouslyDisableSandbox`,
+como quedó anotado en la sesión anterior): alta walk-in con cliente/vehículo ya existentes, alta
+walk-in con cliente y vehículo nuevos (circuito completo de 5 saltos), agregar línea de servicio y
+de insumo (confirmado el descuento de stock y la fila de kardex con `idOrden` seteado), rechazo de
+insumo con stock insuficiente (sin fila huérfana en `DetalleOrdenInsumo` ni en `MovimientoStock`),
+quitar una línea de servicio, transición `Abierta` → `En proceso` con cambio de
+kilometraje/observaciones, cancelar una orden con insumos cargados (stock repuesto, kardex con
+`TipoCancelacionOrden`), UI de estado terminal (sin `ddlEstado`/botones de edición, historial de
+detalle igual visible), acceso completo confirmado como Empleado, y la regresión del flujo
+`"vehiculo"` existente. Los datos de prueba (órdenes, clientes y vehículos creados durante la
+sesión) se borraron al cerrar, dejando la base como estaba antes de empezar.
+
+### 2026-09-11 — Arranca Fase 3: pantalla de Turnos
+
+Primera pantalla de Fase 3, sobre `BIZ/Modelo/Turno.cs` y `BIZ/Data/TurnoDAL.cs` nuevos (patrón
+`Vehiculo`/`VehiculoDAL`). Se confirmó con el usuario seguir el orden del Roadmap (Turnos y
+Órdenes antes que Compras/Cuentas corrientes, que dependen de que existan Órdenes cerradas) y,
+dentro de Fase 3, arrancar por Turnos por ser más simple.
+
+**Bug real encontrado en la propia sesión, no solo en teoría — `ddlVehiculo` sin ninguna opción
+en el alta:** el `DropDownList` de vehículo del formulario se poblaba únicamente al elegir un
+cliente (`SeleccionarCliente` → `CargarVehiculosDelCliente`), pero `Page_Load` nunca lo inicializaba
+en el primer `GET` de la pantalla (`Nuevo turno`, sin cliente todavía). Con el control sin ningún
+`<option>` renderizado, ASP.NET rechaza **cualquier** valor posteado para ese control — incluso
+`""` — con `HttpUnhandledException: Argumento de postback no válido` (la validación de eventos
+compara contra la lista de opciones que el servidor efectivamente renderizó). Se detectó recién
+al probar el alta contra IIS Express con requests HTTP crudos (sin navegador en la sesión): la
+UI real nunca dispara esto porque el buscador de cliente siempre repuebla el combo antes de que
+el usuario pueda tocar "Guardar", pero un test de alta "en frío" (sin pasar por el buscador) lo
+expone al toque. Se arregló con un método único `LimpiarVehiculos()` (dejar solo el placeholder
+"(sin vehículo asociado)") llamado tanto en `Page_Load` como en `LimpiarFormulario` y al empezar
+`CargarVehiculosDelCliente` — moraleja para las pantallas de Fase 3/4 que vengan: todo
+`DropDownList` poblado dinámicamente necesita alguna carga base en el primer `Page_Load`, no solo
+en el flujo que lo repuebla más tarde.
+
+**Decisión de alcance:** a diferencia de "Nuevo cliente" desde Vehículos, Turnos **no** tiene ese
+atajo hacia `Clientes.aspx` — no está en el alcance de Requerimientos §6.3 (es específicamente el
+flujo walk-in de Órdenes, §6.4). Si el cliente no existe todavía, se da de alta primero en
+`Clientes.aspx` y después se carga el turno.
+
+**Validación de pertenencia vehículo↔cliente:** `TurnoDAL` valida que, si se envía un
+`idVehiculo`, ese vehículo exista, esté activo y sea del cliente seleccionado — no alcanza con que
+el combo del formulario ya filtre por cliente, porque una request armada a mano podría mandar
+cualquier combinación. Probado explícitamente forzando un request con cliente A y vehículo de
+cliente B: rechazado con "El vehículo seleccionado no pertenece a ese cliente.", sin tocar la base.
+
+**`TurnoDAL.Crear` ignora el estado que venga del formulario** y fuerza `Solicitado` siempre — el
+`ddlEstado` del alta es cosmético (arranca en `Solicitado` por ser el primer item), la fuente de
+verdad es el DAL, no lo que el cliente HTTP mande.
+
+**Nota de infraestructura para la próxima sesión que necesite IIS Express standalone:** lanzarlo
+con el `Bash` tool (con o sin `dangerouslyDisableSandbox`) deja el proceso zombie — sin sockets
+reales — apenas termina la llamada a la herramienta, y una segunda corrida en el mismo puerto falla
+con "no se puede crear un archivo que ya existe" (reserva de URL en `http.sys` que quedó
+huérfana). Lo que sí funcionó: lanzarlo con la herramienta **PowerShell** en background
+(`dangerouslyDisableSandbox: true`) — ahí el proceso sigue vivo y sirviendo requests después de
+que la llamada a la herramienta "termina". Si hace falta reintentar, matar antes cualquier
+`iisexpress` colgado (`Get-Process iisexpress | Stop-Process -Force`) o cambiar de puerto.
+
+**Verificación:** rebuild limpio (`MSBuild`) + `aspnet_compiler` sin errores. Contra IIS Express +
+LocalDB, con requests HTTP armados a mano (extrayendo `__VIEWSTATE`/`__EVENTVALIDATION` de cada
+respuesta, sin navegador disponible en el entorno — el mismo método que sesiones anteriores):
+alta de turno sin vehículo, edición asociando un vehículo y cambiando fecha/hora/estado a
+`Confirmado`, búsqueda por DNI del cliente, búsqueda sin resultados, filtro por estado sin
+resultados, rechazo de fecha/hora/cliente vacíos (sin insertar fila), rechazo de vehículo de otro
+cliente (forzado a mano), y alta exitosa logueado como `empleado@lubricentro.com` (acceso
+completo, sin panel de solo-lectura) — confirma la matriz de permisos §5 para esta pantalla. Los
+datos de prueba (turnos y un cliente extra creado para el test de pertenencia) se borraron al
+cerrar la sesión.
 
 ### 2026-09-07 (noche, cont. 2) — Refinamiento de UI en Insumos, Fase 2 cerrada
 
@@ -543,11 +687,14 @@ Los `.cs` nunca estuvieron afectados: el compilador de C# asume UTF-8 cuando no 
 Servicios) están hechas, verificadas contra IIS Express y con su modo solo-consulta para
 Empleado donde corresponde.
 
-**Sigue Fase 3 — Turnos y Órdenes de trabajo** según el Roadmap del proyecto (`CLAUDE.md` /
-`Docs/Lubricentro_Requerimientos.md`). Nota: lo que el usuario mencionó como "compras, turnos y
-cuentas corrientes" en realidad cruza dos fases del roadmap original — Turnos es Fase 3, pero
-Compras y Cuentas Corrientes son Fase 4 (junto con Ventas y Pagos). Falta acordar con el usuario
-si se respeta ese orden o se reprioriza.
+**Fase 3 terminada.** Turnos y Órdenes de trabajo, las dos pantallas, hechas y verificadas contra
+IIS Express.
+
+**Sigue Fase 4 — Compras, Ventas, Pagos, Cuentas corrientes**, según el Roadmap del proyecto
+(`CLAUDE.md` / `Docs/Lubricentro_Requerimientos.md`). Ahora sí hay Órdenes de trabajo reales para
+poder probar Ventas de punta a punta (la venta se genera automáticamente al cerrar una orden,
+§6.6) y Cuentas corrientes con movimientos reales. Falta decidir con el usuario con cuál de las
+cuatro pantallas de Fase 4 arrancar.
 
 ### Repaso de redacción, pendiente
 

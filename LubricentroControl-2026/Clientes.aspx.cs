@@ -35,11 +35,40 @@ namespace LubricentroControl_2026
 
                 pnlVieneDeVehiculo.Visible = true;
             }
+            // Se llegó con "Nuevo cliente" desde OrdenesDeTrabajo.aspx (origen "orden"): a
+            // diferencia del caso de Vehículos, acá todavía no existe ni cliente ni vehículo —
+            // solo se guardan los datos sueltos de la orden en curso para devolverlos intactos.
+            else if (Request.QueryString["origen"] == "orden")
+            {
+                hdnVieneDeOrden.Value = bool.TrueString;
+                hdnOrKilometraje.Value = Request.QueryString["kilometraje"];
+                hdnOrObservaciones.Value = Request.QueryString["observaciones"];
+                hdnOrIdTurno.Value = Request.QueryString["idTurno"];
+
+                pnlVieneDeOrden.Visible = true;
+            }
         }
 
         protected void btnVolverAVehiculos_Click(object sender, EventArgs e)
         {
             Response.Redirect(ArmarUrlVuelta(LeerIdOculto(hdnVhIdCliente.Value)));
+        }
+
+        protected void btnVolverAOrdenes_Click(object sender, EventArgs e)
+        {
+            Response.Redirect(ArmarUrlVueltaOrden(0));
+        }
+
+        // Arma la URL de vuelta a OrdenesDeTrabajo.aspx con los datos de la orden en curso más
+        // el cliente a seleccionar (el recién creado, o ninguno si se vuelve sin crear).
+        private string ArmarUrlVueltaOrden(int idClienteNuevo)
+        {
+            var url = "~/OrdenesDeTrabajo"
+                + "?kilometraje=" + Server.UrlEncode(hdnOrKilometraje.Value)
+                + "&observaciones=" + Server.UrlEncode(hdnOrObservaciones.Value)
+                + "&idTurno=" + Server.UrlEncode(hdnOrIdTurno.Value);
+
+            return idClienteNuevo > 0 ? url + "&idClienteNuevo=" + idClienteNuevo : url;
         }
 
         // Arma la URL de vuelta a Vehiculos.aspx con el vehículo que había quedado en curso
@@ -121,6 +150,13 @@ namespace LubricentroControl_2026
             if (esAlta && hdnVieneDeVehiculo.Value == bool.TrueString)
             {
                 Response.Redirect(ArmarUrlVuelta(cliente.IdCliente));
+                return;
+            }
+
+            // Ídem, pero viniendo de "Nuevo cliente" en OrdenesDeTrabajo.aspx.
+            if (esAlta && hdnVieneDeOrden.Value == bool.TrueString)
+            {
+                Response.Redirect(ArmarUrlVueltaOrden(cliente.IdCliente));
                 return;
             }
 
