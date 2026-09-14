@@ -8,27 +8,36 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1, Fase 2 y Fase 3 terminadas.** Andan el login, la recuperación de
-contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa `BIZ/Data` de punta a
-punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**, **Proveedores**,
-**Insumos** con kardex de stock, y **Servicios**), y las 2 pantallas de Fase 3 (**Turnos** y
-**Órdenes de trabajo**, esta última con descuento/reposición automática de stock). Las 21 tablas
-del diagrama original ya existen (`Database\01_Esquema.sql`), más `MovimientoStock` (kardex de
-stock, agregada en Fase 2 — ver §9.3 de los Requerimientos). **El resto de las pantallas de
-negocio (Compras, Ventas, Pagos, cuentas corrientes, reportes) siguen siendo cascarones vacíos**:
+**Estado real del código: Fase 1, Fase 2 y Fase 3 terminadas; Fase 4 arrancada (Compras hecha).**
+Andan el login, la recuperación de contraseña por mail, el ABM de usuarios, el menú dinámico por
+rol, la capa `BIZ/Data` de punta a punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**,
+**Vehículos**, **Proveedores**, **Insumos** con kardex de stock, y **Servicios**), las 2
+pantallas de Fase 3 (**Turnos** y **Órdenes de trabajo**, esta última con descuento/reposición
+automática de stock), y la primera de las 5 pantallas de Fase 4, **Compras** (alta con líneas
+armadas en memoria y guardadas todas juntas, suma stock automáticamente, condición de pago
+Contado/Cuenta corriente). Las 21 tablas del diagrama original ya existen
+(`Database\01_Esquema.sql`), más `MovimientoStock` (kardex de stock, agregada en Fase 2 — ver
+§9.3 de los Requerimientos) y dos columnas agregadas en Fase 4 (`ComprobanteCompra.medioPago`,
+`CuentaCorrienteCliente`/`Proveedor.idUsuario` — ver §9.5). **El resto de las pantallas de
+negocio (Ventas, Pagos, las dos cuentas corrientes, reportes) siguen siendo cascarones vacíos**:
 solo muestran su título y "Pendiente".
 
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
 - `Docs/Lubricentro_Requerimientos.md` — alcance, matriz de permisos por rol, las 21 entidades
   (+ `MovimientoStock`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
-  los supuestos/formatos ya confirmados en Fase 2/3 (DNI/CUIT/patente, diseño de
-  Clientes/Vehículos, kardex de stock, estados de Turno/Orden).
-- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue la Fase 4** (Compras, Ventas,
-  Pagos, Cuentas corrientes). Los ABM de Fase 2 y las pantallas de Fase 3 quedan como referencia
-  de patrón — Proveedores/Insumos/Servicios para el modo solo-consulta, Clientes/Vehículos para
-  el layout de dos columnas y el buscador desplegable, Turnos/Órdenes para pantallas con
-  cliente/vehículo fijo post-alta y (en Órdenes) franja de detalle con líneas.
+  los supuestos/formatos ya confirmados en Fase 2/3/4 (DNI/CUIT/patente, diseño de
+  Clientes/Vehículos, kardex de stock, estados de Turno/Orden, medio de pago de Compras).
+- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue Fase 4** (Compras hecha; faltan
+  Cuenta corriente de Proveedores, Ventas, Cuenta corriente de Clientes y Pagos, en ese orden —
+  ver `Docs/EstadoActual.md` §3 para el detalle y por qué ese orden). Los ABM de Fase 2 y las
+  pantallas de Fase 3 quedan como referencia de patrón — Proveedores/Insumos/Servicios para el
+  modo solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador
+  desplegable, Turnos/Órdenes para pantallas con cliente/vehículo fijo post-alta y (en Órdenes)
+  franja de detalle con líneas. Compras suma un patrón nuevo: líneas armadas en memoria
+  (`ViewState`) y guardadas todas juntas en un solo batch atómico, en vez de la franja progresiva
+  de Órdenes — usarlo cuando la entidad se carga completa de una vez (como una factura), no
+  progresivamente.
 
 ## Restricciones del stack (no negociables)
 
@@ -188,6 +197,11 @@ usa un patrón distinto para su `tipoMovimiento`: sin `CHECK` sobre los valores 
 que `CuentaCorrienteCliente`/`Proveedor`), pero con `CK_MovStock_origen`, que ata cada tipo a qué
 FK debe estar poblada (mismo criterio que `CK_Pago_titular`) — entre los dos, cualquier valor
 fuera de los 4 esperados ya queda rechazado sin necesitar un CHECK aparte.
+
+Fase 4 sumó dos columnas que tampoco estaban en el diagrama original (ver Requerimientos §9.5):
+`ComprobanteCompra.medioPago` (nullable, atada a `condicionPago = Contado` por
+`CK_Compra_medioPago_condicion`, mismo criterio que `CK_Pago_titular`/`CK_MovStock_origen`) y
+`CuentaCorrienteCliente`/`Proveedor.idUsuario` (nullable, poblado solo en movimientos `Ajuste`).
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`). Para pasar al
 SQL Server del lubricentro por VPN Radmin alcanza con cambiar la cadena `LubricentroDB` en
@@ -400,3 +414,27 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   existente — sin tocar esa lógica. Cualquier pantalla futura que necesite el mismo atajo de alta
   en cascada sigue este patrón: un origen nuevo, hidden fields propios (prefijo distinto, acá
   `hdnOr*`), nunca reescribir la rama existente.
+
+- **Compras (Fase 4, sesión 2026-09-14).** Primera pantalla de Fase 4, sobre
+  `ComprobanteCompra`/`DetalleCompra`/`CuentaCorrienteProveedor` (con sus DAL). Dos decisiones de
+  producto confirmadas con el usuario antes de diseñar (detalle en `Docs/EstadoActual.md`): las
+  cuentas corrientes van a llevar ajuste manual (todavía sin construir), y una compra "Contado"
+  registra su medio de pago en la propia compra sin pasar por Pagos/Cuenta corriente — esto
+  último exigió agregar `ComprobanteCompra.medioPago` al esquema (ver «Base de datos» arriba).
+
+  **Patrón nuevo, distinto al de Órdenes: líneas en memoria (`ViewState`), no franja
+  progresiva.** Una compra es la transcripción de una factura que ya llega completa (a diferencia
+  de una orden de trabajo, donde el trabajo se descubre progresivamente) — tiene más sentido
+  armar todas las líneas en pantalla y persistir todo junto con un solo "Guardar". La clase de
+  Modelo que vive en `ViewState` mientras tanto (`DetalleCompra`) se marcó `[Serializable]`:
+  primera vez que hace falta en el proyecto. Usar este patrón (no el de Órdenes) para cualquier
+  pantalla futura donde la entidad llega completa de una sola vez.
+
+  **Tercera aparición del bug de `DropDownList` sin `<option>`s — esta vez, falso positivo en las
+  pruebas, no en la app.** Mismo síntoma que `ddlVehiculo`/`ddlEstado` (ver entrada de Turnos/
+  Órdenes arriba), pero con causa distinta: acá `ddlMedioPago` sí tenía opciones cargadas — el
+  problema fue que la prueba con `curl` posteó su valor mientras el `Panel` que lo contiene
+  estaba oculto (`condicionPago = "Cuenta corriente"`), algo que un browser real nunca haría
+  porque ese campo ni siquiera existe en el DOM en ese momento. Distinción a tener presente: el
+  bug real es "el control nunca tuvo opciones ni siquiera cuando se necesitaba"; esto era "se
+  posteó un campo que no correspondía a la vista actual" — un error de la prueba, no del código.

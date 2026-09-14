@@ -276,12 +276,20 @@ CREATE TABLE ComprobanteCompra (
     fecha             DATETIME          NOT NULL CONSTRAINT DF_Compra_fecha DEFAULT (GETDATE()),
     /* Contado | Cuenta corriente */
     condicionPago     NVARCHAR(30)      NOT NULL CONSTRAINT DF_Compra_condicionPago DEFAULT ('Contado'),
+    /* Solo poblado si condicionPago = Contado (CK_Compra_medioPago_condicion): una compra a
+       cuenta corriente no tiene medio de pago porque todavía no se pagó nada. Agregada en
+       Fase 4 — no estaba en el diagrama original, ver Requerimientos §9.5. */
+    medioPago         NVARCHAR(30)      NULL,
     subtotal          DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Compra_subtotal DEFAULT (0),
     impuestos         DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Compra_impuestos DEFAULT (0),
     total             DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Compra_total DEFAULT (0),
     saldoPendiente    DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Compra_saldo DEFAULT (0),
     CONSTRAINT PK_ComprobanteCompra PRIMARY KEY (idCompra),
-    CONSTRAINT FK_Compra_Proveedor FOREIGN KEY (idProveedor) REFERENCES Proveedor(idProveedor)
+    CONSTRAINT FK_Compra_Proveedor FOREIGN KEY (idProveedor) REFERENCES Proveedor(idProveedor),
+    CONSTRAINT CK_Compra_medioPago_dominio CHECK (medioPago IN ('Efectivo','Transferencia','Tarjeta') OR medioPago IS NULL),
+    CONSTRAINT CK_Compra_medioPago_condicion CHECK (
+        (condicionPago = 'Contado' AND medioPago IS NOT NULL) OR
+        (condicionPago = 'Cuenta corriente' AND medioPago IS NULL))
 );
 GO
 
@@ -379,10 +387,15 @@ CREATE TABLE CuentaCorrienteCliente (
     haber          DECIMAL(12,2)     NOT NULL CONSTRAINT DF_CCCli_haber DEFAULT (0),
     saldo          DECIMAL(12,2)     NOT NULL,
     descripcion    NVARCHAR(300)     NULL,
+    /* Nullable a propósito: los movimientos automáticos de Venta/Pago ya son trazables por otro
+       lado (Pago.idUsuario, o el usuario que cerró la orden) — solo Ajuste lo puebla. Agregada
+       en Fase 4 junto con el ajuste manual, mismo criterio que MovimientoStock.idUsuario. */
+    idUsuario      INT               NULL,
     CONSTRAINT PK_CuentaCorrienteCliente PRIMARY KEY (idMovimiento),
     CONSTRAINT FK_CCCli_Cliente FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
     CONSTRAINT FK_CCCli_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
-    CONSTRAINT FK_CCCli_Pago FOREIGN KEY (idPago) REFERENCES Pago(idPago)
+    CONSTRAINT FK_CCCli_Pago FOREIGN KEY (idPago) REFERENCES Pago(idPago),
+    CONSTRAINT FK_CCCli_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
 );
 GO
 
@@ -398,10 +411,13 @@ CREATE TABLE CuentaCorrienteProveedor (
     haber          DECIMAL(12,2)     NOT NULL CONSTRAINT DF_CCProv_haber DEFAULT (0),
     saldo          DECIMAL(12,2)     NOT NULL,
     descripcion    NVARCHAR(300)     NULL,
+    /* Ídem CuentaCorrienteCliente.idUsuario: nullable, solo poblado en los ajustes manuales. */
+    idUsuario      INT               NULL,
     CONSTRAINT PK_CuentaCorrienteProveedor PRIMARY KEY (idMovimiento),
     CONSTRAINT FK_CCProv_Proveedor FOREIGN KEY (idProveedor) REFERENCES Proveedor(idProveedor),
     CONSTRAINT FK_CCProv_Compra FOREIGN KEY (idCompra) REFERENCES ComprobanteCompra(idCompra),
-    CONSTRAINT FK_CCProv_Pago FOREIGN KEY (idPago) REFERENCES Pago(idPago)
+    CONSTRAINT FK_CCProv_Pago FOREIGN KEY (idPago) REFERENCES Pago(idPago),
+    CONSTRAINT FK_CCProv_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
 );
 GO
 

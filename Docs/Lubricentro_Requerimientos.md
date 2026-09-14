@@ -180,7 +180,6 @@ cátedra; es un agregado posterior justificado por una necesidad real de trazabi
 
 Detalles menores que se resuelven con una propuesta razonable, pendientes de validar con el dueño del negocio:
 
-- **Numeración de comprobantes** (venta y compra): correlativo interno automático por tipo de comprobante.
 - **Catálogo de servicios:** se asume una lista fija mantenida por Admin/Encargado (nombre, descripción, precio base), sin categorías adicionales por ahora.
 
 ### 9.1 Formato de DNI, CUIT y patente (confirmado 2026-09-06)
@@ -252,6 +251,25 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
 - **Sin "deshacer" una línea de insumo individual** en una Orden: si hace falta corregir una
   cantidad cargada mal, se cancela la orden completa (que repone todo el stock) y se rehace. Las
   líneas de servicio sí se pueden quitar libremente (no tienen efecto sobre stock).
+
+### 9.5 Compras — condición de pago y medio de pago (confirmado 2026-09-14)
+
+- **Una compra "Contado" no genera ninguna fila en `Pago` ni en `CuentaCorrienteProveedor`**
+  (`saldoPendiente = 0` desde el alta) — se asume pagada por fuera del circuito de cobranzas del
+  sistema. **Pero el medio de pago usado sí queda registrado**, en una columna nueva
+  `ComprobanteCompra.medioPago` (no estaba en el diagrama original) — decisión explícita del
+  dueño del negocio, que quiso que quedara trazado igual que se traza el insumo que baja stock.
+- **Una compra "Cuenta corriente" no tiene medio de pago** (`medioPago = NULL`): todavía no se
+  pagó nada, así que no hay medio de pago que registrar — recién se sabrá cuando se cargue el
+  `Pago` que la cancele (total o parcialmente).
+- **Ajuste manual de cuenta corriente:** confirmado que sí se va a construir (motivo + monto con
+  signo, mismo patrón que el ajuste de stock de Insumos), aunque el requerimiento §6.8 no lo pide
+  explícitamente — el esquema ya reservaba un tipo `Ajuste` para esto. Para trazar quién hizo el
+  ajuste se agregó `CuentaCorrienteCliente`/`Proveedor.idUsuario` (nullable, poblado solo en
+  movimientos `Ajuste` — los automáticos de Venta/Compra/Pago no lo necesitan).
+- **Numeración de comprobantes** (pendiente en §9 desde el documento original): correlativo
+  interno derivado del propio `IDENTITY` de la tabla, con prefijo por tipo — `C-000001`,
+  `C-000002`, ... para compras; `V-000001`, ... para ventas. Sin tabla de secuencia aparte.
 
 ---
 

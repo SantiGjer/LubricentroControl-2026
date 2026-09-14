@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 14 de septiembre de 2026
+**Última actualización:** 14 de septiembre de 2026 (noche)
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -29,14 +29,15 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1 y Fase 2 completas. Fase 3 completa:** Turnos y Órdenes de trabajo, las dos hechas.
+**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras hecha, siguen Cuenta corriente de
+Proveedores, Ventas, Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de Fase 4).
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
 | 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
-| 4 | Compras, Ventas, Pagos, Cuentas corrientes | ⬜ No empezada |
+| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 Compras hecha, 4 pantallas pendientes |
 | 5 | Reportes | ⬜ No empezada |
 | 6 | Integración, pruebas y pulido | ⬜ No empezada |
 
@@ -98,16 +99,100 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
   el mecanismo de `Response.Redirect` + query string que ya conectaba Vehículos↔Clientes (un
   tercer origen `"orden"` agregado en paralelo al `"vehiculo"` existente, sin tocarlo). Acceso
   completo para los 3 roles, sin modo solo-consulta.
+- **Compras** (primera pantalla de Fase 4): sin franja de alta progresiva como Órdenes — una
+  compra es la transcripción de una factura que ya llega completa, así que las líneas se arman
+  **en memoria** (`ViewState`, primer uso de este patrón en el proyecto) y "Guardar compra" las
+  persiste todas juntas con la cabecera en un solo batch atómico. Suma stock automáticamente por
+  cada línea (kardex con `MovimientoStock.TipoCompra`). Condición de pago "Contado" registra el
+  medio de pago en la propia compra (columna nueva `ComprobanteCompra.medioPago`) y queda
+  `saldoPendiente = 0` sin tocar Pagos/Cuenta corriente; "Cuenta corriente" deja
+  `saldoPendiente = total` y genera el movimiento en `CuentaCorrienteProveedor`. Numeración
+  correlativa automática (`C-000001`, ...) derivada del propio `IDENTITY`. Una compra ya guardada
+  no se edita — se ve de solo lectura. Modo solo-consulta para Empleado, igual que Proveedores/
+  Insumos.
 
 ### Qué NO funciona todavía
 
-Quedan 8 pantallas de negocio como **cascarones** (Compras, Ventas, Pagos, las dos cuentas
-corrientes y los tres reportes): existen, están enlazadas desde el menú y respetan los permisos
-por rol, pero no tienen funcionalidad.
+Quedan 7 pantallas de negocio como **cascarones** (Ventas, Pagos, las dos cuentas corrientes y
+los tres reportes): existen, están enlazadas desde el menú y respetan los permisos por rol, pero
+no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-14 (noche) — Arranca Fase 4: pantalla de Compras
+
+Primera de las 5 pantallas de Fase 4 (el Roadmap agrupa 4, pero Cuentas corrientes son 2
+pantallas separadas — Cliente y Proveedor). Sobre 3 entidades nuevas (`ComprobanteCompra`,
+`DetalleCompra`, `CuentaCorrienteProveedor`, cada una con su Modelo + DAL).
+
+**Dos decisiones de alcance confirmadas con el usuario antes de diseñar:**
+
+1. **Las cuentas corrientes sí van a llevar ajuste manual** (motivo + monto con signo, calco del
+   patrón de Insumos.aspx) — el requerimiento §6.8 no lo pide explícitamente, pero el esquema ya
+   reservaba un tipo `Ajuste` para esto. Todavía no implementado (queda para la pantalla de
+   Cuenta corriente de Proveedores, próxima sesión).
+2. **Una compra "Contado" queda fuera del circuito de Pagos/Cuenta corriente, pero el medio de
+   pago usado se registra igual** en la propia compra — el usuario lo pidió explícitamente
+   ("que se guarde el registro del método de pago así como los insumos utilizados para bajar el
+   stock"). Esto obligó a **agregar una columna nueva al esquema** que no estaba en el diagrama
+   original: `ComprobanteCompra.medioPago` (`NULL`, con dos `CHECK` nuevos atando su dominio y su
+   obligatoriedad a `condicionPago = Contado` — mismo criterio que `CK_Pago_titular`).
+
+**Segundo cambio de esquema, más discreto:** `CuentaCorrienteCliente`/`Proveedor` no tenían
+`idUsuario` (a diferencia de `MovimientoStock`). Ahora que existe el ajuste manual (decisión 1),
+aplica el mismo criterio que ya se usó para `MovimientoStock.idUsuario`: se agregó `idUsuario
+INT NULL` a las dos tablas, poblado solo en movimientos de tipo `Ajuste` (los automáticos de
+Venta/Compra/Pago ya son trazables por otro lado).
+
+**Recrear el esquema local pisó datos reales del usuario** (cliente, vehículo, turno y su propio
+usuario `Santi@gmail.com`) — a diferencia de la sesión 2026-09-07 (que recreó el esquema sin
+avisar y borró datos de prueba cargados a mano), esta vez se le avisó explícitamente antes de
+hacerlo y el usuario confirmó seguir adelante.
+
+**Patrón nuevo: líneas en memoria vía `ViewState`, no franja progresiva.** A diferencia de
+Órdenes (donde cada línea se persiste al toque porque el trabajo se descubre progresivamente),
+una compra es la transcripción de una factura que ya llega completa — tiene más sentido armar
+todas las líneas en pantalla y guardar todo junto. `DetalleCompra` se marcó `[Serializable]`
+(primera clase del Modelo que lo necesita) para poder vivir en `ViewState["LineasPendientes"]`
+mientras se arma la compra.
+
+**`ComprobanteCompraDAL.Crear` es el batch atómico más grande del proyecto hasta ahora:** un
+`StringBuilder` arma dinámicamente `N` bloques de `UPDATE Insumo` + `INSERT MovimientoStock` +
+`INSERT DetalleCompra` (uno por línea, con parámetros sufijados `@idInsumo0`, `@idInsumo1`, ...)
+más, si la condición es "Cuenta corriente", un `INSERT CuentaCorrienteProveedor` final con el
+saldo calculado por subquery — todo en un solo `SET XACT_ABORT ON`/`BEGIN TRAN`/`COMMIT`. El
+número de comprobante nace de un `UPDATE` final usando el propio `SCOPE_IDENTITY()`, sin tabla de
+secuencia aparte.
+
+**Bug real encontrado — tercera vez con el mismo síntoma, pero causa distinta:** `MovimientoStock.
+idUsuario` es `NOT NULL` desde Fase 2, y el batch de `ComprobanteCompraDAL.Crear` lo insertaba
+como `NULL` a propósito (el razonamiento de "solo Ajuste necesita idUsuario" aplicaba a
+`CuentaCorrienteProveedor`, no a `MovimientoStock`, que siempre lo exigió). Se agregó un
+parámetro `idUsuario` a `Crear` — el usuario que carga la compra queda registrado en cada
+movimiento de stock que genera, igual que ya pasa en Órdenes.
+
+**Falso bug en las pruebas (no en el código real), útil para la próxima sesión:** al probar con
+requests HTTP crudos, postear `ddlMedioPago` con cualquier valor mientras `pnlMedioPago` está
+oculto (condición de pago "Cuenta corriente") tira el mismo `HttpUnhandledException` de
+validación de eventos ya visto con `ddlVehiculo`/`ddlEstado` en sesiones anteriores — pero acá
+`ddlMedioPago` sí tiene opciones cargadas, el problema es que el panel que lo contiene no se
+renderiza. Un browser real nunca postea un campo que no está en el DOM actual, así que no es un
+bug de la aplicación — es nada más una trampa a tener presente al armar el próximo request a
+mano: omitir del POST cualquier control que esté dentro de un `Panel`/sección oculta en el último
+render simulado.
+
+**Verificación:** rebuild limpio + `aspnet_compiler` sin errores. Contra IIS Express + LocalDB
+(recreada con el esquema nuevo) con requests HTTP armados a mano: alta de compra Contado (medio
+de pago guardado, sin fila en `Pago` ni `CuentaCorrienteProveedor`, `saldoPendiente = 0`) y a
+Cuenta corriente (`saldoPendiente = total`, movimiento en `CuentaCorrienteProveedor` con
+`idUsuario = NULL`); suba de stock y kardex correctos en ambos casos; numeración correlativa
+(`C-000002`, `C-000003` — el gap en `C-000001` confirma que el `ROLLBACK` del bug de arriba
+efectivamente deshizo el `INSERT` de la cabecera, aunque el `IDENTITY` no se recicla); vista de
+solo lectura de una compra ya guardada; rechazo de cantidad ≤ 0 y de guardar sin líneas; acceso
+completo como Admin y modo solo-consulta confirmado como Empleado (sin formulario, sin columna de
+acciones). Datos de prueba (proveedor, insumos, compras) borrados al cerrar la sesión.
 
 ### 2026-09-14 — Órdenes de trabajo, cierra Fase 3
 
@@ -690,11 +775,20 @@ Empleado donde corresponde.
 **Fase 3 terminada.** Turnos y Órdenes de trabajo, las dos pantallas, hechas y verificadas contra
 IIS Express.
 
-**Sigue Fase 4 — Compras, Ventas, Pagos, Cuentas corrientes**, según el Roadmap del proyecto
-(`CLAUDE.md` / `Docs/Lubricentro_Requerimientos.md`). Ahora sí hay Órdenes de trabajo reales para
-poder probar Ventas de punta a punta (la venta se genera automáticamente al cerrar una orden,
-§6.6) y Cuentas corrientes con movimientos reales. Falta decidir con el usuario con cuál de las
-cuatro pantallas de Fase 4 arrancar.
+**Fase 4 arrancada — Compras hecha, siguen 4 pantallas más, en este orden** (plan completo de
+Fase 4 acordado con el usuario, guarda las decisiones de diseño de las 5 pantallas):
+
+1. ~~Compras~~ ✅ (esta sesión).
+2. **Cuenta corriente de Proveedores** — pantalla de solo consulta + el ajuste manual pendiente
+   (decisión 1 de la sesión de Compras, todavía sin construir), sobre `CuentaCorrienteProveedorDAL`
+   ya escrito.
+3. **Ventas** — pantalla de solo lectura (no se carga a mano) + gancho en `OrdenDeTrabajoDAL`
+   que genera la venta al cerrar una orden — **toca código de Fase 3 ya entregado**: hay que sacar
+   `Cerrada` de `OrdenDeTrabajo.EstadosEditables` y agregar un botón `btnCerrarOrden` dedicado
+   (mismo criterio que `btnCancelarOrden`), porque cerrar pasa a tener el efecto colateral de
+   generar la venta.
+4. **Cuenta corriente de Clientes** — mismo patrón que el punto 2.
+5. **Pagos** — usa los `Registrar` de ambas cuentas corrientes, ya construidos en 2 y 4.
 
 ### Repaso de redacción, pendiente
 
