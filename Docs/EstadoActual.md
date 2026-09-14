@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 14 de septiembre de 2026 (noche)
+**Última actualización:** 14 de septiembre de 2026 (noche, cont.)
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -29,15 +29,15 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras hecha, siguen Cuenta corriente de
-Proveedores, Ventas, Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de Fase 4).
+**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras y Cuenta corriente de Proveedores hechas,
+siguen Ventas, Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de Fase 4).
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
 | 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
-| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 Compras hecha, 4 pantallas pendientes |
+| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 2 de 5 pantallas hechas |
 | 5 | Reportes | ⬜ No empezada |
 | 6 | Integración, pruebas y pulido | ⬜ No empezada |
 
@@ -110,16 +110,55 @@ Proveedores, Ventas, Cuenta corriente de Clientes y Pagos (en ese orden, ver pla
   correlativa automática (`C-000001`, ...) derivada del propio `IDENTITY`. Una compra ya guardada
   no se edita — se ve de solo lectura. Modo solo-consulta para Empleado, igual que Proveedores/
   Insumos.
+- **Cuenta corriente de Proveedores** (segunda pantalla de Fase 4): buscador+grilla de
+  proveedores a la izquierda ("Ver cuenta"), a la derecha saldo actual + historial (fecha, tipo,
+  debe, haber, saldo, descripción, usuario) del proveedor elegido. A diferencia de Proveedores/
+  Insumos, el modo solo-consulta de Empleado **no esconde toda la pantalla**: puede buscar y ver
+  el historial/saldo de cualquier proveedor, solo se le esconde la franja "Registrar ajuste"
+  (motivo + monto con signo, mismo patrón que el ajuste de stock de Insumos). El usuario que hizo
+  cada ajuste queda registrado (`CuentaCorrienteProveedor.idUsuario`, columna nueva de esta fase);
+  los movimientos automáticos de compra no llevan usuario (se muestran con la celda vacía).
 
 ### Qué NO funciona todavía
 
-Quedan 7 pantallas de negocio como **cascarones** (Ventas, Pagos, las dos cuentas corrientes y
+Quedan 6 pantallas de negocio como **cascarones** (Ventas, Pagos, Cuenta corriente de Clientes y
 los tres reportes): existen, están enlazadas desde el menú y respetan los permisos por rol, pero
 no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-14 (noche, cont.) — Cuenta corriente de Proveedores
+
+Segunda pantalla de Fase 4. Sin capa BIZ nueva: el DAL (`CuentaCorrienteProveedorDAL.
+ListarPorProveedor`/`ObtenerSaldoActual`/`RegistrarAjuste`) ya había quedado escrito en la sesión
+de Compras, porque `ComprobanteCompraDAL.Crear` ya necesitaba `CuentaCorrienteProveedor` para las
+compras a cuenta corriente. Esta sesión fue pura pantalla.
+
+**Decisión de layout distinta a Proveedores/Insumos: el modo solo-consulta no esconde el
+formulario entero.** En Proveedores/Insumos, "solo consulta" para Empleado significa "no ve
+ningún formulario, solo la grilla" — tiene sentido ahí porque el formulario ES la pantalla
+completa (alta/edición). Acá la pantalla ya es de consulta para todos los roles (ver
+historial/saldo); lo único que cambia con el rol es si además puede *escribir* un ajuste. Por
+eso `EsSoloLectura` esconde nada más la franja `pnlAjuste`, dejando visible el resto
+(buscador, grilla de proveedores, y el panel de historial+saldo una vez elegido uno) para los
+3 roles por igual.
+
+**Reutilización directa del patrón de ajuste de Insumos**, sin cambios: campo único con signo
+(positivo aumenta la deuda, negativo la reduce), sin radio Entrada/Salida — el mismo criterio que
+ya se había validado con el usuario para el stock.
+
+**Verificación:** rebuild limpio + `aspnet_compiler` sin errores. Contra IIS Express + LocalDB con
+requests HTTP armados a mano: selección de proveedor con historial vacío (saldo $0), ajuste
+positivo y negativo (saldo acumulado correcto, usuario registrado), rechazo de monto cero,
+historial mixto mostrando una fila de Compra (usuario en blanco, por diseño) junto a ajustes
+manuales (usuario visible) en el orden correcto; acceso completo confirmado como Admin y modo
+solo-consulta confirmado como Empleado (ve historial y saldo, sin la franja de ajuste — un intento
+forzado de postear el botón de ajuste igual lo rechaza, aunque por una razón distinta a la
+esperada: el botón ni siquiera se renderiza para ese rol, así que ASP.NET lo frena por validación
+de eventos antes de que el código llegue a chequear `EsSoloLectura`). Datos de prueba (proveedor,
+compra de prueba, movimientos) borrados al cerrar la sesión.
 
 ### 2026-09-14 (noche) — Arranca Fase 4: pantalla de Compras
 
@@ -775,19 +814,19 @@ Empleado donde corresponde.
 **Fase 3 terminada.** Turnos y Órdenes de trabajo, las dos pantallas, hechas y verificadas contra
 IIS Express.
 
-**Fase 4 arrancada — Compras hecha, siguen 4 pantallas más, en este orden** (plan completo de
-Fase 4 acordado con el usuario, guarda las decisiones de diseño de las 5 pantallas):
+**Fase 4 arrancada — 2 de 5 pantallas hechas, siguen 3, en este orden** (plan completo de Fase 4
+acordado con el usuario, guarda las decisiones de diseño de las 5 pantallas):
 
-1. ~~Compras~~ ✅ (esta sesión).
-2. **Cuenta corriente de Proveedores** — pantalla de solo consulta + el ajuste manual pendiente
-   (decisión 1 de la sesión de Compras, todavía sin construir), sobre `CuentaCorrienteProveedorDAL`
-   ya escrito.
+1. ~~Compras~~ ✅.
+2. ~~Cuenta corriente de Proveedores~~ ✅ (esta sesión).
 3. **Ventas** — pantalla de solo lectura (no se carga a mano) + gancho en `OrdenDeTrabajoDAL`
    que genera la venta al cerrar una orden — **toca código de Fase 3 ya entregado**: hay que sacar
    `Cerrada` de `OrdenDeTrabajo.EstadosEditables` y agregar un botón `btnCerrarOrden` dedicado
    (mismo criterio que `btnCancelarOrden`), porque cerrar pasa a tener el efecto colateral de
    generar la venta.
-4. **Cuenta corriente de Clientes** — mismo patrón que el punto 2.
+4. **Cuenta corriente de Clientes** — mismo patrón que el punto 2 (`CuentaCorrienteClienteDAL`
+   todavía sin escribir — a diferencia de Proveedor, nada lo necesitó antes; se escribe recién
+   cuando se construya Ventas, que es quien primero le va a escribir un movimiento).
 5. **Pagos** — usa los `Registrar` de ambas cuentas corrientes, ya construidos en 2 y 4.
 
 ### Repaso de redacción, pendiente
