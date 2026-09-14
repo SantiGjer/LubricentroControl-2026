@@ -29,15 +29,15 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras, Cuenta corriente de Proveedores y Ventas
-hechas, siguen Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de Fase 4).
+**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras, Cuenta corriente de Proveedores, Ventas y
+Cuenta corriente de Clientes hechas, sigue Pagos (la última).
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
 | 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
-| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 3 de 5 pantallas hechas |
+| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 4 de 5 pantallas hechas |
 | 5 | Reportes | ⬜ No empezada |
 | 6 | Integración, pruebas y pulido | ⬜ No empezada |
 
@@ -128,16 +128,34 @@ hechas, siguen Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de F
   trabajo ganó un botón "Cerrar orden"** (separado de "Guardar", con confirmación, mismo criterio
   que "Cancelar orden") porque cerrar pasó a tener el efecto colateral de generar la venta —
   `Cerrada` salió de `OrdenDeTrabajo.EstadosEditables`.
+- **Cuenta corriente de Clientes** (cuarta pantalla de Fase 4): calco exacto de Cuenta corriente
+  de Proveedores — buscador+grilla de clientes, historial+saldo+ajuste manual del elegido, mismo
+  matiz de permisos (solo consulta esconde nada más la franja de ajuste, no toda la pantalla). Sin
+  DAL nuevo: `CuentaCorrienteClienteDAL` ya había quedado escrito en la sesión de Ventas.
 
 ### Qué NO funciona todavía
 
-Quedan 5 pantallas de negocio como **cascarones** (Pagos, Cuenta corriente de Clientes y los tres
-reportes): existen, están enlazadas desde el menú y respetan los permisos por rol, pero no tienen
-funcionalidad.
+Quedan 4 pantallas de negocio como **cascarones** (Pagos y los tres reportes): existen, están
+enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-14 (noche, cont. 3) — Cuenta corriente de Clientes
+
+Cuarta pantalla de Fase 4. Pura pantalla, sin BIZ nueva: `CuentaCorrienteClienteDAL` ya había
+quedado escrito en la sesión de Ventas (`ComprobanteVentaDAL.GenerarDesdeOrden` lo necesitaba
+para el movimiento de la venta), igual que pasó con `CuentaCorrienteProveedorDAL` en la sesión de
+Compras. Calco pieza por pieza de `CuentaCorrienteProveedores.aspx`: mismo layout, mismo criterio
+de permisos (solo consulta esconde nada más la franja de ajuste), mismo patrón de ajuste con
+signo único.
+
+**Verificación:** rebuild limpio + `aspnet_compiler` sin errores. Contra IIS Express + LocalDB:
+selección de cliente con historial vacío (saldo $0), ajuste positivo con motivo (saldo actualizado,
+usuario registrado), acceso completo confirmado como Admin y modo solo-consulta confirmado como
+Empleado (ve historial, sin la franja de ajuste). Con esto, **Fase 4 queda en 4 de 5 pantallas —
+solo falta Pagos**. Datos de prueba (un cliente) borrados al cerrar la sesión.
 
 ### 2026-09-14 (noche, cont. 2) — Ventas, toca Órdenes de trabajo ya entregado
 
@@ -870,18 +888,16 @@ Empleado donde corresponde.
 **Fase 3 terminada.** Turnos y Órdenes de trabajo, las dos pantallas, hechas y verificadas contra
 IIS Express.
 
-**Fase 4 arrancada — 3 de 5 pantallas hechas, siguen 2, en este orden** (plan completo de Fase 4
-acordado con el usuario, guarda las decisiones de diseño de las 5 pantallas):
+**Fase 4 arrancada — 4 de 5 pantallas hechas, falta solo Pagos:**
 
 1. ~~Compras~~ ✅.
 2. ~~Cuenta corriente de Proveedores~~ ✅.
-3. ~~Ventas~~ ✅ (esta sesión) — `CuentaCorrienteClienteDAL` ya quedó escrito (lo necesitó
-   `ComprobanteVentaDAL.GenerarDesdeOrden`), igual que pasó con `CuentaCorrienteProveedorDAL` en
-   la sesión de Compras.
-4. **Cuenta corriente de Clientes** — pantalla nada más, mismo patrón que Cuenta corriente de
-   Proveedores (buscador+grilla de clientes, historial+saldo+ajuste manual del elegido), sobre el
-   DAL ya escrito en el punto 3.
-5. **Pagos** — usa los `Registrar` de ambas cuentas corrientes, ya construidos.
+3. ~~Ventas~~ ✅.
+4. ~~Cuenta corriente de Clientes~~ ✅ (esta sesión) — pantalla nada más, sin DAL nuevo.
+5. **Pagos** — última pantalla de Fase 4. Usa los `Registrar` internos de
+   `CuentaCorrienteClienteDAL`/`ProveedorDAL` (ya construidos) llamados desde el propio batch
+   atómico de `PagoDAL.Registrar` (no como llamada C# aparte, mismo criterio de atomicidad que
+   Compras/Ventas). Con esto se cierra Fase 4 completa — sigue Fase 5 (Reportes).
 
 ### Repaso de redacción, pendiente
 
