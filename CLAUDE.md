@@ -8,20 +8,20 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1, Fase 2 y Fase 3 terminadas; Fase 4 arrancada (2 de 5 pantallas:
-Compras y Cuenta corriente de Proveedores).** Andan el login, la recuperación de contraseña por
-mail, el ABM de usuarios, el menú dinámico por rol, la capa `BIZ/Data` de punta a punta contra
-SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**, **Proveedores**, **Insumos** con
-kardex de stock, y **Servicios**), las 2 pantallas de Fase 3 (**Turnos** y **Órdenes de
-trabajo**, esta última con descuento/reposición automática de stock), y de Fase 4: **Compras**
-(alta con líneas armadas en memoria y guardadas todas juntas, suma stock automáticamente,
-condición de pago Contado/Cuenta corriente) y **Cuenta corriente de Proveedores** (historial +
-saldo + ajuste manual). Las 21 tablas del diagrama original ya existen
-(`Database\01_Esquema.sql`), más `MovimientoStock` (kardex de stock, agregada en Fase 2 — ver
-§9.3 de los Requerimientos) y dos columnas agregadas en Fase 4 (`ComprobanteCompra.medioPago`,
-`CuentaCorrienteCliente`/`Proveedor.idUsuario` — ver §9.5). **El resto de las pantallas de
-negocio (Ventas, Pagos, Cuenta corriente de Clientes, reportes) siguen siendo cascarones
-vacíos**: solo muestran su título y "Pendiente".
+**Estado real del código: Fase 1, Fase 2 y Fase 3 terminadas; Fase 4 arrancada (3 de 5 pantallas:
+Compras, Cuenta corriente de Proveedores y Ventas).** Andan el login, la recuperación de
+contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa `BIZ/Data` de punta a
+punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**, **Proveedores**,
+**Insumos** con kardex de stock, y **Servicios**), las 2 pantallas de Fase 3 (**Turnos** y
+**Órdenes de trabajo**), y de Fase 4: **Compras** (alta con líneas armadas en memoria y guardadas
+todas juntas, suma stock automáticamente, condición de pago Contado/Cuenta corriente), **Cuenta
+corriente de Proveedores** (historial + saldo + ajuste manual) y **Ventas** (de solo lectura: el
+comprobante se genera automáticamente al cerrar una orden de trabajo, botón nuevo `btnCerrarOrden`
+en Órdenes). Las 21 tablas del diagrama original ya existen (`Database\01_Esquema.sql`), más
+`MovimientoStock` (kardex de stock, agregada en Fase 2 — ver §9.3 de los Requerimientos) y dos
+columnas agregadas en Fase 4 (`ComprobanteCompra.medioPago`, `CuentaCorrienteCliente`/
+`Proveedor.idUsuario` — ver §9.5). **El resto de las pantallas de negocio (Pagos, Cuenta corriente
+de Clientes, reportes) siguen siendo cascarones vacíos**: solo muestran su título y "Pendiente".
 
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
@@ -29,11 +29,11 @@ Documentos de referencia (leer antes de diseñar algo del dominio):
   (+ `MovimientoStock`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
   los supuestos/formatos ya confirmados en Fase 2/3/4 (DNI/CUIT/patente, diseño de
   Clientes/Vehículos, kardex de stock, estados de Turno/Orden, medio de pago de Compras).
-- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue Fase 4** (Compras y Cuenta
-  corriente de Proveedores hechas; faltan Ventas, Cuenta corriente de Clientes y Pagos, en ese
-  orden — ver `Docs/EstadoActual.md` §3 para el detalle y por qué ese orden). Los ABM de Fase 2 y
-  las pantallas de Fase 3 quedan como referencia de patrón — Proveedores/Insumos/Servicios para
-  el modo solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador
+- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue Fase 4** (Compras, Cuenta
+  corriente de Proveedores y Ventas hechas; faltan Cuenta corriente de Clientes y Pagos — ver
+  `Docs/EstadoActual.md` §3 para el detalle y por qué ese orden). Los ABM de Fase 2 y las
+  pantallas de Fase 3 quedan como referencia de patrón — Proveedores/Insumos/Servicios para el
+  modo solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador
   desplegable, Turnos/Órdenes para pantallas con cliente/vehículo fijo post-alta y (en Órdenes)
   franja de detalle con líneas. Compras suma un patrón nuevo: líneas armadas en memoria
   (`ViewState`) y guardadas todas juntas en un solo batch atómico, en vez de la franja progresiva
@@ -41,7 +41,9 @@ Documentos de referencia (leer antes de diseñar algo del dominio):
   progresivamente. Cuenta corriente de Proveedores suma otro matiz de permisos: "solo consulta"
   para Empleado no esconde toda la pantalla (a diferencia de Proveedores/Insumos/Compras), solo
   la franja de escritura — porque la pantalla ya es de consulta para todos los roles, lo único
-  que cambia es si además puede escribir un ajuste.
+  que cambia es si además puede escribir un ajuste. Ventas es la primera pantalla puramente de
+  solo lectura del proyecto (sin alta, sin `EsSoloLectura` que manejar) y la primera vez que una
+  pantalla de Fase 4 modifica código de una fase ya entregada (Órdenes de trabajo).
 
 ## Restricciones del stack (no negociables)
 
@@ -442,3 +444,26 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   porque ese campo ni siquiera existe en el DOM en ese momento. Distinción a tener presente: el
   bug real es "el control nunca tuvo opciones ni siquiera cuando se necesitaba"; esto era "se
   posteó un campo que no correspondía a la vista actual" — un error de la prueba, no del código.
+
+- **Ventas (Fase 4, sesión 2026-09-14).** Sobre `ComprobanteVenta`/`DetalleComprobanteVenta`/
+  `CuentaCorrienteCliente` (con sus DAL). Primera pantalla de Fase 4 que modifica código de una
+  fase ya entregada en vez de solo agregar algo nuevo: `OrdenDeTrabajoDAL.Cerrar` reemplaza el
+  paso de `Cerrada` por el `ddlEstado` genérico (ver entrada de Turnos/Órdenes arriba —
+  `Cancelar`/`Cerrar` comparten el mismo criterio: un estado con efecto colateral necesita su
+  propio botón, no un dropdown). `Cerrar` genera la venta primero y recién si eso sale bien
+  actualiza el estado — al revés dejaría una orden `Cerrada` sin venta si algo fallara en el
+  medio, el peor de los dos escenarios.
+
+  **`ComprobanteVentaDAL.GenerarDesdeOrden` no lleva `idUsuario`,** a diferencia de `Cancelar`:
+  se evaluó por simetría, pero ni `ComprobanteVenta` ni el movimiento de `CuentaCorrienteCliente`
+  que genera tienen dónde guardarlo (`idUsuario` en cuenta corriente solo se puebla en `Ajuste`,
+  ver entrada de Compras) — se descartó el parámetro por no tener ningún uso real.
+
+  Mismo mecanismo de batch atómico que `ComprobanteCompraDAL.Crear` (Compras), esta vez copiando
+  las líneas de `DetalleOrdenServicio`/`DetalleOrdenInsumo` ya existentes en vez de recibirlas de
+  un formulario. Guarda de idempotencia en C# (no hay `UNIQUE` en `ComprobanteVenta.idOrden`):
+  `GenerarDesdeOrden` rechaza si la orden ya tiene una venta generada.
+
+  `Ventas.aspx` es la primera pantalla puramente de solo lectura del proyecto — ni siquiera tiene
+  el concepto de `EsSoloLectura` por rol, porque no hay ninguna escritura que restringir para
+  nadie (acceso completo para los 3 roles).

@@ -12,10 +12,12 @@ namespace BIZ.Modelo
         public const string EstadoCerrada = "Cerrada";
         public const string EstadoCancelada = "Cancelada";
 
-        // Los que ofrece el ddlEstado del formulario — Cancelada no está: se llega solo por
-        // OrdenDeTrabajoDAL.Cancelar, que además repone el stock de los insumos cargados.
+        // Los que ofrece el ddlEstado del formulario. Cerrada tampoco está desde Fase 4: cerrar
+        // una orden genera automáticamente la venta (Requerimientos §6.6), así que se llega solo
+        // por OrdenDeTrabajoDAL.Cerrar — mismo criterio que Cancelada/Cancelar, que repone el
+        // stock de los insumos cargados.
         public static readonly string[] EstadosEditables =
-            { EstadoAbierta, EstadoEnProceso, EstadoCerrada };
+            { EstadoAbierta, EstadoEnProceso };
 
         // Los 4 estados posibles, para el filtro de búsqueda (que sí necesita poder
         // encontrar órdenes Canceladas).

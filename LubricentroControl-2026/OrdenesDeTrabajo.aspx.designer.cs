@@ -104,6 +104,9 @@ namespace LubricentroControl_2026
         /// <summary>Control btnCancelarOrden.</summary>
         protected global::System.Web.UI.WebControls.Button btnCancelarOrden;
 
+        /// <summary>Control btnCerrarOrden.</summary>
+        protected global::System.Web.UI.WebControls.Button btnCerrarOrden;
+
         /// <summary>Control pnlDetalle.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlDetalle;
 

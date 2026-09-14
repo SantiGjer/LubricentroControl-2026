@@ -168,6 +168,9 @@
             <asp:Button ID="btnCancelarOrden" runat="server" Text="Cancelar orden" Visible="false"
                 OnClick="btnCancelarOrden_Click" CausesValidation="false"
                 OnClientClick="return confirm('¿Cancelar esta orden? Se repondrá el stock de los insumos cargados.');" />
+            <asp:Button ID="btnCerrarOrden" runat="server" Text="Cerrar orden" Visible="false"
+                OnClick="btnCerrarOrden_Click" CausesValidation="false"
+                OnClientClick="return confirm('¿Cerrar esta orden? Se generará la venta correspondiente.');" />
         </div>
     </div>
 

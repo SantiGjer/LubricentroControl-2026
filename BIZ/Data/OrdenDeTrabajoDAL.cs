@@ -143,10 +143,11 @@ namespace BIZ.Data
             return ResultadoOperacion.Ok("Orden creada.");
         }
 
-        // Solo kilometraje, observaciones y estado (Abierta/En proceso/Cerrada) — cliente,
-        // vehículo y turno quedan fijos desde el alta (Requerimientos: la orden es sobre un
-        // cliente/vehículo concreto). Cancelar una orden es OrdenDeTrabajoDAL.Cancelar, no pasa
-        // por acá.
+        // Solo kilometraje, observaciones y estado (Abierta/En proceso) — cliente, vehículo y
+        // turno quedan fijos desde el alta (Requerimientos: la orden es sobre un cliente/vehículo
+        // concreto). Cerrar y Cancelar una orden son OrdenDeTrabajoDAL.Cerrar/Cancelar, no pasan
+        // por acá — las dos tienen un efecto colateral (generar la venta, reponer stock) que no
+        // tiene que poder dispararse solo por elegir un valor en un dropdown genérico.
         public static ResultadoOperacion Actualizar(OrdenDeTrabajo orden)
         {
             var existente = ObtenerPorId(orden.IdOrden);
@@ -205,6 +206,29 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idOrden", idOrden));
 
             return ResultadoOperacion.Ok("Orden cancelada. Se repuso el stock de los insumos cargados.");
+        }
+
+        // Cierra la orden y genera automáticamente el comprobante de venta (Requerimientos §6.6)
+        // — por eso Cerrada salió de EstadosEditables y pasa a tener su propio botón, igual que
+        // Cancelar. Solo se puede cerrar una orden Abierta o En proceso.
+        public static ResultadoOperacion Cerrar(int idOrden)
+        {
+            var orden = ObtenerPorId(idOrden);
+            if (orden == null)
+                return ResultadoOperacion.Error("La orden no existe.");
+
+            if (orden.Estado == OrdenDeTrabajo.EstadoCerrada || orden.Estado == OrdenDeTrabajo.EstadoCancelada)
+                return ResultadoOperacion.Error("Una orden " + orden.Estado.ToLowerInvariant() + " no se puede cerrar.");
+
+            var venta = ComprobanteVentaDAL.GenerarDesdeOrden(idOrden);
+            if (!venta.Exito) return venta;
+
+            AccesoDatos.Ejecutar(
+                "UPDATE OrdenDeTrabajo SET estado = @estado WHERE idOrden = @idOrden",
+                AccesoDatos.Param("@estado", OrdenDeTrabajo.EstadoCerrada),
+                AccesoDatos.Param("@idOrden", idOrden));
+
+            return ResultadoOperacion.Ok("Orden cerrada. Se generó la venta correspondiente.");
         }
     }
 }

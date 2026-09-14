@@ -270,6 +270,16 @@ namespace LubricentroControl_2026
             if (resultado.Exito) Seleccionar(idOrden);
         }
 
+        protected void btnCerrarOrden_Click(object sender, EventArgs e)
+        {
+            var idOrden = LeerIdOculto(hdnIdOrden.Value);
+            var resultado = OrdenDeTrabajoDAL.Cerrar(idOrden);
+
+            MostrarMensaje(resultado.Mensaje, resultado.Exito);
+            CargarGrilla();
+            if (resultado.Exito) Seleccionar(idOrden);
+        }
+
         protected void gvOrdenes_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName != "Seleccionar") return;
@@ -311,6 +321,7 @@ namespace LubricentroControl_2026
 
             btnGuardar.Visible = !esTerminal;
             btnCancelarOrden.Visible = !esTerminal;
+            btnCerrarOrden.Visible = !esTerminal;
 
             litTituloFormulario.Text = "Editar orden";
 
@@ -406,6 +417,7 @@ namespace LubricentroControl_2026
             pnlEstado.Visible = false;
             btnGuardar.Visible = true;
             btnCancelarOrden.Visible = false;
+            btnCerrarOrden.Visible = false;
             litTituloFormulario.Text = "Nueva orden";
             pnlDetalle.Visible = false;
         }

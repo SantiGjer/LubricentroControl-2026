@@ -29,15 +29,15 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras y Cuenta corriente de Proveedores hechas,
-siguen Ventas, Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de Fase 4).
+**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras, Cuenta corriente de Proveedores y Ventas
+hechas, siguen Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de Fase 4).
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
 | 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
-| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 2 de 5 pantallas hechas |
+| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 3 de 5 pantallas hechas |
 | 5 | Reportes | ⬜ No empezada |
 | 6 | Integración, pruebas y pulido | ⬜ No empezada |
 
@@ -118,16 +118,72 @@ siguen Ventas, Cuenta corriente de Clientes y Pagos (en ese orden, ver plan de F
   (motivo + monto con signo, mismo patrón que el ajuste de stock de Insumos). El usuario que hizo
   cada ajuste queda registrado (`CuentaCorrienteProveedor.idUsuario`, columna nueva de esta fase);
   los movimientos automáticos de compra no llevan usuario (se muestran con la celda vacía).
+- **Ventas** (tercera pantalla de Fase 4): **de solo lectura, sin alta** — el comprobante se
+  genera automáticamente al cerrar una orden de trabajo (`OrdenDeTrabajoDAL.Cerrar` →
+  `ComprobanteVentaDAL.GenerarDesdeOrden`), nunca se carga a mano. Buscador+grilla de ventas a la
+  izquierda, a la derecha cabecera (cliente, vehículo, fecha, subtotal/impuestos/total/saldo
+  pendiente) + detalle línea por línea (copiado 1 a 1 de los servicios/insumos que ya tenía la
+  orden, con el precio que ya tenían aplicado). Numeración correlativa (`V-000001`, ...), mismo
+  esquema que Compras. Acceso completo para los 3 roles, sin modo solo-consulta. **Órdenes de
+  trabajo ganó un botón "Cerrar orden"** (separado de "Guardar", con confirmación, mismo criterio
+  que "Cancelar orden") porque cerrar pasó a tener el efecto colateral de generar la venta —
+  `Cerrada` salió de `OrdenDeTrabajo.EstadosEditables`.
 
 ### Qué NO funciona todavía
 
-Quedan 6 pantallas de negocio como **cascarones** (Ventas, Pagos, Cuenta corriente de Clientes y
-los tres reportes): existen, están enlazadas desde el menú y respetan los permisos por rol, pero
-no tienen funcionalidad.
+Quedan 5 pantallas de negocio como **cascarones** (Pagos, Cuenta corriente de Clientes y los tres
+reportes): existen, están enlazadas desde el menú y respetan los permisos por rol, pero no tienen
+funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-14 (noche, cont. 2) — Ventas, toca Órdenes de trabajo ya entregado
+
+Tercera pantalla de Fase 4, sobre 3 entidades nuevas (`ComprobanteVenta`,
+`DetalleComprobanteVenta`, `CuentaCorrienteCliente`, cada una con su Modelo + DAL). Primera vez
+que una pantalla de Fase 4 modifica código de una fase ya entregada en vez de solo agregar algo
+nuevo.
+
+**`OrdenDeTrabajoDAL.Cerrar` es el nuevo `Cancelar`.** Cerrar una orden ya no es una transición
+más del `ddlEstado` genérico: pasa a tener el efecto colateral de generar la venta
+(Requerimientos §6.6), así que se sacó `EstadoCerrada` de `OrdenDeTrabajo.EstadosEditables`
+(queda `{Abierta, En proceso}`) y se agregó un botón `btnCerrarOrden` dedicado en
+`OrdenesDeTrabajo.aspx`, con confirmación — calco exacto del patrón que ya tenía "Cancelar
+orden". `Cerrar` primero genera la venta (`ComprobanteVentaDAL.GenerarDesdeOrden`) y recién si
+eso sale bien actualiza el estado — al revés dejaría la orden marcada `Cerrada` sin venta si algo
+fallara en el medio, que es el peor de los dos escenarios posibles.
+
+**`GenerarDesdeOrden` no necesitó ningún parámetro `idUsuario`,** a diferencia de `Cancelar`. Se
+evaluó pasarlo por simetría, pero ni `ComprobanteVenta` ni el movimiento de
+`CuentaCorrienteCliente` que genera tienen dónde guardarlo (el criterio ya establecido es que
+`idUsuario` en cuenta corriente solo se puebla en `Ajuste`) — se descartó agregar un parámetro
+sin ningún lugar donde usarlo.
+
+**Mismo patrón de batch atómico que `ComprobanteCompraDAL.Crear`, aplicado a Ventas:** un
+`StringBuilder` arma `INSERT ComprobanteVenta` + un `INSERT DetalleComprobanteVenta` por cada
+línea de servicio y de insumo que ya tenía la orden (copiadas tal cual, sin volver a mirar el
+precio del catálogo) + `INSERT CuentaCorrienteCliente` con el saldo por subquery + el `UPDATE`
+final que arma el número de comprobante (`V-000001`, ...) desde el propio `SCOPE_IDENTITY()`.
+Guarda de idempotencia explícita: `GenerarDesdeOrden` rechaza si la orden ya tiene una venta
+generada (no hay `UNIQUE` en `ComprobanteVenta.idOrden`, así que la guarda vive en C#, no en el
+esquema).
+
+**Ventas.aspx es la primera pantalla puramente de solo lectura del proyecto** — ni siquiera tiene
+el concepto de `EsSoloLectura` por rol, porque no hay ninguna escritura que restringir para nadie
+(acceso completo para los 3 roles, matriz §5). Buscador+grilla a la izquierda, cabecera +
+detalle de solo lectura a la derecha — mismo layout de dos columnas que el resto, sin ningún
+botón de acción salvo "Ver".
+
+**Verificación:** rebuild limpio + `aspnet_compiler` sin errores. Contra IIS Express + LocalDB con
+requests HTTP armados a mano: orden con un servicio y un insumo cargados, cerrada desde
+`OrdenesDeTrabajo.aspx` con el botón nuevo — venta generada con el detalle y los montos
+correctos, movimiento en `CuentaCorrienteCliente` (`idUsuario = NULL`), numeración correlativa;
+vista de detalle en `Ventas.aspx` mostrando todo correcto; regresión de "Cancelar orden" con una
+segunda orden (stock repuesto correctamente, sin generar ninguna venta); acceso completo
+confirmado como Empleado en Ventas. Datos de prueba (cliente, vehículo, servicio, insumo,
+órdenes, venta) borrados al cerrar la sesión.
 
 ### 2026-09-14 (noche, cont.) — Cuenta corriente de Proveedores
 
@@ -814,20 +870,18 @@ Empleado donde corresponde.
 **Fase 3 terminada.** Turnos y Órdenes de trabajo, las dos pantallas, hechas y verificadas contra
 IIS Express.
 
-**Fase 4 arrancada — 2 de 5 pantallas hechas, siguen 3, en este orden** (plan completo de Fase 4
+**Fase 4 arrancada — 3 de 5 pantallas hechas, siguen 2, en este orden** (plan completo de Fase 4
 acordado con el usuario, guarda las decisiones de diseño de las 5 pantallas):
 
 1. ~~Compras~~ ✅.
-2. ~~Cuenta corriente de Proveedores~~ ✅ (esta sesión).
-3. **Ventas** — pantalla de solo lectura (no se carga a mano) + gancho en `OrdenDeTrabajoDAL`
-   que genera la venta al cerrar una orden — **toca código de Fase 3 ya entregado**: hay que sacar
-   `Cerrada` de `OrdenDeTrabajo.EstadosEditables` y agregar un botón `btnCerrarOrden` dedicado
-   (mismo criterio que `btnCancelarOrden`), porque cerrar pasa a tener el efecto colateral de
-   generar la venta.
-4. **Cuenta corriente de Clientes** — mismo patrón que el punto 2 (`CuentaCorrienteClienteDAL`
-   todavía sin escribir — a diferencia de Proveedor, nada lo necesitó antes; se escribe recién
-   cuando se construya Ventas, que es quien primero le va a escribir un movimiento).
-5. **Pagos** — usa los `Registrar` de ambas cuentas corrientes, ya construidos en 2 y 4.
+2. ~~Cuenta corriente de Proveedores~~ ✅.
+3. ~~Ventas~~ ✅ (esta sesión) — `CuentaCorrienteClienteDAL` ya quedó escrito (lo necesitó
+   `ComprobanteVentaDAL.GenerarDesdeOrden`), igual que pasó con `CuentaCorrienteProveedorDAL` en
+   la sesión de Compras.
+4. **Cuenta corriente de Clientes** — pantalla nada más, mismo patrón que Cuenta corriente de
+   Proveedores (buscador+grilla de clientes, historial+saldo+ajuste manual del elegido), sobre el
+   DAL ya escrito en el punto 3.
+5. **Pagos** — usa los `Registrar` de ambas cuentas corrientes, ya construidos.
 
 ### Repaso de redacción, pendiente
 

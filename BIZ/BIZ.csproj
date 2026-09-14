@@ -45,8 +45,11 @@
     <Compile Include="Data\AccesoDatos.cs" />
     <Compile Include="Data\ClienteDAL.cs" />
     <Compile Include="Data\ComprobanteCompraDAL.cs" />
+    <Compile Include="Data\ComprobanteVentaDAL.cs" />
+    <Compile Include="Data\CuentaCorrienteClienteDAL.cs" />
     <Compile Include="Data\CuentaCorrienteProveedorDAL.cs" />
     <Compile Include="Data\DetalleCompraDAL.cs" />
+    <Compile Include="Data\DetalleComprobanteVentaDAL.cs" />
     <Compile Include="Data\DetalleOrdenInsumoDAL.cs" />
     <Compile Include="Data\DetalleOrdenServicioDAL.cs" />
     <Compile Include="Data\InsumoDAL.cs" />
@@ -63,8 +66,11 @@
     <Compile Include="Data\VehiculoDAL.cs" />
     <Compile Include="Modelo\Cliente.cs" />
     <Compile Include="Modelo\ComprobanteCompra.cs" />
+    <Compile Include="Modelo\ComprobanteVenta.cs" />
+    <Compile Include="Modelo\CuentaCorrienteCliente.cs" />
     <Compile Include="Modelo\CuentaCorrienteProveedor.cs" />
     <Compile Include="Modelo\DetalleCompra.cs" />
+    <Compile Include="Modelo\DetalleComprobanteVenta.cs" />
     <Compile Include="Modelo\DetalleOrdenInsumo.cs" />
     <Compile Include="Modelo\DetalleOrdenServicio.cs" />
     <Compile Include="Modelo\Insumo.cs" />
