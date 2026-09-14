@@ -7,8 +7,9 @@ using BIZ.Modelo;
 namespace BIZ.Data
 {
     // Envío de mails. La configuración vive en <system.net>/<mailSettings> de Web.config.
-    // En desarrollo está apuntado a una carpeta local (SpecifiedPickupDirectory): los mails
-    // se escriben como archivos .eml en App_Data\MailsEnviados en vez de salir a Internet.
+    // En desarrollo (MailModoDesarrollo=true) no se manda nada por SMTP: se escribe un .txt
+    // simple en App_Data\MailsEnviados con el destinatario, el asunto y el cuerpo, para poder
+    // abrirlo con cualquier editor de texto sin necesidad de un cliente de mail.
     public static class ServicioMail
     {
         private static string Remitente
@@ -20,7 +21,7 @@ namespace BIZ.Data
             }
         }
 
-        // Con MailModoDesarrollo=true los mails se guardan como .eml en
+        // Con MailModoDesarrollo=true los mails se guardan como .txt en
         // App_Data\MailsEnviados en lugar de salir por SMTP. Así el circuito de
         // recuperación de clave se puede probar entero sin un servidor de correo.
         private static bool ModoDesarrollo
@@ -40,25 +41,12 @@ namespace BIZ.Data
             }
         }
 
-        private static SmtpClient CrearCliente()
-        {
-            // Sin modo desarrollo toma la configuración de <system.net>/<mailSettings>.
-            if (!ModoDesarrollo) return new SmtpClient();
-
-            var carpeta = CarpetaMailsDesarrollo;
-            if (!Directory.Exists(carpeta)) Directory.CreateDirectory(carpeta);
-
-            return new SmtpClient
-            {
-                DeliveryMethod = SmtpDeliveryMethod.SpecifiedPickupDirectory,
-                PickupDirectoryLocation = carpeta
-            };
-        }
-
         // Envía el mail. Devuelve el resultado en vez de propagar la excepción:
         // que falle el SMTP no debe tumbar la pantalla que lo pidió.
         public static ResultadoOperacion Enviar(string destinatario, string asunto, string cuerpoHtml)
         {
+            if (ModoDesarrollo) return GuardarComoTexto(destinatario, asunto, cuerpoHtml);
+
             try
             {
                 using (var mensaje = new MailMessage())
@@ -69,7 +57,7 @@ namespace BIZ.Data
                     mensaje.Body = cuerpoHtml;
                     mensaje.IsBodyHtml = true;
 
-                    using (var cliente = CrearCliente())
+                    using (var cliente = new SmtpClient())
                     {
                         cliente.Send(mensaje);
                     }
@@ -79,6 +67,33 @@ namespace BIZ.Data
             catch (Exception ex)
             {
                 return ResultadoOperacion.Error("No se pudo enviar el mail: " + ex.Message);
+            }
+        }
+
+        // Reemplaza el envío real en desarrollo: escribe un .txt plano (destinatario, asunto y
+        // cuerpo) en vez de un .eml, que trae el cuerpo codificado en base64 y no se puede leer
+        // directo con el Bloc de notas.
+        private static ResultadoOperacion GuardarComoTexto(string destinatario, string asunto, string cuerpoHtml)
+        {
+            try
+            {
+                var carpeta = CarpetaMailsDesarrollo;
+                if (!Directory.Exists(carpeta)) Directory.CreateDirectory(carpeta);
+
+                var nombreArchivo = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".txt";
+                var contenido =
+                    "Para: " + destinatario + Environment.NewLine +
+                    "Asunto: " + asunto + Environment.NewLine +
+                    "Fecha: " + DateTime.Now + Environment.NewLine +
+                    Environment.NewLine +
+                    cuerpoHtml;
+
+                File.WriteAllText(Path.Combine(carpeta, nombreArchivo), contenido);
+                return ResultadoOperacion.Ok();
+            }
+            catch (Exception ex)
+            {
+                return ResultadoOperacion.Error("No se pudo guardar el mail simulado: " + ex.Message);
             }
         }
 

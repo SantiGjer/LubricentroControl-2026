@@ -222,8 +222,9 @@ Usuario inicial que siembra `02_DatosIniciales.sql`: **admin@lubricentro.com / A
   `BIZ\Negocio\PasswordHasher.cs`. Cambiar cualquiera de esas constantes invalida todos los hashes
   existentes, incluido el del admin sembrado por SQL.
 - Con `MailModoDesarrollo=true` en `Web.config` los mails **no salen por SMTP**: se escriben como
-  `.eml` en `App_Data\MailsEnviados`. Así se prueba el circuito de recuperación de clave sin
-  servidor de correo. Ese archivo `.eml` tiene el cuerpo en base64.
+  `.txt` planos en `App_Data\MailsEnviados` (destinatario, asunto y cuerpo, sin codificar). Así se
+  prueba el circuito de recuperación de clave sin servidor de correo ni cliente de mail — alcanza
+  con abrir el archivo con cualquier editor de texto.
 - La recuperación responde **el mismo mensaje genérico exista o no el mail**, y el login usa un
   único mensaje de error para usuario inexistente y contraseña incorrecta. Es a propósito: evita
   que el formulario sirva para averiguar qué cuentas existen. No "mejorar" esos mensajes.

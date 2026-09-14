@@ -150,6 +150,25 @@ enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcion
 
 ## 2. Historial de sesiones
 
+### 2026-09-14 (noche, cont. 5) — Recuperación de clave: entrega en `.txt` en vez de `.eml`
+
+Cambio puntual en `ServicioMail.cs`, pedido por el usuario para poder abrir el mail simulado sin
+un cliente de correo: el `.eml` que generaba `SmtpClient` con `SpecifiedPickupDirectory` traía el
+cuerpo codificado en base64 y no se podía leer con el Bloc de notas. Ahora, en modo desarrollo
+(`MailModoDesarrollo=true`), `Enviar` no pasa más por `SmtpClient` — escribe directo un `.txt`
+plano (`Para` / `Asunto` / `Fecha` / cuerpo, un archivo por envío, nombrado con fecha y hora) en
+la misma carpeta `App_Data\MailsEnviados`. Fuera de modo desarrollo el envío real sigue igual
+(`SmtpClient` con la config de `<system.net>/<mailSettings>`).
+
+No fue necesario ningún cambio de base de datos — la pregunta pendiente sobre si además conviene
+guardar el token de recuperación **hasheado** en vez de en texto plano (`RecuperacionClave.token`)
+sigue abierta, sin decidir (ver sección 4, "Pendientes conocidos").
+
+**Verificación:** rebuild limpio de `BIZ`. Contra IIS Express + LocalDB, pedido de recuperación
+con `admin@lubricentro.com`: se generó el `.txt` en `App_Data\MailsEnviados` con el link y token
+en texto plano, legible directo. Los `.eml` de sesiones anteriores quedaron intactos en la misma
+carpeta (no se borraron, son solo de esta fecha en adelante en `.txt`).
+
 ### 2026-09-14 (noche, cont. 4) — Pagos, cierra Fase 4
 
 Quinta y última pantalla de Fase 4, sobre `Pago`/`PagoDAL`. Con esto termina el circuito de
@@ -788,7 +807,7 @@ contra LocalDB y se probó a mano contra el código ya reorganizado:
   esconder el link).
 - ABM de Usuarios: la grilla carga y lista al admin sembrado.
 - `CambiarClave`: el formulario carga.
-- Circuito de recuperación de contraseña completo: `RecuperarClave` genera el `.eml` en
+- Circuito de recuperación de contraseña completo: `RecuperarClave` genera el `.txt` en
   `App_Data\MailsEnviados` con el enlace y token; `RestablecerClave?token=...` valida un token
   real (muestra el formulario) y rechaza uno inventado (muestra el error). No se llegó a
   confirmar el submit final del cambio de contraseña para no invalidar la clave sembrada del
@@ -958,9 +977,13 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
 - **Borrar los usuarios de prueba** (`encargado@lubricentro.com`, `empleado@lubricentro.com`)
   y el script `03_UsuariosDePrueba.sql` de la entrega final.
 - **Conmutar a la VPN Radmin:** cambiar la cadena `LubricentroDB` en `Web.config`.
-- **Salida real de mails:** hoy `MailModoDesarrollo=true` escribe los mails como archivos `.eml`
+- **Salida real de mails:** hoy `MailModoDesarrollo=true` escribe los mails como archivos `.txt`
   en `App_Data\MailsEnviados` en vez de enviarlos. Para producción hay que ponerlo en `false` y
   configurar `<system.net>/<mailSettings>`.
+- **Token de recuperación de clave guardado en texto plano.** `RecuperacionClave.token` guarda el
+  valor tal cual, no un hash — a diferencia de la contraseña, que sí está hasheada. El usuario
+  pidió evaluar guardar el hash del token en vez del token; decisión pendiente de confirmar antes
+  de implementarla (no requiere columna nueva, `token` ya es `NVARCHAR(100)`).
 - **`customErrors`:** con `debug="true"` y sin `customErrors`, un error muestra el stack trace
   completo en pantalla. Antes de entregar conviene una página de error propia.
 - **El esquema de negocio nunca se ejerció por completo.** Con Fase 2 cerrada ya se ejercitaron
