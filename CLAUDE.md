@@ -8,21 +8,21 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1, Fase 2 y Fase 3 terminadas; Fase 4 arrancada (4 de 5 pantallas:
-Compras, Cuenta corriente de Proveedores, Ventas y Cuenta corriente de Clientes — falta solo
-Pagos).** Andan el login, la recuperación de contraseña por mail, el ABM de usuarios, el menú
-dinámico por rol, la capa `BIZ/Data` de punta a punta contra SQL Server, los 5 ABM de Fase 2
-(**Clientes**, **Vehículos**, **Proveedores**, **Insumos** con kardex de stock, y **Servicios**),
-las 2 pantallas de Fase 3 (**Turnos** y **Órdenes de trabajo**), y de Fase 4: **Compras** (alta
-con líneas armadas en memoria y guardadas todas juntas, suma stock automáticamente, condición de
-pago Contado/Cuenta corriente), **Cuenta corriente de Proveedores** y **Cuenta corriente de
-Clientes** (historial + saldo + ajuste manual, calcadas entre sí) y **Ventas** (de solo lectura:
-el comprobante se genera automáticamente al cerrar una orden de trabajo, botón nuevo
-`btnCerrarOrden` en Órdenes). Las 21 tablas del diagrama original ya existen
-(`Database\01_Esquema.sql`), más `MovimientoStock` (kardex de stock, agregada en Fase 2 — ver
-§9.3 de los Requerimientos) y dos columnas agregadas en Fase 4 (`ComprobanteCompra.medioPago`,
-`CuentaCorrienteCliente`/`Proveedor.idUsuario` — ver §9.5). **El resto de las pantallas de negocio
-(Pagos, reportes) siguen siendo cascarones vacíos**: solo muestran su título y "Pendiente".
+**Estado real del código: Fase 1, Fase 2, Fase 3 y Fase 4 terminadas.** Andan el login, la
+recuperación de contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa
+`BIZ/Data` de punta a punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**,
+**Proveedores**, **Insumos** con kardex de stock, y **Servicios**), las 2 pantallas de Fase 3
+(**Turnos** y **Órdenes de trabajo**), y las 5 de Fase 4: **Compras** (alta con líneas armadas en
+memoria y guardadas todas juntas, suma stock automáticamente, condición de pago Contado/Cuenta
+corriente), **Cuenta corriente de Proveedores** y **Cuenta corriente de Clientes** (historial +
+saldo + ajuste manual, calcadas entre sí), **Ventas** (de solo lectura: el comprobante se genera
+automáticamente al cerrar una orden de trabajo, botón nuevo `btnCerrarOrden` en Órdenes), y
+**Pagos** (de cliente o de proveedor, imputado a un comprobante puntual o "a cuenta general").
+Las 21 tablas del diagrama original ya existen (`Database\01_Esquema.sql`), más `MovimientoStock`
+(kardex de stock, agregada en Fase 2 — ver §9.3 de los Requerimientos) y dos columnas agregadas
+en Fase 4 (`ComprobanteCompra.medioPago`, `CuentaCorrienteCliente`/`Proveedor.idUsuario` — ver
+§9.5). **El resto de las pantallas de negocio (los tres reportes de Fase 5) siguen siendo
+cascarones vacíos**: solo muestran su título y "Pendiente".
 
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
@@ -30,20 +30,21 @@ Documentos de referencia (leer antes de diseñar algo del dominio):
   (+ `MovimientoStock`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
   los supuestos/formatos ya confirmados en Fase 2/3/4 (DNI/CUIT/patente, diseño de
   Clientes/Vehículos, kardex de stock, estados de Turno/Orden, medio de pago de Compras).
-- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue Fase 4, falta solo Pagos** (ver
-  `Docs/EstadoActual.md` §3). Los ABM de Fase 2 y las pantallas de Fase 3 quedan como referencia
-  de patrón — Proveedores/Insumos/Servicios para el modo solo-consulta, Clientes/Vehículos para
-  el layout de dos columnas y el buscador desplegable, Turnos/Órdenes para pantallas con
-  cliente/vehículo fijo post-alta y (en Órdenes) franja de detalle con líneas. Compras suma un
-  patrón nuevo: líneas armadas en memoria (`ViewState`) y guardadas todas juntas en un solo batch
-  atómico, en vez de la franja progresiva de Órdenes — usarlo cuando la entidad se carga completa
-  de una vez (como una factura), no progresivamente. Las dos Cuentas corrientes suman otro matiz
-  de permisos: "solo consulta" para Empleado no esconde toda la pantalla (a diferencia de
-  Proveedores/Insumos/Compras), solo la franja de escritura — porque la pantalla ya es de
-  consulta para todos los roles, lo único que cambia es si además puede escribir un ajuste.
-  Ventas es la primera pantalla puramente de solo lectura del proyecto (sin alta, sin
-  `EsSoloLectura` que manejar) y la primera vez que una pantalla de Fase 4 modifica código de una
-  fase ya entregada (Órdenes de trabajo).
+- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue Fase 5** (Reportes: stock bajo,
+  ventas por período, cuentas corrientes — §6.9). Los ABM de Fase 2, las pantallas de Fase 3 y las
+  de Fase 4 quedan como referencia de patrón — Proveedores/Insumos/Servicios para el modo
+  solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador desplegable,
+  Turnos/Órdenes para pantallas con cliente/vehículo fijo post-alta y (en Órdenes) franja de
+  detalle con líneas. Compras suma un patrón nuevo: líneas armadas en memoria (`ViewState`) y
+  guardadas todas juntas en un solo batch atómico, en vez de la franja progresiva de Órdenes —
+  usarlo cuando la entidad se carga completa de una vez (como una factura), no progresivamente.
+  Las dos Cuentas corrientes suman otro matiz de permisos: "solo consulta" para Empleado no
+  esconde toda la pantalla (a diferencia de Proveedores/Insumos/Compras), solo la franja de
+  escritura — porque la pantalla ya es de consulta para todos los roles, lo único que cambia es
+  si además puede escribir un ajuste. Ventas es la primera pantalla puramente de solo lectura del
+  proyecto (sin alta, sin `EsSoloLectura` que manejar) y la primera vez que una pantalla de Fase 4
+  modifica código de una fase ya entregada (Órdenes de trabajo). Pagos reutiliza tal cual los dos
+  buscadores desplegables ya existentes (cliente, de Turnos/Órdenes; proveedor, de Compras).
 
 ## Restricciones del stack (no negociables)
 
@@ -467,3 +468,21 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   `Ventas.aspx` es la primera pantalla puramente de solo lectura del proyecto — ni siquiera tiene
   el concepto de `EsSoloLectura` por rol, porque no hay ninguna escritura que restringir para
   nadie (acceso completo para los 3 roles).
+
+- **Pagos (Fase 4, sesión 2026-09-14) — cierra Fase 4.** Sobre `Pago`/`PagoDAL`. Es el único
+  punto del sistema donde una misma operación puede terminar escribiendo en
+  `CuentaCorrienteCliente` **o** `CuentaCorrienteProveedor` según un dato de entrada
+  (`Pago.Tipo`), decidido en tiempo de ejecución — el resto de Fase 4 siempre supo de antemano a
+  qué tabla escribir. `PagoDAL.Registrar` lo resuelve con una rama `if` dentro del mismo batch
+  atómico (no dos métodos separados): el `INSERT Pago` y la validación de que el monto no supere
+  el saldo pendiente del comprobante elegido son comunes a los dos casos.
+
+  **No aportó ningún patrón de UI nuevo a propósito** — reutiliza tal cual los dos buscadores
+  desplegables ya existentes (cliente de Turnos/Órdenes, proveedor de Compras), alternados con un
+  `ddlTipo`. La única pieza nueva es el desplegable "comprobante a pagar", poblado con
+  `ComprobanteVentaDAL.ListarPendientesPorCliente`/`ComprobanteCompraDAL.
+  ListarPendientesPorProveedor` (un método nuevo en cada uno de esos DAL, no en `PagoDAL` — mismo
+  criterio de "cada entidad expone las consultas sobre sí misma" que `TurnoDAL.ListarPorCliente`).
+
+  Un pago "a cuenta general" (sin comprobante puntual) no tiene techo de monto — solo se valida
+  el techo cuando se imputa a un comprobante puntual, contra su `saldoPendiente`.

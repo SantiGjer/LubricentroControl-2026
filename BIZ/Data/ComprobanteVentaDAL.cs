@@ -60,6 +60,18 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
+        // Ventas de un cliente con saldo pendiente — para el desplegable "comprobante a pagar"
+        // de Pagos.aspx.
+        public static List<ComprobanteVenta> ListarPendientesPorCliente(int idCliente)
+        {
+            var lista = new List<ComprobanteVenta>();
+            foreach (DataRow fila in AccesoDatos.Consultar(
+                SelectBase + " WHERE v.idCliente = @idCliente AND v.saldoPendiente > 0 ORDER BY v.fecha",
+                AccesoDatos.Param("@idCliente", idCliente)).Rows)
+                lista.Add(Mapear(fila));
+            return lista;
+        }
+
         // Cliente, patente o número de comprobante.
         public static List<ComprobanteVenta> Buscar(string texto)
         {

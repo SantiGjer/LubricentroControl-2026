@@ -53,6 +53,18 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
+        // Compras de un proveedor con saldo pendiente — para el desplegable "comprobante a
+        // pagar" de Pagos.aspx.
+        public static List<ComprobanteCompra> ListarPendientesPorProveedor(int idProveedor)
+        {
+            var lista = new List<ComprobanteCompra>();
+            foreach (DataRow fila in AccesoDatos.Consultar(
+                SelectBase + " WHERE c.idProveedor = @idProveedor AND c.saldoPendiente > 0 ORDER BY c.fecha",
+                AccesoDatos.Param("@idProveedor", idProveedor)).Rows)
+                lista.Add(Mapear(fila));
+            return lista;
+        }
+
         // Razón social, CUIT (sin importar guiones) o número de comprobante.
         public static List<ComprobanteCompra> Buscar(string texto)
         {

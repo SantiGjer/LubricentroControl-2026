@@ -29,15 +29,15 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1, 2 y 3 completas. Fase 4 arrancada:** Compras, Cuenta corriente de Proveedores, Ventas y
-Cuenta corriente de Clientes hechas, sigue Pagos (la última).
+**Fase 1, 2, 3 y 4 completas.** Las 5 pantallas de Fase 4 (Compras, Cuenta corriente de
+Proveedores, Ventas, Cuenta corriente de Clientes, Pagos) están hechas y verificadas.
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
 | 1 | Login, roles, menú dinámico, ABM de usuarios, capa de datos | ✅ Completa |
 | 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
-| 4 | Compras, Ventas, Pagos, Cuentas corrientes | 🔶 4 de 5 pantallas hechas |
+| 4 | Compras, Ventas, Pagos, Cuentas corrientes | ✅ Completa |
 | 5 | Reportes | ⬜ No empezada |
 | 6 | Integración, pruebas y pulido | ⬜ No empezada |
 
@@ -132,15 +132,57 @@ Cuenta corriente de Clientes hechas, sigue Pagos (la última).
   de Proveedores — buscador+grilla de clientes, historial+saldo+ajuste manual del elegido, mismo
   matiz de permisos (solo consulta esconde nada más la franja de ajuste, no toda la pantalla). Sin
   DAL nuevo: `CuentaCorrienteClienteDAL` ya había quedado escrito en la sesión de Ventas.
+- **Pagos** (quinta y última pantalla de Fase 4, **cierra la fase**): alta de pago de cliente o
+  de proveedor, imputado a un comprobante puntual con saldo pendiente (`ddlComprobante`, filtra
+  `saldoPendiente > 0` del cliente/proveedor elegido) o "a cuenta general" (sin comprobante,
+  entra directo a la cuenta corriente). Reutiliza los dos buscadores desplegables ya existentes
+  (cliente, de Turnos/Órdenes; proveedor, de Compras) alternados con un `ddlTipo`. Rechaza un
+  monto mayor al saldo pendiente del comprobante elegido (sin tope para "a cuenta general"). Un
+  pago no se edita ni se borra. **Acceso completo para los 3 roles** (a diferencia de Compras/
+  Cuentas corrientes, acá Empleado también puede cobrar — Requerimientos §5).
 
 ### Qué NO funciona todavía
 
-Quedan 4 pantallas de negocio como **cascarones** (Pagos y los tres reportes): existen, están
+Quedan 3 pantallas de negocio como **cascarones** (los tres reportes de Fase 5): existen, están
 enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcionalidad.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-14 (noche, cont. 4) — Pagos, cierra Fase 4
+
+Quinta y última pantalla de Fase 4, sobre `Pago`/`PagoDAL`. Con esto termina el circuito de
+dinero completo: Compras → Cuenta corriente de Proveedores, Órdenes → Ventas → Cuenta corriente
+de Clientes, y ahora Pagos conecta las puntas (reduce el saldo pendiente de una venta/compra
+puntual, o entra directo a la cuenta corriente si es "a cuenta general").
+
+**Único caso con dos entidades relacionadas ("comprobante puntual" vs "a cuenta general") en una
+sola operación, y el primero que decide en tiempo de ejecución CUÁL de las dos cuentas corrientes
+tocar** (`CuentaCorrienteCliente` o `CuentaCorrienteProveedor`, según `Pago.Tipo`) — el resto de
+las escrituras de Fase 4 siempre supieron de antemano a qué tabla escribir. `PagoDAL.Registrar`
+resuelve esto con un `if` sobre `pago.Tipo` que arma una rama distinta del mismo batch atómico,
+no dos métodos separados — el `INSERT Pago` y la validación de saldo son comunes a los dos casos.
+
+**Reutiliza los dos buscadores desplegables ya existentes tal cual**, sin ninguna adaptación: el
+de cliente (visto por primera vez en Turnos/Órdenes) y el de proveedor (visto por primera vez en
+Compras), alternados en la misma pantalla con un `ddlTipo` que muestra uno u otro. Ningún patrón
+nuevo esta vez — la única pieza genuinamente nueva es el desplegable "comprobante a pagar", que
+se repuebla al elegir cliente/proveedor con `ComprobanteVentaDAL.ListarPendientesPorCliente`/
+`ComprobanteCompraDAL.ListarPendientesPorProveedor` (dos métodos nuevos, uno en cada DAL,
+filtrando `saldoPendiente > 0` — mismo criterio de "cada entidad expone las consultas sobre sí
+misma" que ya usa `TurnoDAL.ListarPorCliente`).
+
+**Verificación:** rebuild limpio + `aspnet_compiler` sin errores. Contra IIS Express + LocalDB:
+pago parcial de una venta (saldo pendiente baja, movimiento `haber` correcto en
+`CuentaCorrienteCliente`, `idVenta = NULL`/`idPago` seteado — el trazado va por `idPago`, no por
+`idVenta`, en un movimiento de tipo `Pago`), pago total de una compra (saldo pendiente a $0),
+rechazo de monto mayor al saldo pendiente de un comprobante puntual, pago "a cuenta general" sin
+comprobante (sin tope de monto), acceso completo confirmado como Empleado (a diferencia de
+Compras/Cuentas corrientes). Datos de prueba borrados al cerrar la sesión.
+
+**Fase 4 completa: Compras, Cuenta corriente de Proveedores, Ventas, Cuenta corriente de
+Clientes, Pagos — las 5 pantallas hechas y verificadas.**
 
 ### 2026-09-14 (noche, cont. 3) — Cuenta corriente de Clientes
 
@@ -888,16 +930,15 @@ Empleado donde corresponde.
 **Fase 3 terminada.** Turnos y Órdenes de trabajo, las dos pantallas, hechas y verificadas contra
 IIS Express.
 
-**Fase 4 arrancada — 4 de 5 pantallas hechas, falta solo Pagos:**
+**Fase 4 terminada.** Las 5 pantallas (Compras, Cuenta corriente de Proveedores, Ventas, Cuenta
+corriente de Clientes, Pagos) hechas y verificadas contra IIS Express.
 
-1. ~~Compras~~ ✅.
-2. ~~Cuenta corriente de Proveedores~~ ✅.
-3. ~~Ventas~~ ✅.
-4. ~~Cuenta corriente de Clientes~~ ✅ (esta sesión) — pantalla nada más, sin DAL nuevo.
-5. **Pagos** — última pantalla de Fase 4. Usa los `Registrar` internos de
-   `CuentaCorrienteClienteDAL`/`ProveedorDAL` (ya construidos) llamados desde el propio batch
-   atómico de `PagoDAL.Registrar` (no como llamada C# aparte, mismo criterio de atomicidad que
-   Compras/Ventas). Con esto se cierra Fase 4 completa — sigue Fase 5 (Reportes).
+**Sigue Fase 5 — Reportes**, según el Roadmap (`CLAUDE.md` / `Docs/Lubricentro_Requerimientos.md`
+§6.9): stock bajo (`InsumoDAL.ListarStockBajo()` ya existe), ventas por período, y cuentas
+corrientes (deudas de clientes y a proveedores). Con Fase 4 completa ya hay datos reales de
+Compras/Ventas/Pagos/Cuentas corrientes para poder probar los tres reportes de punta a punta —
+antes de Fase 4 esto no hubiera sido posible. Falta acordar con el usuario el diseño concreto de
+cada reporte (filtros, formato de salida) antes de empezar a construirlos.
 
 ### Repaso de redacción, pendiente
 
