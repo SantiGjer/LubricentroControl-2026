@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 14 de septiembre de 2026 (noche, cont.)
+**Última actualización:** 15 de septiembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -149,6 +149,78 @@ enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcion
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-15 — Rediseño visual de Login / RecuperarClave / RestablecerClave
+
+Restyling puramente visual de las tres pantallas públicas (`Login.aspx`, `RecuperarClave.aspx`,
+`RestablecerClave.aspx`) y las reglas nuevas en `Content/Site.css` (bloque `/* ===== Login
+===== */`). Sin cambios de code-behind ni de lógica: mismos controles (`asp:TextBox`,
+`asp:RequiredFieldValidator`, `asp:CustomValidator`/`CompareValidator`, `ValidationGroup`),
+mismos `id`, mismo flujo de postback — solo se reemplazó la grilla de `<div class="row border
+border-1">` heredada del template por una tarjeta oscura centrada (`.login-page`/`.login-card`,
+franja de gradiente superior, inputs y botón con la paleta de `Site.css`). Las tres pantallas
+comparten las mismas clases para quedar visualmente idénticas entre sí.
+
+### 2026-09-15 (cont.) — Envío real de mails por SMTP (Gmail)
+
+Habilitado el envío real de `ServicioMail.Enviar`, a pedido del usuario. No hizo falta tocar
+ningún `.cs`: la rama de envío real ya estaba escrita (`new SmtpClient()` sin argumentos, que lee
+`<system.net>/<mailSettings>/<smtp>` de `Web.config`); lo único que faltaba era ese nodo.
+
+**Config partida en dos archivos, para no commitear la contraseña.** `Web.config` ahora tiene
+`<system.net><mailSettings><smtp configSource="Web.MailSettings.config" /></mailSettings>
+</system.net>` — `configSource` es un mecanismo nativo de `System.Configuration` (sin
+dependencias nuevas) que delega una sección entera a un archivo aparte. Ese archivo
+(`Web.MailSettings.config`, con el host/usuario/contraseña de Gmail reales) se gitignoreó; se dejó
+un `Web.MailSettings.config.example` commiteado con placeholders y los 4 pasos para completarlo
+(activar verificación en 2 pasos, generar una contraseña de aplicación en
+`myaccount.google.com/apppasswords`, completar `userName`/`password`, y alinear
+`MailRemitente`/`MailModoDesarrollo` en `Web.config`).
+
+**Proveedor elegido: Gmail con contraseña de aplicación**, puerto 587 + `enableSsl="true"`
+(STARTTLS) — `SmtpClient` de `System.Net.Mail` no soporta bien SSL directo en 465. `MailRemitente`
+tiene que ser la misma cuenta que se autentica en el SMTP: Gmail reescribe/rechaza el `From` si no
+coincide con la cuenta autenticada (o un alias verificado) — quedó documentado como comentario en
+el propio `Web.config`.
+
+**Verificado en dos niveles:** un envío de prueba directo con `System.Net.Mail.SmtpClient` desde
+PowerShell (autenticación y entrega confirmadas), y después contra el IIS Express que el usuario
+ya tenía corriendo en el puerto 8123 — `GET /Login` y `GET /Content/css` devolviendo el HTML/CSS
+esperado (esto último fue para descartar, a pedido del usuario, que el cambio de mail hubiera
+afectado el rediseño de Login/RecuperarClave/RestablecerClave que se lo veía tocado en el working
+directory: no tenía nada que ver, era caché del navegador sobre el bundle `~/Content/css`).
+
+**Estado actual, a tener presente antes de commitear:** `Web.config` quedó con
+`MailModoDesarrollo=false` y `MailRemitente` apuntando a la cuenta de Gmail real que se usó para
+probar — o sea, ahora mismo el sistema manda mails reales, no `.txt`. El default seguro para el
+resto del equipo/corrector sigue siendo `MailModoDesarrollo=true` (así lo documenta `CLAUDE.md`);
+falta decidir si se vuelve a `true` antes de commitear o si se deja así a propósito. Ver también
+sección 4, "Pendientes conocidos".
+
+### 2026-09-15 — Script de datos de ejemplo (`Database/04_DatosDemo.sql`)
+
+Nuevo script, a pedido del usuario, para no tener que cargar datos de prueba a mano desde la UI:
+10 filas de ejemplo en cada entidad de negocio (Clientes, Vehículos, Proveedores, Servicios,
+Insumos, Turnos, Órdenes de trabajo, Compras), más el circuito de dinero/stock derivado armado a
+mano (4 Ventas generadas al cerrar órdenes, 10 Pagos, kardex completo de `MovimientoStock`,
+`CuentaCorrienteCliente`/`Proveedor`) — no son filas sueltas, replica a mano las mismas reglas que
+los DAL reales (signos de `debe`/`haber`, formato `V-`/`C-000001`, invariante de stock, los
+`CHECK` del esquema). Corre después de `01_Esquema.sql` + `02_DatosIniciales.sql` (con
+`03_UsuariosDePrueba.sql` opcional — usa el admin sembrado por `02` si `03` no se corrió). **No es
+idempotente**: asume tablas de negocio vacías; para recargar hay que recrear el esquema primero.
+
+**Bug real encontrado al probarlo:** el comentario de cabecera mencionaba `BIZ/Data/*.cs` — ese
+`/*` abre un comentario anidado que nunca cierra, y rompe el parseo de todo el script (`Msg 113:
+Missing end comment mark`). T-SQL cuenta pares `/* */` anidados; cualquier `/*` suelto dentro de
+un comentario existente hay que evitarlo. Se resolvió reescribiendo la frase sin la secuencia
+`/*`.
+
+**Verificado contra LocalDB:** conteos de fila esperados en las 13 tablas tocadas, el `SELECT` de
+invariante de kardex (`stockActual == Σ(entrada − salida)`) no devuelve ninguna fila, y los saldos
+finales de cuenta corriente (clientes y proveedores) y `saldoPendiente` de ventas/compras
+coinciden exactamente con los calculados en el diseño. Nota cosmética: por el intento fallido
+antes de la corrección, la numeración de comprobantes quedó con un gap (`V-000003`/`C-000006` en
+vez de arrancar en 1) — comportamiento normal de `IDENTITY` tras un intento fallido, no un bug.
 
 ### 2026-09-14 (noche, cont. 5) — Recuperación de clave: entrega en `.txt` en vez de `.eml`
 
@@ -977,9 +1049,12 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
 - **Borrar los usuarios de prueba** (`encargado@lubricentro.com`, `empleado@lubricentro.com`)
   y el script `03_UsuariosDePrueba.sql` de la entrega final.
 - **Conmutar a la VPN Radmin:** cambiar la cadena `LubricentroDB` en `Web.config`.
-- **Salida real de mails:** hoy `MailModoDesarrollo=true` escribe los mails como archivos `.txt`
-  en `App_Data\MailsEnviados` en vez de enviarlos. Para producción hay que ponerlo en `false` y
-  configurar `<system.net>/<mailSettings>`.
+- **Salida real de mails — mecanismo listo, falta decidir el estado final.** `<system.net>/
+  <mailSettings>` ya está configurado (Gmail + contraseña de aplicación, ver sesión
+  2026-09-15 cont.), con las credenciales en `Web.MailSettings.config` (gitignoreado). Hoy
+  `Web.config` quedó con `MailModoDesarrollo=false` (envío real activo, cuenta de prueba del
+  usuario) en vez del `true` documentado como default seguro en `CLAUDE.md` — falta decidir si
+  se revierte a `true` antes de commitear/entregar, o si se deja en `false` a propósito.
 - **Token de recuperación de clave guardado en texto plano.** `RecuperacionClave.token` guarda el
   valor tal cual, no un hash — a diferencia de la contraseña, que sí está hasheada. El usuario
   pidió evaluar guardar el hash del token en vez del token; decisión pendiente de confirmar antes

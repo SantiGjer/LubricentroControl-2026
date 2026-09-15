@@ -2,55 +2,42 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
-    <h1>Ingresar</h1>
+    <div class="login-page">
+        <div class="login-card">
 
-    <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
-        <asp:Literal ID="litMensaje" runat="server" />
-    </asp:Panel>
+            <div class="login-stripe"></div>
 
-    <div class="row border border-1">
-        <div class="col-4"></div>
-        <div class="col-4">
-            <asp:Label runat="server" AssociatedControlID="txtEmail">Mail</asp:Label></div>
-        <div class="col-4"></div>
-    </div>
+            <h1 class="login-title">Ingresar</h1>
+            <p class="login-subtitle">LubricentroControl</p>
 
-    <div class="row border border-1">
-        <div class="col-4"></div>
-        <div class="col-4">
-            <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" autocomplete="username" />
-            <asp:RequiredFieldValidator runat="server" ControlToValidate="txtEmail"
-                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Login"
-                ErrorMessage="Ingresá tu mail." /></div>
-        <div class="col-4"></div>
-    </div>
+            <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert" CssClass="login-mensaje">
+                <asp:Literal ID="litMensaje" runat="server" />
+            </asp:Panel>
 
-    <div class="row border border-1">
-        <div class="col-4"></div>
-        <div class="col-4">
-            <asp:Label runat="server" AssociatedControlID="txtPassword">Contraseña</asp:Label></div>
-        <div class="col-4"></div>
-    </div>
+            <div class="login-campo">
+                <asp:Label runat="server" AssociatedControlID="txtEmail" CssClass="login-label">Mail</asp:Label>
+                <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" autocomplete="username" CssClass="login-input" />
+                <asp:RequiredFieldValidator runat="server" ControlToValidate="txtEmail"
+                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Login"
+                    ErrorMessage="Ingresá tu mail." />
+            </div>
 
-    <div class="row border border-1">
-        <div class="col-4"></div>
-        <div class="col-4">
-            <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" autocomplete="current-password" />
-            <asp:RequiredFieldValidator runat="server" ControlToValidate="txtPassword"
-                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Login"
-                ErrorMessage="Ingresá tu contraseña." /></div>
-        <div class="col-4"></div>
-    </div>
+            <div class="login-campo">
+                <asp:Label runat="server" AssociatedControlID="txtPassword" CssClass="login-label">Contraseña</asp:Label>
+                <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" autocomplete="current-password" CssClass="login-input" />
+                <asp:RequiredFieldValidator runat="server" ControlToValidate="txtPassword"
+                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Login"
+                    ErrorMessage="Ingresá tu contraseña." />
+            </div>
 
-    <div class="row border border-1">
-        <div class="col-4"></div>
-        <div class="col-4">
             <asp:Button ID="btnIngresar" runat="server" Text="Ingresar"
-                OnClick="btnIngresar_Click" ValidationGroup="Login" /></div>
-        <div class="col-4"></div>
+                OnClick="btnIngresar_Click" ValidationGroup="Login" CssClass="login-btn" />
+
+            <p class="login-link">
+                <a runat="server" href="~/RecuperarClave">Olvidé mi contraseña</a>
+            </p>
+
+        </div>
     </div>
 
-    <p>
-        <a runat="server" href="~/RecuperarClave">Olvidé mi contraseña</a>
-    </p>
 </asp:Content>

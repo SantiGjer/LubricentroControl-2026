@@ -15,6 +15,10 @@
 # Mails de prueba generados por ServicioMail en modo desarrollo
 LubricentroControl-2026/App_Data/MailsEnviados/
 
+# Credenciales SMTP reales (contraseña de aplicación de Gmail) - nunca al repo.
+# Web.MailSettings.config.example sí se commitea, como plantilla.
+LubricentroControl-2026/Web.MailSettings.config
+
 # Archivos de base de datos LocalDB si llegan a crearse dentro del repo
 *.mdf
 *.ldf

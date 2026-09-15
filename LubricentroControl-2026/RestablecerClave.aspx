@@ -2,57 +2,44 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
-    <h1>Elegí tu contraseña nueva</h1>
+    <div class="login-page">
+        <div class="login-card">
 
-    <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
-        <asp:Literal ID="litMensaje" runat="server" />
-    </asp:Panel>
+            <div class="login-stripe"></div>
 
-    <asp:Panel ID="pnlFormulario" runat="server">
-        <div class="row border border-1">
-            <div class="col-4"></div>
-            <div class="col-4">
-                <asp:Label runat="server" AssociatedControlID="txtPassword">Contraseña nueva</asp:Label></div>
-            <div class="col-4"></div>
-        </div>
+            <h1 class="login-title">Elegí tu contraseña nueva</h1>
+            <p class="login-subtitle">LubricentroControl</p>
 
-        <div class="row border border-1">
-            <div class="col-4"></div>
-            <div class="col-4">
-                <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" autocomplete="new-password" />
-                <asp:RequiredFieldValidator runat="server" ControlToValidate="txtPassword"
-                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Restablecer"
-                    ErrorMessage="Ingresá la contraseña nueva." /></div>
-            <div class="col-4"></div>
-        </div>
+            <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
+                <asp:Literal ID="litMensaje" runat="server" />
+            </asp:Panel>
 
-        <div class="row border border-1">
-            <div class="col-4"></div>
-            <div class="col-4">
-                <asp:Label runat="server" AssociatedControlID="txtRepetir">Repetir contraseña</asp:Label></div>
-            <div class="col-4"></div>
-        </div>
+            <asp:Panel ID="pnlFormulario" runat="server">
+                <div class="login-campo">
+                    <asp:Label runat="server" AssociatedControlID="txtPassword" CssClass="login-label">Contraseña nueva</asp:Label>
+                    <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" autocomplete="new-password" CssClass="login-input" />
+                    <asp:RequiredFieldValidator runat="server" ControlToValidate="txtPassword"
+                        CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Restablecer"
+                        ErrorMessage="Ingresá la contraseña nueva." />
+                </div>
 
-        <div class="row border border-1">
-            <div class="col-4"></div>
-            <div class="col-4">
-                <asp:TextBox ID="txtRepetir" runat="server" TextMode="Password" autocomplete="new-password" />
-                <asp:CompareValidator runat="server" ControlToValidate="txtRepetir" ControlToCompare="txtPassword"
-                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Restablecer"
-                    ErrorMessage="Las contraseñas no coinciden." /></div>
-            <div class="col-4"></div>
-        </div>
+                <div class="login-campo">
+                    <asp:Label runat="server" AssociatedControlID="txtRepetir" CssClass="login-label">Repetir contraseña</asp:Label>
+                    <asp:TextBox ID="txtRepetir" runat="server" TextMode="Password" autocomplete="new-password" CssClass="login-input" />
+                    <asp:CompareValidator runat="server" ControlToValidate="txtRepetir" ControlToCompare="txtPassword"
+                        CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Restablecer"
+                        ErrorMessage="Las contraseñas no coinciden." />
+                </div>
 
-        <div class="row border border-1">
-            <div class="col-4"></div>
-            <div class="col-4">
                 <asp:Button ID="btnGuardar" runat="server" Text="Guardar contraseña"
-                    OnClick="btnGuardar_Click" ValidationGroup="Restablecer" /></div>
-            <div class="col-4"></div>
-        </div>
-    </asp:Panel>
+                    OnClick="btnGuardar_Click" ValidationGroup="Restablecer" CssClass="login-btn" />
+            </asp:Panel>
 
-    <p>
-        <a runat="server" href="~/Login">Ir al ingreso</a>
-    </p>
+            <p class="login-link">
+                <a runat="server" href="~/Login">Ir al ingreso</a>
+            </p>
+
+        </div>
+    </div>
+
 </asp:Content>

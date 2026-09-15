@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Plantilla para mandar mails reales por Gmail. Pasos:
+  1. Activar la verificación en 2 pasos en la cuenta de Google que se va a usar para enviar.
+  2. Generar una "contraseña de aplicación" en https://myaccount.google.com/apppasswords
+     (no es la contraseña normal de la cuenta).
+  3. Copiar este archivo como Web.MailSettings.config (al lado de este mismo .example, mismo
+     directorio) y completar userName/password abajo con esa cuenta y esa contraseña de 16
+     caracteres. Ese archivo queda gitignoreado, nunca se commitea.
+  4. En Web.config: poner MailModoDesarrollo en false y MailRemitente con la misma cuenta de
+     Gmail del paso 1 (Gmail reescribe/rechaza el From si no coincide con la cuenta autenticada).
+
+  Puerto 587 + enableSsl (STARTTLS) — SmtpClient no soporta bien SSL directo en 465.
+-->
+<smtp deliveryMethod="Network">
+  <network host="smtp.gmail.com" port="587" enableSsl="true"
+           userName="tu-cuenta@gmail.com" password="contraseña-de-aplicación-16-caracteres" />
+</smtp>

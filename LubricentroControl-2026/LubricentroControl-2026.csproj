@@ -197,6 +197,7 @@
     <Content Include="Scripts\WebForms\WebUIValidation.js" />
     <Content Include="Site.Master" />
     <Content Include="Web.config" />
+    <Content Include="Web.MailSettings.config.example" />
     <Content Include="Bundle.config" />
   </ItemGroup>
   <ItemGroup>
