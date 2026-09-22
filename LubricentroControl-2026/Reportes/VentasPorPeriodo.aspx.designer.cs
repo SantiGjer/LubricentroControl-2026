@@ -8,5 +8,28 @@ namespace LubricentroControl_2026.Reportes
 {
     public partial class VentasPorPeriodo
     {
+        /// <summary>Control pnlMensaje.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlMensaje;
+
+        /// <summary>Control litMensaje.</summary>
+        protected global::System.Web.UI.WebControls.Literal litMensaje;
+
+        /// <summary>Control txtDesde.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtDesde;
+
+        /// <summary>Control txtHasta.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtHasta;
+
+        /// <summary>Control btnFiltrar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnFiltrar;
+
+        /// <summary>Control pnlResumen.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlResumen;
+
+        /// <summary>Control litResumen.</summary>
+        protected global::System.Web.UI.WebControls.Literal litResumen;
+
+        /// <summary>Control gvVentas.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvVentas;
     }
 }

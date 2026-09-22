@@ -55,6 +55,34 @@ namespace BIZ.Data
             return resultado == null ? 0m : System.Convert.ToDecimal(resultado);
         }
 
+        // Saldo actual (último movimiento) de cada cliente con saldo distinto de cero — para
+        // Reportes/CuentasCorrientes.aspx. CROSS APPLY trae el último movimiento de cada cliente
+        // y de paso excluye a los que nunca tuvieron ninguno (no hay fila que comparar contra
+        // <> 0). Saldo positivo = el cliente debe; negativo = a favor del cliente.
+        public static List<CuentaCorrienteCliente> ListarSaldos()
+        {
+            const string sql = @"
+                SELECT c.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente, u.saldo, u.fecha
+                FROM Cliente c
+                CROSS APPLY (
+                    SELECT TOP 1 saldo, fecha FROM CuentaCorrienteCliente
+                    WHERE idCliente = c.idCliente ORDER BY idMovimiento DESC
+                ) u
+                WHERE u.saldo <> 0
+                ORDER BY u.saldo DESC";
+
+            var lista = new List<CuentaCorrienteCliente>();
+            foreach (DataRow fila in AccesoDatos.Consultar(sql).Rows)
+                lista.Add(new CuentaCorrienteCliente
+                {
+                    IdCliente = AccesoDatos.LeerInt(fila, "idCliente"),
+                    NombreCliente = AccesoDatos.LeerString(fila, "nombreCliente"),
+                    Saldo = AccesoDatos.LeerDecimal(fila, "saldo"),
+                    Fecha = AccesoDatos.LeerFecha(fila, "fecha")
+                });
+            return lista;
+        }
+
         // Núcleo de escritura: una sola fila, con el saldo acumulado calculado por subquery en
         // el propio INSERT. Los casos que necesitan ir atómicamente junto con otra escritura (una
         // Venta generada al cerrar una orden, un Pago) arman su propio batch con este mismo texto

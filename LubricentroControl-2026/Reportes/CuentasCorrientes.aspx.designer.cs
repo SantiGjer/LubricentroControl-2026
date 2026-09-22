@@ -8,5 +8,22 @@ namespace LubricentroControl_2026.Reportes
 {
     public partial class CuentasCorrientes
     {
+        /// <summary>Control pnlResumenClientes.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlResumenClientes;
+
+        /// <summary>Control litResumenClientes.</summary>
+        protected global::System.Web.UI.WebControls.Literal litResumenClientes;
+
+        /// <summary>Control gvClientes.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvClientes;
+
+        /// <summary>Control pnlResumenProveedores.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlResumenProveedores;
+
+        /// <summary>Control litResumenProveedores.</summary>
+        protected global::System.Web.UI.WebControls.Literal litResumenProveedores;
+
+        /// <summary>Control gvProveedores.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvProveedores;
     }
 }

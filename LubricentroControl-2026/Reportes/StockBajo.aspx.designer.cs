@@ -8,5 +8,13 @@ namespace LubricentroControl_2026.Reportes
 {
     public partial class StockBajo
     {
+        /// <summary>Control pnlResumen.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlResumen;
+
+        /// <summary>Control litResumen.</summary>
+        protected global::System.Web.UI.WebControls.Literal litResumen;
+
+        /// <summary>Control gvStockBajo.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvStockBajo;
     }
 }

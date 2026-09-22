@@ -29,8 +29,12 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1, 2, 3 y 4 completas.** Las 5 pantallas de Fase 4 (Compras, Cuenta corriente de
-Proveedores, Ventas, Cuenta corriente de Clientes, Pagos) están hechas y verificadas.
+**Fase 1 a 5 completas. Falta Fase 6** (integración, pruebas y pulido — sin empezar). Las 5
+pantallas de Fase 4 (Compras, Cuenta corriente de Proveedores, Ventas, Cuenta corriente de
+Clientes, Pagos) están hechas y verificadas contra IIS Express. Los 3 reportes de Fase 5 (Stock
+bajo, Ventas por período, Cuentas corrientes) están hechos y verificados con `MSBuild`/
+`aspnet_compiler`, pero **ninguno se probó todavía contra IIS Express** (WSL no llega a esos
+puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
@@ -38,7 +42,7 @@ Proveedores, Ventas, Cuenta corriente de Clientes, Pagos) están hechas y verifi
 | 2 | ABM de Clientes, Vehículos, Proveedores, Insumos, Servicios | ✅ Completa |
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
 | 4 | Compras, Ventas, Pagos, Cuentas corrientes | ✅ Completa |
-| 5 | Reportes | ⬜ No empezada |
+| 5 | Reportes | ✅ Completa |
 | 6 | Integración, pruebas y pulido | ⬜ No empezada |
 
 ### Qué funciona hoy
@@ -140,6 +144,29 @@ Proveedores, Ventas, Cuenta corriente de Clientes, Pagos) están hechas y verifi
   monto mayor al saldo pendiente del comprobante elegido (sin tope para "a cuenta general"). Un
   pago no se edita ni se borra. **Acceso completo para los 3 roles** (a diferencia de Compras/
   Cuentas corrientes, acá Empleado también puede cobrar — Requerimientos §5).
+- **Reporte de Stock bajo** (primero de los 3 reportes de Fase 5): grilla de solo lectura sobre
+  `InsumoDAL.ListarStockBajo()` (ya escrita desde Fase 2, sin usar hasta ahora), insumos activos
+  con `stockActual` por debajo de `stockMinimo`, ordenados por faltante de mayor a menor.
+  Resumen arriba con cantidad total y cuántos están en cero, esas mismas filas resaltadas en rojo
+  en la grilla. Sin filtros ni parámetros — a diferencia de los otros dos reportes, no había nada
+  de diseño que acordar antes de construirlo: el DAL ya traía el filtro exacto de
+  Requerimientos §6.9. Mismo acceso que el resto de Fase 5 (sin acceso para Empleado).
+- **Reporte de Ventas por período** (segundo de los 3): filtro de rango de fechas (`Desde`/
+  `Hasta`, inputs `type="date"`, default el mes en curso al entrar a la pantalla) sobre
+  `ComprobanteVentaDAL.ListarPorPeriodo`, método nuevo, sin cambio de esquema. Mismo formato
+  resumen + grilla paginada que Stock bajo: cantidad de ventas y total del período arriba (más el
+  total pendiente de cobro si lo hay), filas con saldo pendiente resaltadas en rojo en la grilla.
+  `CompareValidator` rechaza un rango con `Hasta` anterior a `Desde`. Mismo acceso que el resto de
+  Fase 5 (sin acceso para Empleado).
+- **Reporte de Cuentas corrientes** (tercero y último de Fase 5, cierra la fase): dos secciones
+  independientes en una sola pantalla (Clientes, Proveedores), cada una con su propio resumen +
+  grilla paginada. Sobre `CuentaCorrienteClienteDAL`/`CuentaCorrienteProveedorDAL.ListarSaldos`,
+  dos métodos nuevos (`CROSS APPLY` para traer el último saldo de cada uno), sin cambio de
+  esquema. Decidido con el usuario: entran los que tienen saldo distinto de cero, cualquier signo
+  (deuda o a favor) — no es un listado completo de todos ni sólo deudores. Sin resaltado de filas
+  (a diferencia de Stock bajo/Ventas: acá no hay un subconjunto "más urgente" claro dentro de la
+  lista, ya viene filtrada a lo que importa). Mismo acceso que el resto de Fase 5 (sin acceso
+  para Empleado). **Cierra Fase 5 — falta sólo Fase 6** (integración, pruebas y pulido).
 
 - **Alta pública de usuario (`~/Registro`)**: link "Crear cuenta nueva" desde `Login.aspx`, sin
   necesitar sesión previa. El visitante elige su propia contraseña (a diferencia del ABM de
@@ -155,12 +182,109 @@ Proveedores, Ventas, Cuenta corriente de Clientes, Pagos) están hechas y verifi
 
 ### Qué NO funciona todavía
 
-Quedan 3 pantallas de negocio como **cascarones** (los tres reportes de Fase 5): existen, están
-enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcionalidad.
+Las 15 pantallas de negocio existen y funcionan. Queda **Fase 6** completa (Roadmap): pruebas de
+flujo de punta a punta (turno → orden → venta → pago → cuenta corriente), validaciones cruzadas
+entre módulos, revisión de permisos por rol pantalla por pantalla, mejora de mensajes de error y
+UX, y documentación final. Ver también los pendientes puntuales sin fase asignada en la
+sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, etc.).
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-22 (cont. 2) — Tercer reporte de Fase 5: Cuentas corrientes, cierra la fase
+
+Sobre `CuentaCorrienteCliente`/`Proveedor` y sus DAL. A diferencia de Stock bajo, este también
+necesitaba diseño acordado (Ventas por período también lo necesitó) — decidido con el usuario:
+entran clientes y proveedores con saldo distinto de cero, cualquier signo (deuda **o** a favor),
+no un listado completo ni sólo deudores.
+
+**Sin filtro de fechas** (a diferencia de Ventas por período): es una foto del saldo actual, no
+un rango — no había nada de tiempo que acotar.
+
+**`ListarSaldos()`, método nuevo en los dos DAL** (`CuentaCorrienteClienteDAL` y
+`CuentaCorrienteProveedorDAL`, mismo patrón en los dos). Trae el último movimiento de cada
+cliente/proveedor con `CROSS APPLY` en vez de una subquery correlacionada por columna:
+
+```sql
+SELECT c.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente, u.saldo, u.fecha
+FROM Cliente c
+CROSS APPLY (
+    SELECT TOP 1 saldo, fecha FROM CuentaCorrienteCliente
+    WHERE idCliente = c.idCliente ORDER BY idMovimiento DESC
+) u
+WHERE u.saldo <> 0
+ORDER BY u.saldo DESC
+```
+
+El `CROSS APPLY` hace dos cosas a la vez: trae el saldo más reciente y excluye de entrada a
+quien nunca tuvo un movimiento (no hay fila del lado derecho para comparar contra `<> 0`) — no
+hace falta un `LEFT JOIN` + `WHERE ... IS NOT NULL` aparte. Mismo criterio de signo que ya regía
+en las pantallas de Fase 4: para Cliente, positivo = debe; para Proveedor, positivo = le
+debemos (confirmado releyendo `ComprobanteCompraDAL.Crear`, que carga la compra a cuenta
+corriente como `debe`).
+
+**Pantalla con dos secciones independientes, no una sola grilla combinada.** Clientes y
+Proveedores son entidades distintas con su propio DAL — mezclarlas en una grilla habría
+necesitado una columna "tipo" artificial y un modelo de fila que no es ninguna de las dos
+entidades reales. Cada sección repite el patrón resumen + grilla paginada ya establecido, con su
+propio `CargarClientes`/`CargarProveedores` y su propio `PageIndexChanging` (la paginación de una
+sección no debe reiniciar la otra).
+
+**Resumen con dos cláusulas condicionales, no una** (Stock bajo y Ventas por período tenían como
+mucho una cláusula extra opcional). Acá el conjunto ya viene mezclado en signo, así que el
+resumen separa cuántos deben y cuánto suman, y cuántos están a favor y cuánto suman — cualquiera
+de las dos cláusulas puede faltar si ese lado quedó vacío (ej.: todos los saldos son deudas, cero
+a favor).
+
+**Sin resaltado de filas**, a diferencia de Stock bajo (insumos en cero) y Ventas por período
+(saldo pendiente). Ahí el resaltado marcaba un subconjunto más urgente *dentro de* una lista ya
+filtrada a algo más amplio. Acá la lista ya viene filtrada a exactamente lo que importa (saldo
+≠ 0) — no hay un subconjunto adicional que separar visualmente.
+
+**`pnlSoloLectura` ya no existe** (ver la entrada de Santi más abajo, "Alta pública de usuario,
+rol Lectura..." — sacó el banner de las 3 pantallas de Reportes mientras yo tenía este trabajo
+sin commitear): esta pantalla se construyó y luego se rebaseó sobre ese cambio, sin el banner.
+
+**Verificación:** rebuild limpio de la solución (`MSBuild`, Debug) y `aspnet_compiler -v /` sin
+errores — designer.cs sincronizado con el markup, en los dos DAL y en la pantalla. No se corrió
+contra IIS Express en esta sesión (WSL no llega a esos puertos).
+
+**Cierra Fase 5.** Los tres reportes de Requerimientos §6.9 (Stock bajo, Ventas por período,
+Cuentas corrientes) están hechos. Sigue Fase 6 — ver Roadmap.
+
+### 2026-09-22 (cont.) — Segundo reporte de Fase 5: Ventas por período
+
+Sobre `ComprobanteVenta`/`ComprobanteVentaDAL`. A diferencia de Stock bajo, este sí necesitaba
+diseño acordado antes de tocar código (filtros, formato de salida) — decidido con el usuario:
+filtro de rango de fechas (`Desde`/`Hasta`) y formato resumen + detalle, igual que Stock bajo.
+
+**Filtro de fechas:** dos `<asp:TextBox TextMode="Date">` (mismo patrón que `txtFecha` en
+Turnos.aspx — HTML5 `type="date"`, postea `yyyy-MM-dd` siempre, se parsea con
+`DateTime.TryParseExact` + `CultureInfo.InvariantCulture`, sin depender de la cultura del
+navegador ni del servidor). Default al entrar a la pantalla: primer día del mes en curso hasta
+hoy, para no mostrar la grilla vacía en el primer ingreso. `CompareValidator` (`Type="Date"`,
+`Operator="GreaterThanEqual"`, ya usado en el proyecto para confirmar contraseña — ver
+CambiarClave/RestablecerClave) rechaza `Hasta` anterior a `Desde` antes de ir al servidor.
+
+**`ComprobanteVentaDAL.ListarPorPeriodo(desde, hasta)`, método nuevo.** Reutiliza el
+`SelectBase` ya existente (mismo JOIN con Cliente/OrdenDeTrabajo/Vehiculo que `Listar`/`Buscar`).
+`fecha` es `DATETIME` (`DEFAULT GETDATE()`, con hora), así que el filtro compara
+`>= @desde AND < @hastaExclusiva` (`hasta.Date.AddDays(1)`) en vez de contra `@hasta` a secas —
+si no, se pierden las ventas cargadas después de la medianoche del último día elegido.
+
+**Resumen + grilla, mismo patrón que Stock bajo:** texto arriba con cantidad de ventas y total
+del período, más una cláusula extra con el total pendiente de cobro si `SaldoPendiente` suma más
+de cero (mismo criterio condicional que el "de ellos sin stock" de Stock bajo). Grilla paginada
+(`PageSize=30`, mismo `PagerTemplate`) con las columnas ya usadas en `Ventas.aspx` (Número,
+Fecha, Cliente, Vehículo, Total, Saldo pendiente) menos la columna Acciones — acá no hay
+detalle por fila, es un listado del período, no un maestro-detalle. Filas con saldo pendiente
+resaltadas en rojo (`RowDataBound`), el mismo criterio visual de "solo se resalta lo que necesita
+atención" que Stock bajo con los insumos en cero.
+
+**Verificación:** rebuild limpio de la solución (`MSBuild`, Debug) y `aspnet_compiler -v /` sin
+errores — designer.cs sincronizado con el markup. No se corrió contra IIS Express en esta
+sesión (WSL no llega a esos puertos — ver más abajo).
 
 ### 2026-09-21/2026-09-22 — Alta pública de usuario, rol Lectura, y limpieza de indicadores "solo consulta"
 
@@ -237,6 +361,24 @@ scripts SQL corridos en secuencia sobre una base descartable con los conteos esp
 `verif.rol.lectura@`) borrados de la base real al cerrar cada verificación —
 **`lectura@lubricentro.com` sembrado por `03_UsuariosDePrueba.sql` sí quedó en la base real**, ver
 sección 4.
+
+### 2026-09-15 (noche) — Arranca Fase 5: reporte de Stock bajo
+
+Primer reporte de Fase 5, sobre `InsumoDAL.ListarStockBajo()` (escrita desde Fase 2, sin usar
+hasta ahora). Sin capa BIZ nueva ni cambio de esquema: el acceso (`Url`/`Menu`/`MenuNivel` de
+`~/Reportes/StockBajo`, sin acceso para Empleado — Requerimientos §5) ya estaba desde que se armó
+el menú en Fase 1; esta sesión solo llenó el cascarón con la pantalla.
+
+**El único de los 3 reportes sin nada de diseño que acordar primero:** sin filtros ni parámetros,
+orden por faltante (`stockMinimo - stockActual`) de mayor a menor con desempate alfabético,
+resumen arriba (cuántos insumos bajo el mínimo, cuántos en cero) y esas filas en cero resaltadas
+en rojo en la grilla. `VentasPorPeriodo` y `CuentasCorrientes` siguen como cascarón — esos dos sí
+necesitan decidir rango de fechas/formato de salida antes de tocarlos.
+
+**Verificación:** rebuild limpio de la solución (`MSBuild`, Debug) y `aspnet_compiler -c` sin
+errores — designer.cs sincronizado con el markup. No se corrió contra IIS Express en esta
+sesión; queda pendiente el paso a mano si se quiere el mismo nivel de verificación que las
+pantallas de Fase 4.
 
 ### 2026-09-15 — Rediseño visual de Login / RecuperarClave / RestablecerClave
 
@@ -1112,12 +1254,19 @@ IIS Express.
 **Fase 4 terminada.** Las 5 pantallas (Compras, Cuenta corriente de Proveedores, Ventas, Cuenta
 corriente de Clientes, Pagos) hechas y verificadas contra IIS Express.
 
-**Sigue Fase 5 — Reportes**, según el Roadmap (`CLAUDE.md` / `Docs/Lubricentro_Requerimientos.md`
-§6.9): stock bajo (`InsumoDAL.ListarStockBajo()` ya existe), ventas por período, y cuentas
-corrientes (deudas de clientes y a proveedores). Con Fase 4 completa ya hay datos reales de
-Compras/Ventas/Pagos/Cuentas corrientes para poder probar los tres reportes de punta a punta —
-antes de Fase 4 esto no hubiera sido posible. Falta acordar con el usuario el diseño concreto de
-cada reporte (filtros, formato de salida) antes de empezar a construirlos.
+**Fase 5 terminada.** Los tres reportes (Stock bajo, Ventas por período, Cuentas corrientes)
+hechos sobre datos reales de Fase 4, cada uno verificado con `MSBuild` + `aspnet_compiler` sin
+errores. Ninguno necesitó cambio de esquema.
+
+**Sigue Fase 6 — Integración, pruebas y pulido**, según el Roadmap: pruebas de flujo completo
+(turno → orden → venta → pago → cuenta corriente), validaciones cruzadas entre módulos (ej. no
+permitir cerrar una orden sin stock suficiente), revisión de permisos por rol pantalla por
+pantalla, mejora de mensajes de error y UX (Bootstrap), y documentación final para la entrega.
+Sin acordar todavía por dónde arrancar dentro de Fase 6 — a diferencia de las fases anteriores,
+acá no hay una pantalla nueva por vez: son 5 frentes transversales que tocan código ya
+entregado. Ver también los reportes de Stock bajo/Ventas por período pendientes de probar contra
+IIS Express (ningún reporte de Fase 5 se probó en caliente todavía — WSL no llega a esos
+puertos).
 
 ### Repaso de redacción, pendiente
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -68,6 +69,21 @@ namespace BIZ.Data
             foreach (DataRow fila in AccesoDatos.Consultar(
                 SelectBase + " WHERE v.idCliente = @idCliente AND v.saldoPendiente > 0 ORDER BY v.fecha",
                 AccesoDatos.Param("@idCliente", idCliente)).Rows)
+                lista.Add(Mapear(fila));
+            return lista;
+        }
+
+        // Ventas de un período, para Reportes/VentasPorPeriodo.aspx. "hasta" es inclusive del
+        // día completo aunque "fecha" tenga hora (DEFAULT GETDATE()): se compara contra el día
+        // siguiente en vez de la fecha exacta, para no perder ventas cargadas después de la
+        // medianoche de ese día.
+        public static List<ComprobanteVenta> ListarPorPeriodo(DateTime desde, DateTime hasta)
+        {
+            var lista = new List<ComprobanteVenta>();
+            foreach (DataRow fila in AccesoDatos.Consultar(
+                SelectBase + " WHERE v.fecha >= @desde AND v.fecha < @hastaExclusiva ORDER BY v.fecha",
+                AccesoDatos.Param("@desde", desde.Date),
+                AccesoDatos.Param("@hastaExclusiva", hasta.Date.AddDays(1))).Rows)
                 lista.Add(Mapear(fila));
             return lista;
         }

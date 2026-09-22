@@ -55,6 +55,34 @@ namespace BIZ.Data
             return resultado == null ? 0m : System.Convert.ToDecimal(resultado);
         }
 
+        // Saldo actual (último movimiento) de cada proveedor con saldo distinto de cero, para
+        // Reportes/CuentasCorrientes.aspx. Mismo criterio que CuentaCorrienteClienteDAL.
+        // ListarSaldos: CROSS APPLY trae el último movimiento y de paso excluye a quien nunca
+        // tuvo ninguno. Saldo positivo = le debemos al proveedor; negativo = a favor nuestro.
+        public static List<CuentaCorrienteProveedor> ListarSaldos()
+        {
+            const string sql = @"
+                SELECT p.idProveedor, p.razonSocial, u.saldo, u.fecha
+                FROM Proveedor p
+                CROSS APPLY (
+                    SELECT TOP 1 saldo, fecha FROM CuentaCorrienteProveedor
+                    WHERE idProveedor = p.idProveedor ORDER BY idMovimiento DESC
+                ) u
+                WHERE u.saldo <> 0
+                ORDER BY u.saldo DESC";
+
+            var lista = new List<CuentaCorrienteProveedor>();
+            foreach (DataRow fila in AccesoDatos.Consultar(sql).Rows)
+                lista.Add(new CuentaCorrienteProveedor
+                {
+                    IdProveedor = AccesoDatos.LeerInt(fila, "idProveedor"),
+                    RazonSocial = AccesoDatos.LeerString(fila, "razonSocial"),
+                    Saldo = AccesoDatos.LeerDecimal(fila, "saldo"),
+                    Fecha = AccesoDatos.LeerFecha(fila, "fecha")
+                });
+            return lista;
+        }
+
         // Núcleo de escritura: una sola fila, con el saldo acumulado calculado por subquery en
         // el propio INSERT (no hace falta SELECT + INSERT por separado: es un único statement,
         // atómico por sí solo). Los casos que necesitan ir atómicamente junto con otra escritura

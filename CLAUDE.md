@@ -8,7 +8,8 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1, Fase 2, Fase 3 y Fase 4 terminadas.** Andan el login, la
+**Estado real del código: Fase 1 a Fase 5 terminadas — falta Fase 6 (integración, pruebas y
+pulido).** Andan el login, la
 recuperación de contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa
 `BIZ/Data` de punta a punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**,
 **Proveedores**, **Insumos** con kardex de stock, y **Servicios**), las 2 pantallas de Fase 3
@@ -21,8 +22,10 @@ automáticamente al cerrar una orden de trabajo, botón nuevo `btnCerrarOrden` e
 Las 21 tablas del diagrama original ya existen (`Database\01_Esquema.sql`), más `MovimientoStock`
 (kardex de stock, agregada en Fase 2 — ver §9.3 de los Requerimientos) y dos columnas agregadas
 en Fase 4 (`ComprobanteCompra.medioPago`, `CuentaCorrienteCliente`/`Proveedor.idUsuario` — ver
-§9.5). **El resto de las pantallas de negocio (los tres reportes de Fase 5) siguen siendo
-cascarones vacíos**: solo muestran su título y "Pendiente".
+§9.5). **Los tres reportes de Fase 5 ya están hechos**: Stock bajo, Ventas por período (sobre
+`ComprobanteVentaDAL.ListarPorPeriodo`) y Cuentas corrientes (sobre
+`CuentaCorrienteCliente`/`ProveedorDAL.ListarSaldos`, dos métodos nuevos) — ninguno de los tres
+necesitó cambio de esquema.
 
 Fuera de las 6 fases del Roadmap se agregó un **cuarto rol, Lectura** (`Nivel.Lectura = 4`,
 jerarquía por debajo de Empleado): solo consulta en absolutamente todas las pantallas de negocio
@@ -41,8 +44,8 @@ Documentos de referencia (leer antes de diseñar algo del dominio):
   los supuestos/formatos ya confirmados en Fase 2/3/4 (DNI/CUIT/patente, diseño de
   Clientes/Vehículos, kardex de stock, estados de Turno/Orden, medio de pago de Compras) más el
   rol Lectura y `~/Registro` en §9.6, fuera de las 6 fases.
-- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue Fase 5** (Reportes: stock bajo,
-  ventas por período, cuentas corrientes — §6.9). Los ABM de Fase 2, las pantallas de Fase 3 y las
+- `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Fase 5 terminada** (Reportes — §6.9: los tres hechos); **falta Fase 6** (integración, pruebas
+  y pulido — sin empezar). Los ABM de Fase 2, las pantallas de Fase 3 y las
   de Fase 4 quedan como referencia de patrón — Proveedores/Insumos/Servicios para el modo
   solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador desplegable,
   Turnos/Órdenes para pantallas con cliente/vehículo fijo post-alta y (en Órdenes) franja de
