@@ -75,6 +75,7 @@
         </div>
 
         <div class="col-5">
+        <asp:Panel ID="pnlFormulario" runat="server">
             <h2><asp:Literal ID="litTituloFormulario" runat="server" Text="Nuevo cliente" /></h2>
             <asp:HiddenField ID="hdnIdCliente" runat="server" />
             <asp:HiddenField ID="hdnActivo" runat="server" Value="True" />
@@ -159,6 +160,7 @@
             <asp:Button ID="btnBorrar" runat="server" Text="Borrar" Visible="false"
                 OnClick="btnBorrar_Click" CausesValidation="false"
                 OnClientClick="return confirm('¿Borrar este cliente?');" />
+        </asp:Panel>
         </div>
     </div>
 </asp:Content>

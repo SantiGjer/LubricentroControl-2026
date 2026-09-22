@@ -12,11 +12,18 @@ namespace LubricentroControl_2026
     // "Nueva orden"; editando una ya creada se ven como texto de solo lectura.
     public partial class OrdenesDeTrabajo : PaginaSegura
     {
+        // Índice de la columna "Acciones" en gvOrdenes.Columns.
+        private const int ColumnaAcciones = 4;
+
         protected void Page_Load(object sender, EventArgs e)
         {
-            pnlSoloLectura.Visible = EsSoloLectura;
-
             if (IsPostBack) return;
+
+            if (EsSoloLectura)
+            {
+                pnlFormulario.Visible = false;
+                gvOrdenes.Columns[ColumnaAcciones].Visible = false;
+            }
 
             CargarFiltroEstado();
             CargarEstados();
@@ -65,6 +72,8 @@ namespace LubricentroControl_2026
         // "Cross-page posting no funciona con FriendlyUrls").
         protected void btnNuevoCliente_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             Response.Redirect("~/Clientes"
                 + "?origen=orden"
                 + "&kilometraje=" + Server.UrlEncode(txtKilometraje.Text)
@@ -74,6 +83,8 @@ namespace LubricentroControl_2026
 
         protected void btnNuevoVehiculo_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             var idCliente = LeerIdOculto(hdnIdCliente.Value);
             if (idCliente <= 0)
             {
@@ -225,11 +236,14 @@ namespace LubricentroControl_2026
 
         protected void btnNuevo_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             LimpiarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid) return;
 
             int kilometraje;
@@ -262,6 +276,8 @@ namespace LubricentroControl_2026
 
         protected void btnCancelarOrden_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             var idOrden = LeerIdOculto(hdnIdOrden.Value);
             var resultado = OrdenDeTrabajoDAL.Cancelar(idOrden, UsuarioActual.IdUsuario);
 
@@ -272,6 +288,8 @@ namespace LubricentroControl_2026
 
         protected void btnCerrarOrden_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             var idOrden = LeerIdOculto(hdnIdOrden.Value);
             var resultado = OrdenDeTrabajoDAL.Cerrar(idOrden);
 
@@ -282,6 +300,7 @@ namespace LubricentroControl_2026
 
         protected void gvOrdenes_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            if (EsSoloLectura) return;
             if (e.CommandName != "Seleccionar") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
@@ -355,6 +374,7 @@ namespace LubricentroControl_2026
 
         protected void btnAgregarServicio_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid) return;
 
             var idOrden = LeerIdOculto(hdnIdOrden.Value);
@@ -370,6 +390,7 @@ namespace LubricentroControl_2026
 
         protected void gvServicios_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            if (EsSoloLectura) return;
             if (e.CommandName != "Quitar") return;
 
             DetalleOrdenServicioDAL.Quitar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
@@ -380,6 +401,7 @@ namespace LubricentroControl_2026
 
         protected void btnAgregarInsumo_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid) return;
 
             var idOrden = LeerIdOculto(hdnIdOrden.Value);

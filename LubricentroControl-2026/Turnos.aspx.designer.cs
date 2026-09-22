@@ -8,9 +8,6 @@ namespace LubricentroControl_2026
 {
     public partial class Turnos
     {
-        /// <summary>Control pnlSoloLectura.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlSoloLectura;
-
         /// <summary>Control pnlMensaje.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlMensaje;
 
@@ -28,6 +25,9 @@ namespace LubricentroControl_2026
 
         /// <summary>Control gvTurnos.</summary>
         protected global::System.Web.UI.WebControls.GridView gvTurnos;
+
+        /// <summary>Control pnlFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlFormulario;
 
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;

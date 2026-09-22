@@ -13,9 +13,10 @@ namespace LubricentroControl_2026
     {
         protected void Page_Load(object sender, EventArgs e)
         {
-            pnlSoloLectura.Visible = EsSoloLectura;
-
             if (IsPostBack) return;
+
+            if (EsSoloLectura)
+                pnlFormulario.Visible = false;
 
             CargarTipo();
             CargarMedioPago();
@@ -157,6 +158,7 @@ namespace LubricentroControl_2026
 
         protected void btnRegistrar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid) return;
 
             var esCliente = ddlTipo.SelectedValue == Pago.TipoCliente;

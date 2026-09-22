@@ -24,12 +24,23 @@ en Fase 4 (`ComprobanteCompra.medioPago`, `CuentaCorrienteCliente`/`Proveedor.id
 §9.5). **El resto de las pantallas de negocio (los tres reportes de Fase 5) siguen siendo
 cascarones vacíos**: solo muestran su título y "Pendiente".
 
+Fuera de las 6 fases del Roadmap se agregó un **cuarto rol, Lectura** (`Nivel.Lectura = 4`,
+jerarquía por debajo de Empleado): solo consulta en absolutamente todas las pantallas de negocio
+(incluidas las que a Empleado le dan alta/edición completa — Clientes, Vehículos, Turnos, Órdenes,
+Ventas, Pagos), sin ningún acceso a Usuarios ni a Reportes. Se sumó también **`~/Registro`**, una
+pantalla pública de alta de usuario (link "Crear cuenta nueva" desde `Login.aspx`) que crea la
+cuenta con ese rol Lectura siempre — es la única forma de que un visitante sin cuenta entre al
+sistema por su cuenta, sin pasar por el ABM de Usuarios de un Admin. Ver §9.6 de los
+Requerimientos y la entrada "Rol Lectura y alta pública de usuarios" del Historial de decisiones
+más abajo.
+
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
 - `Docs/Lubricentro_Requerimientos.md` — alcance, matriz de permisos por rol, las 21 entidades
   (+ `MovimientoStock`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
   los supuestos/formatos ya confirmados en Fase 2/3/4 (DNI/CUIT/patente, diseño de
-  Clientes/Vehículos, kardex de stock, estados de Turno/Orden, medio de pago de Compras).
+  Clientes/Vehículos, kardex de stock, estados de Turno/Orden, medio de pago de Compras) más el
+  rol Lectura y `~/Registro` en §9.6, fuera de las 6 fases.
 - `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Sigue Fase 5** (Reportes: stock bajo,
   ventas por período, cuentas corrientes — §6.9). Los ABM de Fase 2, las pantallas de Fase 3 y las
   de Fase 4 quedan como referencia de patrón — Proveedores/Insumos/Servicios para el modo
@@ -187,10 +198,12 @@ Estas no se ven leyendo un solo archivo:
   (cliente que llega sin turno, se da de alta en el momento).
 - Clientes **y** proveedores pueden quedar con saldo pendiente; la cuenta corriente funciona en
   ambos sentidos (a favor o en contra).
-- Roles jerárquicos **Admin > Encargado > Empleado**. El menú se arma dinámicamente según el nivel
-  del usuario logueado (entidades `Menu`, `Url`, `Nivel`). El rol Empleado tiene acceso restringido
-  a compras y cuentas corrientes (solo consulta) y ninguno a reportes financieros ni a gestión de
-  usuarios.
+- Roles jerárquicos **Admin > Encargado > Empleado > Lectura**. El menú se arma dinámicamente según
+  el nivel del usuario logueado (entidades `Menu`, `Url`, `Nivel`). El rol Empleado tiene acceso
+  restringido a compras y cuentas corrientes (solo consulta) y ninguno a reportes financieros ni a
+  gestión de usuarios. El rol Lectura (agregado fuera del alcance original, ver §9.6) es solo
+  consulta en **todo** lo que ve — mismas pantallas que Empleado, pero sin escritura en ninguna —
+  y es el rol que recibe cualquier alta hecha desde `~/Registro`.
 - **Fuera de alcance por decisión explícita:** facturación fiscal / AFIP, portal público de turnos
   para el cliente, notificaciones automáticas por mail o SMS, multi-sucursal.
 
@@ -487,3 +500,56 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
 
   Un pago "a cuenta general" (sin comprobante puntual) no tiene techo de monto — solo se valida
   el techo cuando se imputa a un comprobante puntual, contra su `saldoPendiente`.
+
+- **Rol Lectura y alta pública de usuarios (sesión 2026-09-21/2026-09-22) — fuera de las 6 fases
+  del Roadmap.** Pedido explícito del usuario, sin precedente en `Docs/Lubricentro_Requerimientos.md`
+  (que en §10 da por fuera de alcance cualquier portal público): un botón "Crear cuenta nueva" en
+  `Login.aspx` lleva a `~/Registro`, pantalla pública (no hereda `PaginaSegura`, mismo molde visual
+  que `RecuperarClave`/`RestablecerClave`) donde cualquier visitante elige su propia contraseña.
+  `UsuarioDAL.Registrar` (nuevo, junto a `Crear`) valida, chequea mail duplicado, hashea la
+  contraseña elegida (a diferencia de `Crear`, que siempre genera una temporal y la manda por
+  mail) y fuerza el rol al alta — primero se probó con `Nivel.Empleado`, y a pedido posterior del
+  usuario se cambió a un rol nuevo y más restringido, `Nivel.Lectura`. Al terminar, inicia sesión
+  automáticamente (`SesionUsuario.Iniciar`) y redirige a `~/Default`, igual que un login exitoso.
+
+  **`Nivel.Lectura = 4`** queda por debajo de Empleado en la jerarquía. Su fila en `MenuNivel` (ver
+  `02_DatosIniciales.sql`) replica el mismo `WHERE` que ya excluía Administración/Reportes para
+  Empleado, pero con `soloLectura = 1` para **absolutamente todas** las filas restantes — a
+  diferencia de Empleado, que hoy solo tiene `soloLectura = 1` en 6 pantallas puntuales
+  (Proveedores/Insumos/Compras/Servicios/las dos Cuentas corrientes) y acceso de escritura
+  completo en Clientes/Vehículos/Turnos/Órdenes/Ventas/Pagos.
+
+  **Se encontró un bug real, no cosmético, al construir esto.** El flag `PaginaSegura.EsSoloLectura`
+  ya era genérico (lo calcula `MenuDAL.ObtenerPermiso` desde `MenuNivel.soloLectura`, para
+  cualquier rol/pantalla), y tres pantallas (`Turnos`, `OrdenesDeTrabajo`, `Pagos`) ya mostraban un
+  banner "solo consulta" cuando ese flag daba `true` — pero **ningún método de escritura lo
+  chequeaba**: el banner era decorativo, el botón de Guardar seguía funcionando. Quedó latente
+  porque hasta ahora ningún rol seedeado tenía `soloLectura = 1` en esas tres pantallas. Se corrigió
+  agregando `if (EsSoloLectura) return;` al principio de cada handler de escritura (Guardar,
+  Cancelar/Cerrar orden, agregar servicio/insumo, registrar pago), más ocultar el panel del
+  formulario y la columna "Acciones" de la grilla — mismo patrón ya establecido en `Proveedores.
+  aspx.cs`. `Clientes.aspx`/`Vehiculos.aspx` no tenían ni siquiera el banner: se les agregó el
+  patrón completo desde cero. **Probado el peor caso a propósito:** reusar el `__VIEWSTATE` de una
+  vista de Admin (con el formulario completo habilitado) posteado con la cookie de sesión de un
+  usuario Lectura — el servidor acepta el postback (event validation no lo rechaza, porque ese
+  viewstate sí tenía el control registrado) pero no escribe nada, confirmando que la guarda real es
+  el `if (EsSoloLectura) return;` del código, no el ocultamiento de UI.
+
+  **Los tres scripts de `Database/` se puertaron a mano y se re-verificaron de punta a punta.**
+  `01_Esquema.sql` no necesitó ningún cambio de esquema (`Nivel` ya era genérica, sin `CHECK` de
+  roles) — solo un comentario. `02_DatosIniciales.sql` ganó la fila de `Nivel` y el bloque de
+  `MenuNivel` de Lectura. `03_UsuariosDePrueba.sql` ganó un tercer usuario
+  (`lectura@lubricentro.com` / `Lectura123!`), con hash/salt generados en PowerShell replicando
+  exacto `PasswordHasher.cs` (PBKDF2-SHA256, 25.000 iteraciones, salt 16 bytes, hash 32) en vez de
+  inventados — verificado corriendo `01 → 02 → 03` contra una base descartable y logueándose de
+  verdad con esas credenciales contra la app corriendo. Corridos después los 4 scripts (`01` a
+  `04_DatosDemo.sql`) contra la base de desarrollo real, a pedido explícito del usuario.
+
+  **Los indicadores visuales de "solo consulta" se sacaron de la interfaz a pedido del usuario**,
+  en tres lugares distintos, **sin tocar la restricción real** (que sigue viviendo en `EsSoloLectura`
+  y sus guardas): el badge `<span class="badge">consulta</span>` que `Site.Master.cs` agregaba a
+  cada ítem del menú desplegable, el banner `pnlSoloLectura` ("Tu rol tiene acceso de solo consulta
+  a esta pantalla") de las 15 pantallas que lo tenían, y el sufijo `" (solo consulta)"` que
+  `Default.aspx.cs` agregaba a la lista "Tus accesos" del Inicio. En las 3 pantallas de Reportes
+  (todavía cascarón) sacar el banner dejó `Page_Load` vacío — se eliminó el método entero en vez de
+  dejar un cascarón sin usar.

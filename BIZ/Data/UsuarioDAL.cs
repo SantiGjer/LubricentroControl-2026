@@ -114,6 +114,31 @@ namespace BIZ.Data
             return ResultadoOperacion.Ok("Usuario creado.");
         }
 
+        // Alta pública desde Login/Registro: el visitante elige su contraseña y queda
+        // siempre en el rol más bajo (solo consulta, sin poder escribir en ningún lado).
+        // A diferencia de Crear, no genera clave ni manda mail.
+        public static ResultadoOperacion Registrar(Usuario usuario, string password, string repeticion)
+        {
+            usuario.IdNivel = Nivel.Lectura;
+            usuario.Activo = true;
+
+            var validacion = usuario.Validar();
+            if (!validacion.Exito) return validacion;
+
+            var validacionPassword = Usuario.ValidarPassword(password, repeticion);
+            if (!validacionPassword.Exito) return validacionPassword;
+
+            if (ExisteEmail(usuario.Email))
+                return ResultadoOperacion.Error("Ya existe un usuario con ese mail.");
+
+            usuario.PasswordSalt = PasswordHasher.GenerarSalt();
+            usuario.PasswordHash = PasswordHasher.Hashear(password, usuario.PasswordSalt);
+
+            usuario.IdUsuario = Insertar(usuario);
+
+            return ResultadoOperacion.Ok("Cuenta creada.");
+        }
+
         // No dejar el sistema sin ningún administrador activo, ni permitir mail duplicado.
         public static ResultadoOperacion Actualizar(Usuario usuario)
         {

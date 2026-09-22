@@ -4,10 +4,6 @@
 
     <h1>Órdenes de trabajo</h1>
 
-    <asp:Panel ID="pnlSoloLectura" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
-        Tu rol tiene acceso de <b>solo consulta</b> a esta pantalla.
-    </asp:Panel>
-
     <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
         <asp:Literal ID="litMensaje" runat="server" />
     </asp:Panel>
@@ -46,6 +42,7 @@
         </div>
 
         <div class="col-5">
+        <asp:Panel ID="pnlFormulario" runat="server">
             <h2><asp:Literal ID="litTituloFormulario" runat="server" Text="Nueva orden" /></h2>
             <asp:HiddenField ID="hdnIdOrden" runat="server" />
 
@@ -171,6 +168,7 @@
             <asp:Button ID="btnCerrarOrden" runat="server" Text="Cerrar orden" Visible="false"
                 OnClick="btnCerrarOrden_Click" CausesValidation="false"
                 OnClientClick="return confirm('¿Cerrar esta orden? Se generará la venta correspondiente.');" />
+        </asp:Panel>
         </div>
     </div>
 

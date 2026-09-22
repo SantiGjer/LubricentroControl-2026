@@ -42,12 +42,7 @@ namespace LubricentroControl_2026
         {
             html.Append("<li><a href=\"").Append(HttpUtility.HtmlEncode(ResolveUrl(opcion.Path))).Append("\">")
                 .Append(HttpUtility.HtmlEncode(opcion.Texto))
-                .Append("</a>");
-
-            if (opcion.SoloLectura)
-                html.Append(" (solo consulta)");
-
-            html.Append("</li>");
+                .Append("</a></li>");
         }
     }
 }

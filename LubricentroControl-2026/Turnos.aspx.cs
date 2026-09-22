@@ -12,11 +12,18 @@ namespace LubricentroControl_2026
     // desplegable de cliente que Vehiculos.aspx — sin el atajo "Nuevo cliente" (ver plan).
     public partial class Turnos : PaginaSegura
     {
+        // Índice de la columna "Acciones" en gvTurnos.Columns.
+        private const int ColumnaAcciones = 4;
+
         protected void Page_Load(object sender, EventArgs e)
         {
-            pnlSoloLectura.Visible = EsSoloLectura;
-
             if (IsPostBack) return;
+
+            if (EsSoloLectura)
+            {
+                pnlFormulario.Visible = false;
+                gvTurnos.Columns[ColumnaAcciones].Visible = false;
+            }
 
             CargarFiltroEstado();
             CargarEstados();
@@ -124,11 +131,14 @@ namespace LubricentroControl_2026
 
         protected void btnNuevo_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             LimpiarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid) return;
 
             // Los inputs HTML5 type="date"/"time" siempre postean en yyyy-MM-dd / HH:mm,
@@ -173,6 +183,7 @@ namespace LubricentroControl_2026
 
         protected void gvTurnos_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            if (EsSoloLectura) return;
             if (e.CommandName != "Seleccionar") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));

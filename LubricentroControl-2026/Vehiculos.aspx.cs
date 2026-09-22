@@ -12,9 +12,18 @@ namespace LubricentroControl_2026
     // (Requerimientos §9.2).
     public partial class Vehiculos : PaginaSegura
     {
+        // Índice de la columna "Acciones" en gvVehiculos.Columns.
+        private const int ColumnaAcciones = 6;
+
         protected void Page_Load(object sender, EventArgs e)
         {
             if (IsPostBack) return;
+
+            if (EsSoloLectura)
+            {
+                pnlFormulario.Visible = false;
+                gvVehiculos.Columns[ColumnaAcciones].Visible = false;
+            }
 
             CargarTiposCombustible();
             CargarGrilla();
@@ -69,6 +78,8 @@ namespace LubricentroControl_2026
         // PreviousPage necesita reconstruir la página de origen a partir de esa ruta).
         protected void btnNuevoCliente_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             var url = "~/Clientes"
                 + "?origen=vehiculo"
                 + "&idVehiculo=" + Server.UrlEncode(hdnIdVehiculo.Value)
@@ -176,11 +187,14 @@ namespace LubricentroControl_2026
 
         protected void btnNuevo_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             LimpiarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid) return;
 
             int anioParsed;
@@ -224,6 +238,8 @@ namespace LubricentroControl_2026
 
         protected void btnBorrar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             var baja = VehiculoDAL.Desactivar(LeerIdOculto(hdnIdVehiculo.Value));
 
             MostrarMensaje(baja.Mensaje, baja.Exito);
@@ -233,6 +249,7 @@ namespace LubricentroControl_2026
 
         protected void gvVehiculos_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            if (EsSoloLectura) return;
             if (e.CommandName != "Seleccionar") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));

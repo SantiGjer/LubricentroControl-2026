@@ -4,10 +4,6 @@
 
     <h1>Turnos</h1>
 
-    <asp:Panel ID="pnlSoloLectura" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
-        Tu rol tiene acceso de <b>solo consulta</b> a esta pantalla.
-    </asp:Panel>
-
     <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
         <asp:Literal ID="litMensaje" runat="server" />
     </asp:Panel>
@@ -54,6 +50,7 @@
         </div>
 
         <div class="col-5">
+        <asp:Panel ID="pnlFormulario" runat="server">
             <h2><asp:Literal ID="litTituloFormulario" runat="server" Text="Nuevo turno" /></h2>
             <asp:HiddenField ID="hdnIdTurno" runat="server" />
 
@@ -141,6 +138,7 @@
                 OnClick="btnGuardar_Click" ValidationGroup="Turno" />
             <asp:Button ID="btnNuevo" runat="server" Text="Nuevo turno"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
+        </asp:Panel>
         </div>
     </div>
 </asp:Content>

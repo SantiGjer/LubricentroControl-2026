@@ -8,9 +8,6 @@ namespace LubricentroControl_2026
 {
     public partial class OrdenesDeTrabajo
     {
-        /// <summary>Control pnlSoloLectura.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlSoloLectura;
-
         /// <summary>Control pnlMensaje.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlMensaje;
 
@@ -28,6 +25,9 @@ namespace LubricentroControl_2026
 
         /// <summary>Control gvOrdenes.</summary>
         protected global::System.Web.UI.WebControls.GridView gvOrdenes;
+
+        /// <summary>Control pnlFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlFormulario;
 
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;

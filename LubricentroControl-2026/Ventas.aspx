@@ -4,10 +4,6 @@
 
     <h1>Ventas</h1>
 
-    <asp:Panel ID="pnlSoloLectura" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
-        Tu rol tiene acceso de <b>solo consulta</b> a esta pantalla.
-    </asp:Panel>
-
     <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
         <asp:Literal ID="litMensaje" runat="server" />
     </asp:Panel>

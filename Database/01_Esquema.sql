@@ -51,7 +51,7 @@ GO
 CREATE TABLE Nivel (
     idNivel     INT IDENTITY(1,1) NOT NULL,
     nombre      NVARCHAR(50)      NOT NULL,
-    /* Menor jerarquía = más permisos. Admin=1 > Encargado=2 > Empleado=3 */
+    /* Menor jerarquía = más permisos. Admin=1 > Encargado=2 > Empleado=3 > Lectura=4 */
     jerarquia   INT               NOT NULL,
     CONSTRAINT PK_Nivel PRIMARY KEY (idNivel),
     CONSTRAINT UQ_Nivel_nombre UNIQUE (nombre)

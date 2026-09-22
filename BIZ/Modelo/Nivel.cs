@@ -1,12 +1,15 @@
 namespace BIZ.Modelo
 {
-    // Rol de usuario. Jerarquía: Admin(1) > Encargado(2) > Empleado(3).
+    // Rol de usuario. Jerarquía: Admin(1) > Encargado(2) > Empleado(3) > Lectura(4).
     public class Nivel
     {
         // Ids fijos que carga 02_DatosIniciales.sql.
         public const int Admin = 1;
         public const int Encargado = 2;
         public const int Empleado = 3;
+
+        // Solo consulta en todas las áreas salvo Usuarios y Reportes (que no ve ni en el menú).
+        public const int Lectura = 4;
 
         public int IdNivel { get; set; }
         public string Nombre { get; set; }

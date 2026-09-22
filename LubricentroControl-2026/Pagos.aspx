@@ -4,10 +4,6 @@
 
     <h1>Pagos</h1>
 
-    <asp:Panel ID="pnlSoloLectura" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
-        Tu rol tiene acceso de <b>solo consulta</b> a esta pantalla.
-    </asp:Panel>
-
     <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
         <asp:Literal ID="litMensaje" runat="server" />
     </asp:Panel>
@@ -45,6 +41,7 @@
         </div>
 
         <div class="col-5">
+        <asp:Panel ID="pnlFormulario" runat="server">
             <h2>Registrar pago</h2>
 
             <div class="row border border-1">
@@ -166,6 +163,7 @@
 
             <asp:Button ID="btnRegistrar" runat="server" Text="Registrar pago"
                 OnClick="btnRegistrar_Click" ValidationGroup="Pago" />
+        </asp:Panel>
         </div>
     </div>
 </asp:Content>

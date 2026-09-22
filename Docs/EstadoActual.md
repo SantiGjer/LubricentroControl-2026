@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 15 de septiembre de 2026
+**Última actualización:** 22 de septiembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -141,6 +141,18 @@ Proveedores, Ventas, Cuenta corriente de Clientes, Pagos) están hechas y verifi
   pago no se edita ni se borra. **Acceso completo para los 3 roles** (a diferencia de Compras/
   Cuentas corrientes, acá Empleado también puede cobrar — Requerimientos §5).
 
+- **Alta pública de usuario (`~/Registro`)**: link "Crear cuenta nueva" desde `Login.aspx`, sin
+  necesitar sesión previa. El visitante elige su propia contraseña (a diferencia del ABM de
+  Usuarios, que siempre genera una temporal y la manda por mail); si el mail no existe, crea la
+  cuenta y loguea automático. Siempre queda en el rol nuevo **Lectura** (`Nivel.Lectura = 4`, el
+  más restringido de los cuatro), nunca en Empleado.
+- **Rol Lectura**: ve las mismas pantallas que Empleado, pero en modo solo consulta en
+  absolutamente todas — incluidas Clientes, Vehículos, Turnos, Órdenes, Ventas y Pagos, donde
+  Empleado sí tiene alta/edición completa. Sin acceso a Usuarios ni a Reportes.
+- Los indicadores visuales de "solo consulta" (badge del menú, banner de cada pantalla, sufijo en
+  "Tus accesos" del Inicio) se sacaron de la interfaz — la restricción real (formulario oculto,
+  columna Acciones oculta, guarda `if (EsSoloLectura) return;` en cada escritura) sigue intacta.
+
 ### Qué NO funciona todavía
 
 Quedan 3 pantallas de negocio como **cascarones** (los tres reportes de Fase 5): existen, están
@@ -149,6 +161,82 @@ enlazadas desde el menú y respetan los permisos por rol, pero no tienen funcion
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-21/2026-09-22 — Alta pública de usuario, rol Lectura, y limpieza de indicadores "solo consulta"
+
+Trabajo fuera de las 6 fases del Roadmap, a pedido explícito del usuario: una vía para que
+cualquier visitante se cree su propia cuenta desde `Login.aspx`, sin depender de un Admin. Sin
+precedente en `Docs/Lubricentro_Requerimientos.md` (§10 da por fuera de alcance cualquier portal
+público) — se documentó como decisión nueva en §9.6.
+
+**`~/Registro` (nuevo).** Pantalla pública (no hereda `PaginaSegura`, mismo molde visual que
+`RecuperarClave`/`RestablecerClave`: `login-page`/`login-card`/`login-stripe`): nombre, apellido,
+mail, contraseña + repetir. `UsuarioDAL.Registrar` (nuevo, junto a `Crear`) valida, chequea mail
+duplicado y hashea la contraseña que el visitante eligió — a diferencia de `Crear` (ABM de
+Usuarios), que siempre genera una temporal y la manda por mail. Al terminar, inicia sesión
+automáticamente y redirige a `~/Default`, igual que un login exitoso. **El rol que recibe cambió
+en la propia sesión:** primero se implementó con `Nivel.Empleado` (el más bajo de los 3 roles
+existentes en ese momento), y a pedido posterior del usuario se creó un rol nuevo más restringido
+(`Nivel.Lectura`) y se cambió `Registrar` para asignar ese en vez de Empleado.
+
+**Rol nuevo `Lectura` (`idNivel = 4`, jerarquía por debajo de Empleado).** Ve las mismas 17
+pantallas que ve Empleado (todo menos Administración y Reportes), pero en modo solo consulta en
+**absolutamente todas** — incluidas Clientes, Vehículos, Turnos, Órdenes, Ventas y Pagos, donde
+Empleado sigue teniendo alta/edición completa. La fila de `MenuNivel` para Lectura en
+`02_DatosIniciales.sql` es el mismo `WHERE` que ya excluía Administración/Reportes para Empleado,
+pero con `soloLectura = 1` en las 17 filas en vez de en 6.
+
+**Bug real encontrado al construir esto, no solo cosmético.** `PaginaSegura.EsSoloLectura` ya era
+genérico (calculado por `MenuDAL.ObtenerPermiso` desde `MenuNivel.soloLectura`), y `Turnos`,
+`OrdenesDeTrabajo` y `Pagos` ya mostraban un banner "solo consulta" cuando ese flag daba `true` —
+pero **ningún método de escritura lo chequeaba**: el banner era decorativo nada más, el botón de
+Guardar seguía funcionando. Quedó sin detectar hasta ahora porque ningún rol seedeado tenía
+`soloLectura = 1` en esas tres pantallas todavía. Se corrigió agregando `if (EsSoloLectura)
+return;` al principio de cada handler de escritura (Guardar, Cancelar/Cerrar orden, agregar
+servicio/insumo, registrar pago) más ocultar el panel del formulario (`pnlFormulario`, nuevo en
+estas 3) y la columna "Acciones" de la grilla — mismo patrón ya establecido en
+`Proveedores.aspx.cs`. `Clientes.aspx`/`Vehiculos.aspx` no tenían ni el banner: se les agregó el
+patrón completo desde cero (nuevo también ahí `pnlFormulario`).
+
+**Verificado con el peor caso a propósito, no solo con la UI oculta:** reusar el `__VIEWSTATE` de
+una vista de Admin (formulario completo habilitado) posteado con la cookie de sesión de un usuario
+Lectura — el servidor acepta el postback (event validation no lo rechaza, porque ese viewstate sí
+tenía el control registrado como válido) pero no escribe nada en la base, confirmando que la
+guarda real es el `if (EsSoloLectura) return;` del código, no el ocultamiento visual del panel.
+
+**Los 3 scripts de `Database/` se pusieron al día y se re-verificaron de punta a punta, no solo el
+cambio incremental de antes.** `01_Esquema.sql`: sin cambio de esquema (`Nivel` ya es genérica, sin
+`CHECK` de roles), solo un comentario. `02_DatosIniciales.sql`: fila de `Nivel` + bloque de
+`MenuNivel` de Lectura. `03_UsuariosDePrueba.sql`: tercer usuario
+(`lectura@lubricentro.com` / `Lectura123!`) con hash/salt generados de verdad en PowerShell
+replicando `PasswordHasher.cs` (PBKDF2-SHA256, 25.000 iteraciones, salt 16 bytes, hash 32) en vez
+de inventados. Verificado corriendo `01 → 02 → 03` contra una base descartable
+(`LubricentroControlVerifTmp`) y logueándose de verdad con esas credenciales contra la app
+corriendo, antes de tocar la base de desarrollo real. A pedido explícito del usuario, se corrieron
+después los 4 scripts (`01` a `04_DatosDemo.sql`) contra la base de desarrollo real — recrea el
+esquema y repone los mismos 10 registros de ejemplo por entidad que ya tenía.
+
+**Los indicadores visuales de "solo consulta" se sacaron de la interfaz, en 3 pedidos separados
+del usuario, sin tocar la restricción real.** El badge `<span class="badge">consulta</span>` que
+`Site.Master.cs` agregaba a cada ítem del menú desplegable (`RenderizarGrupo`); el banner
+`pnlSoloLectura` ("Tu rol tiene acceso de solo consulta a esta pantalla") de las 15 pantallas que
+lo tenían — sacado con una pasada de PowerShell sobre los 3 archivos de cada pantalla
+(`.aspx`/`.aspx.cs`/`.aspx.designer.cs`), preservando el BOM de cada archivo; y el sufijo
+`" (solo consulta)"` que `Default.aspx.cs` agregaba a cada ítem de la lista "Tus accesos" del
+Inicio. En las 3 pantallas de Reportes (todavía cascarón "Pendiente") sacar el banner dejó
+`Page_Load` vacío — se eliminó el método entero en vez de dejar un cascarón sin usar.
+
+**Verificación, en cada paso:** rebuild limpio + `aspnet_compiler` sin errores. Contra IIS Express
++ LocalDB: alta por `~/Registro` con mail nuevo (queda en rol Lectura, sesión iniciada, menú
+restringido correcto), mail duplicado y contraseña corta rechazados: menú del rol Lectura sin
+Usuarios/Reportes en las 12 pantallas con escritura restringida — banner ausente, botón de
+Guardar/Registrar ausente, columna Acciones ausente — y el replay de viewstate ya descripto arriba
+sin escribir nada; Admin sigue viendo el formulario completo en Proveedores sin regresión; los 4
+scripts SQL corridos en secuencia sobre una base descartable con los conteos esperados en
+`Nivel`/`MenuNivel`/`Usuario`. Usuarios de prueba (`empleado.prueba.*@`, `lectura.prueba@`,
+`verif.rol.lectura@`) borrados de la base real al cerrar cada verificación —
+**`lectura@lubricentro.com` sembrado por `03_UsuariosDePrueba.sql` sí quedó en la base real**, ver
+sección 4.
 
 ### 2026-09-15 — Rediseño visual de Login / RecuperarClave / RestablecerClave
 
@@ -1046,8 +1134,8 @@ falta es decidir si se unifica el criterio.
 Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
 
 - **Cambiar la contraseña del administrador.** Hoy es la sembrada por el script (`Admin123!`).
-- **Borrar los usuarios de prueba** (`encargado@lubricentro.com`, `empleado@lubricentro.com`)
-  y el script `03_UsuariosDePrueba.sql` de la entrega final.
+- **Borrar los usuarios de prueba** (`encargado@lubricentro.com`, `empleado@lubricentro.com`,
+  `lectura@lubricentro.com`) y el script `03_UsuariosDePrueba.sql` de la entrega final.
 - **Conmutar a la VPN Radmin:** cambiar la cadena `LubricentroDB` en `Web.config`.
 - **Salida real de mails — mecanismo listo, falta decidir el estado final.** `<system.net>/
   <mailSettings>` ya está configurado (Gmail + contraseña de aplicación, ver sesión

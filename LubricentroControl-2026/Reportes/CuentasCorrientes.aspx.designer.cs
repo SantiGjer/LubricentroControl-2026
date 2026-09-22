@@ -8,7 +8,5 @@ namespace LubricentroControl_2026.Reportes
 {
     public partial class CuentasCorrientes
     {
-        /// <summary>Control pnlSoloLectura.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlSoloLectura;
     }
 }

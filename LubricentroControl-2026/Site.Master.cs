@@ -63,12 +63,8 @@ namespace LubricentroControl_2026
                 html.Append("<li><a class=\"dropdown-item")
                     .Append(EsRutaActual(hijo, rutaActual) ? " active" : "")
                     .Append("\" href=\"").Append(HttpUtility.HtmlEncode(ResolveUrl(hijo.Path))).Append("\">")
-                    .Append(HttpUtility.HtmlEncode(hijo.Texto));
-
-                if (hijo.SoloLectura)
-                    html.Append(" <span class=\"badge bg-light text-dark\">consulta</span>");
-
-                html.Append("</a></li>");
+                    .Append(HttpUtility.HtmlEncode(hijo.Texto))
+                    .Append("</a></li>");
             }
 
             html.Append("</ul></li>");

@@ -19,11 +19,13 @@ SET NOCOUNT ON;
 INSERT INTO Nivel (nombre, jerarquia) VALUES
     ('Admin', 1),
     ('Encargado', 2),
-    ('Empleado', 3);
+    ('Empleado', 3),
+    ('Lectura', 4);
 
 DECLARE @admin INT = (SELECT idNivel FROM Nivel WHERE nombre = 'Admin');
 DECLARE @encargado INT = (SELECT idNivel FROM Nivel WHERE nombre = 'Encargado');
 DECLARE @empleado INT = (SELECT idNivel FROM Nivel WHERE nombre = 'Empleado');
+DECLARE @lectura INT = (SELECT idNivel FROM Nivel WHERE nombre = 'Lectura');
 
 /* --- Usuario administrador inicial --------------------------------------
    Hash PBKDF2-SHA256, 25.000 iteraciones, 32 bytes — mismo algoritmo que
@@ -103,7 +105,8 @@ JOIN Url u ON u.path = v.path;
 
 /* --- Permisos de menú por rol -------------------------------------------
    Refleja la matriz de permisos de los requerimientos (§5).
-   soloLectura = 1 son los casos "👁️ Solo consulta" del rol Empleado.       */
+   soloLectura = 1 son los casos "👁️ Solo consulta" del rol Empleado, y
+   absolutamente todo para el rol Lectura (ver bloque más abajo).          */
 
 /* Admin ve absolutamente todo, con permiso completo. */
 INSERT INTO MenuNivel (idMenu, idNivel, soloLectura)
@@ -123,6 +126,15 @@ SELECT m.idMenu, @empleado,
             THEN 1 ELSE 0 END
 FROM Menu m
 LEFT JOIN Url u ON u.idUrl = m.idUrl
+WHERE m.idMenu NOT IN (@gAdmin, @gReportes)
+  AND ISNULL(m.idMenuPadre, 0) NOT IN (@gAdmin, @gReportes);
+
+/* Lectura: mismas pantallas que ve Empleado (sin Administración ni Reportes),
+   pero solo consulta en absolutamente todas — incluidas las que a Empleado
+   todavía le dan alta/edición (Clientes, Vehículos, Turnos, Órdenes, Ventas, Pagos). */
+INSERT INTO MenuNivel (idMenu, idNivel, soloLectura)
+SELECT m.idMenu, @lectura, 1
+FROM Menu m
 WHERE m.idMenu NOT IN (@gAdmin, @gReportes)
   AND ISNULL(m.idMenuPadre, 0) NOT IN (@gAdmin, @gReportes);
 

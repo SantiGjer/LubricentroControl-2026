@@ -37,6 +37,10 @@
                 <a runat="server" href="~/RecuperarClave">Olvidé mi contraseña</a>
             </p>
 
+            <p class="login-link">
+                <a runat="server" href="~/Registro">Crear cuenta nueva</a>
+            </p>
+
         </div>
     </div>
 

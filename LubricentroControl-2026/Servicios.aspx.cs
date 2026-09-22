@@ -16,8 +16,6 @@ namespace LubricentroControl_2026
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            pnlSoloLectura.Visible = EsSoloLectura;
-
             if (IsPostBack) return;
 
             if (EsSoloLectura)

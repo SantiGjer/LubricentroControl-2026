@@ -84,6 +84,10 @@ Login por mail + contraseña (hasheada). Recuperación de contraseña vía mail 
 | Cuentas corrientes | ✅ | ✅ | 👁️ Solo consulta |
 | Reportes financieros | ✅ | ✅ | ❌ |
 
+**Nota (2026-09-22):** se agregó un cuarto rol, **Lectura**, fuera de esta matriz "v1" original —
+ver §9.6. Solo consulta en todas las filas de arriba salvo "Gestión de usuarios" y "Reportes
+financieros", que no ve.
+
 ---
 
 ## 6. Módulos y requerimientos funcionales
@@ -270,6 +274,26 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
 - **Numeración de comprobantes** (pendiente en §9 desde el documento original): correlativo
   interno derivado del propio `IDENTITY` de la tabla, con prefijo por tipo — `C-000001`,
   `C-000002`, ... para compras; `V-000001`, ... para ventas. Sin tabla de secuencia aparte.
+
+### 9.6 Rol Lectura y alta pública de usuarios (confirmado 2026-09-21/2026-09-22)
+
+Pedido del dueño del negocio, sin precedente en el documento original — la matriz de §5 y la
+jerarquía de roles de §5/§7 nacieron pensadas para 3 roles asignados siempre por un Admin desde el
+ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
+
+- **Cuarto rol, Lectura, por debajo de Empleado en la jerarquía** (`Admin > Encargado > Empleado >
+  Lectura`). Ve exactamente las mismas pantallas que Empleado (todo menos "Gestión de usuarios" y
+  "Reportes financieros" de la matriz de §5), pero en modo **solo consulta en todas**, incluidas
+  las que a Empleado le dan alta/edición completa (Clientes, vehículos, turnos, Órdenes de
+  trabajo, Ventas y cobro de pagos).
+- **Alta pública de usuario, `~/Registro`**, accesible con un botón desde la pantalla de Login sin
+  necesidad de sesión previa. El visitante carga nombre, apellido, mail y elige su propia
+  contraseña; si el mail no existe todavía, se crea la cuenta y queda logueado automáticamente. La
+  cuenta creada por esta vía **siempre** recibe el rol Lectura — es intencional que quede en el
+  rol más restringido, ya que no hay ningún Admin aprobando el alta. Esto es, en los hechos, una
+  excepción puntual a lo que dice §10 sobre no tener portal público — acá no es un portal para que
+  el *cliente* pida turno (eso sigue fuera de alcance), es una vía de autoservicio para que
+  personal del lubricentro se cree su propia cuenta de solo consulta sin depender de un Admin.
 
 ---
 

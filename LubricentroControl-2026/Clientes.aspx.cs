@@ -11,9 +11,18 @@ namespace LubricentroControl_2026
     // izquierda, formulario siempre visible a la derecha (sesión 2026-09-06).
     public partial class Clientes : PaginaSegura
     {
+        // Índice de la columna "Acciones" en gvClientes.Columns.
+        private const int ColumnaAcciones = 6;
+
         protected void Page_Load(object sender, EventArgs e)
         {
             if (IsPostBack) return;
+
+            if (EsSoloLectura)
+            {
+                pnlFormulario.Visible = false;
+                gvClientes.Columns[ColumnaAcciones].Visible = false;
+            }
 
             CargarGrilla();
 
@@ -110,6 +119,8 @@ namespace LubricentroControl_2026
 
         protected void btnNuevo_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             LimpiarFormulario();
         }
 
@@ -120,6 +131,7 @@ namespace LubricentroControl_2026
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid) return;
 
             var esAlta = LeerIdOculto(hdnIdCliente.Value) == 0;
@@ -167,6 +179,8 @@ namespace LubricentroControl_2026
 
         protected void btnBorrar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             var baja = ClienteDAL.Desactivar(LeerIdOculto(hdnIdCliente.Value));
 
             MostrarMensaje(baja.Mensaje, baja.Exito);
@@ -176,6 +190,8 @@ namespace LubricentroControl_2026
 
         protected void gvClientes_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            if (EsSoloLectura) return;
+
             int idCliente;
             if (!int.TryParse(Convert.ToString(e.CommandArgument), out idCliente)) return;
 

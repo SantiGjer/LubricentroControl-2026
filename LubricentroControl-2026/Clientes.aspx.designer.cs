@@ -77,6 +77,9 @@ namespace LubricentroControl_2026
         /// <summary>Control gvClientes.</summary>
         protected global::System.Web.UI.WebControls.GridView gvClientes;
 
+        /// <summary>Control pnlFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlFormulario;
+
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;
 

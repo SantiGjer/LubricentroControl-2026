@@ -8,9 +8,6 @@ namespace LubricentroControl_2026
 {
     public partial class Ventas
     {
-        /// <summary>Control pnlSoloLectura.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlSoloLectura;
-
         /// <summary>Control pnlMensaje.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlMensaje;
 
