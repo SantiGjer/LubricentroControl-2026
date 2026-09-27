@@ -201,6 +201,11 @@ Estas no se ven leyendo un solo archivo:
   (cliente que llega sin turno, se da de alta en el momento).
 - Clientes **y** proveedores pueden quedar con saldo pendiente; la cuenta corriente funciona en
   ambos sentidos (a favor o en contra).
+- **Una orden `Cerrada` o `Cancelada` no admite tocar su detalle.** Agregar o quitar una línea de
+  servicio/insumo sólo vale mientras `orden.Estado` esté en `OrdenDeTrabajo.EstadosEditables`
+  (`Abierta`/`En proceso`) — `DetalleOrdenServicioDAL.Agregar`/`Quitar` y
+  `DetalleOrdenInsumoDAL.Agregar` lo chequean ellos mismos, no sólo la UI (ver «Historial de
+  decisiones», entrada de Fase 6).
 - Roles jerárquicos **Admin > Encargado > Empleado > Lectura**. El menú se arma dinámicamente según
   el nivel del usuario logueado (entidades `Menu`, `Url`, `Nivel`). El rol Empleado tiene acceso
   restringido a compras y cuentas corrientes (solo consulta) y ninguno a reportes financieros ni a
@@ -556,3 +561,23 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   `Default.aspx.cs` agregaba a la lista "Tus accesos" del Inicio. En las 3 pantallas de Reportes
   (todavía cascarón) sacar el banner dejó `Page_Load` vacío — se eliminó el método entero en vez de
   dejar un cascarón sin usar.
+
+- **Fase 6 (sesión 2026-09-27) — primera prueba de flujo completo, encuentra un bug real.** Se
+  armó un harness de consola descartable (no commiteado: proyecto `.csproj` aparte referenciando
+  `BIZ.dll` + `App.config` con la misma cadena de LocalDB) que simula Turno → Orden → Cierre →
+  Venta → Pago → Cuenta corriente de punta a punta, llamando directo a los métodos de `BIZ/Data`
+  (no HTTP: WSL no llega a los puertos de IIS Express). Confirmó correcto: rechazo de stock
+  insuficiente, totales de la venta generada, pago parcial actualizando `saldoPendiente` y la
+  cuenta corriente, rechazo de pago que excede el saldo, rechazo de cancelar una orden ya Cerrada.
+
+  **Bug real encontrado, mismo patrón que el hallazgo del rol Lectura:** `btnAgregarServicio_Click`,
+  `btnAgregarInsumo_Click` y `gvServicios_RowCommand` (Quitar) en `OrdenesDeTrabajo.aspx.cs` sólo
+  chequeaban `EsSoloLectura`, nunca el estado de la orden. La UI esconde el panel de alta cuando
+  la orden es terminal (`pnlAgregarServicio.Visible = !esTerminal`), pero nada en el DAL lo
+  bloqueaba — un POST directo (o un tab viejo) podía agregar/quitar líneas de una orden ya
+  `Cerrada` o `Cancelada`: descontando stock real sin que se reflejara en la venta ya generada
+  (huérfano), o revirtiendo silenciosamente lo que `Cancelar` ya había repuesto. Reproducido con
+  el harness antes de corregir. **Corregido** agregando el chequeo de
+  `OrdenDeTrabajo.EstadosEditables` dentro de `DetalleOrdenServicioDAL.Agregar`/`Quitar` y
+  `DetalleOrdenInsumoDAL.Agregar` (la guarda real vive en el DAL, no sólo en el `Visible` de la
+  UI) — re-verificado con el mismo harness, las 3 rutas ahora rechazan y el stock no se mueve.

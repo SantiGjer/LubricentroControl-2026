@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 22 de septiembre de 2026
+**Última actualización:** 27 de septiembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -43,7 +43,7 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
 | 4 | Compras, Ventas, Pagos, Cuentas corrientes | ✅ Completa |
 | 5 | Reportes | ✅ Completa |
-| 6 | Integración, pruebas y pulido | ⬜ No empezada |
+| 6 | Integración, pruebas y pulido | 🔶 En curso |
 
 ### Qué funciona hoy
 
@@ -191,6 +191,52 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-27 — Arranca Fase 6: primera prueba de flujo completo, encuentra un bug real
+
+Primer frente de Fase 6 (integración, pruebas y pulido): pruebas de flujo completo Turno → Orden
+→ Cierre de orden → Venta → Pago → Cuenta corriente, con validaciones cruzadas entre módulos.
+
+**Cómo se probó, ya que no hay proyecto de tests ni forma de llegar a IIS Express desde WSL.** Se
+armó un harness de consola descartable (no commiteado, vive fuera del repo): un `.csproj` de
+consola clásico (mismo `TargetFrameworkVersion v4.7.2`) que referencia el `BIZ.dll` ya compilado
+y trae su propio `App.config` con la misma cadena de conexión a LocalDB que usa la app real. Llama
+directo a los métodos de `BIZ/Data` (no HTTP) — más fiel que reimplementar el SQL a mano, porque
+también ejercita las validaciones de C#, no sólo el esquema.
+
+**Flujo feliz, todo correcto:** cliente/vehículo/insumo/servicio/turno de prueba → orden desde el
+turno → agregar 1 servicio + 3 unidades de insumo (stock 10→7, con `MovimientoStock` correcto) →
+intento de agregar 999 unidades rechazado por stock insuficiente → cerrar la orden (genera la
+venta, subtotal/total 2500 = 1 servicio a 1000 + 3 insumos a 500) → pago parcial de 1000 (saldo
+pendiente de la venta 2500→1500, mismo movimiento reflejado en `CuentaCorrienteCliente`) → intento
+de pagar de más rechazado → intento de cancelar la orden ya Cerrada rechazado.
+
+**Bug real encontrado, mismo patrón que el hallazgo del rol Lectura (22/09): la UI escondía el
+control, pero el DAL no tenía guarda propia.** `btnAgregarServicio_Click`,
+`btnAgregarInsumo_Click` y `gvServicios_RowCommand` (Quitar) en `OrdenesDeTrabajo.aspx.cs` sólo
+chequeaban `EsSoloLectura` — nunca si la orden ya estaba `Cerrada`/`Cancelada`. El panel se oculta
+en la UI cuando la orden es terminal (`pnlAgregarServicio.Visible = !esTerminal`), pero un POST
+directo contra `DetalleOrdenServicioDAL.Agregar`/`Quitar` o `DetalleOrdenInsumoDAL.Agregar` lo
+aceptaba igual: se podía agregar una línea de insumo a una orden ya Cerrada (descontando stock
+real, sin que apareciera en la venta ya generada — huérfano) o a una ya Cancelada (revirtiendo en
+silencio lo que `Cancelar` había repuesto). Reproducido primero con el harness (`FAIL`, el insumo
+bajó de 7 a 5 tras "cerrar" la orden), después corregido.
+
+**Corrección:** `DetalleOrdenServicioDAL` gana `ValidarOrdenEditable(idOrden)` (privado), usado en
+`Agregar` y en `Quitar` (que antes ni siquiera sabía a qué orden pertenecía la línea — ahora la
+busca primero). `DetalleOrdenInsumoDAL.Agregar` hace el mismo chequeo en línea (no se compartió el
+helper entre clases — mismo criterio ya asentado en el proyecto de preferir una pequeña
+duplicación a acoplar dos DAL entre sí). Las tres rutas devuelven
+`"Una orden <estado> no admite cambios en el detalle."` en vez de escribir.
+
+**Verificación:** rebuild limpio (`MSBuild`) + `aspnet_compiler -v /` sin errores. Reproducido el
+bug y confirmada la corrección con el mismo harness contra LocalDB (las 3 rutas rechazan, stock
+sin cambios); todo el resto del flujo feliz sigue en verde tras el fix. Datos de prueba del
+harness borrados de LocalDB al cerrar la sesión (verificado sin huérfanos en `MovimientoStock`).
+
+**Sigue Fase 6:** revisión de permisos por rol pantalla por pantalla, y los pendientes de la
+sección 4. Sin acordar todavía si hay más validaciones cruzadas para revisar en Turnos/Compras
+(mismo patrón "UI esconde, DAL no valida" podría repetirse ahí — no se auditó esta sesión).
 
 ### 2026-09-22 (cont. 2) — Tercer reporte de Fase 5: Cuentas corrientes, cierra la fase
 

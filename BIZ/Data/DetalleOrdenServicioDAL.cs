@@ -35,10 +35,28 @@ namespace BIZ.Data
             return lista;
         }
 
+        // Cerrada/Cancelada no admite tocar el detalle: la venta (si la orden se cerró) ya
+        // quedó generada con las líneas de ese momento, y una orden cancelada ya repuso su
+        // stock — agregar o quitar después dejaría el detalle desincronizado de la venta o del
+        // kardex. Mismo criterio en DetalleOrdenInsumoDAL.Agregar.
+        private static ResultadoOperacion ValidarOrdenEditable(int idOrden)
+        {
+            var orden = OrdenDeTrabajoDAL.ObtenerPorId(idOrden);
+            if (orden == null)
+                return ResultadoOperacion.Error("La orden no existe.");
+            if (System.Array.IndexOf(OrdenDeTrabajo.EstadosEditables, orden.Estado) < 0)
+                return ResultadoOperacion.Error(
+                    "Una orden " + orden.Estado.ToLowerInvariant() + " no admite cambios en el detalle.");
+            return ResultadoOperacion.Ok();
+        }
+
         // precioAplicado es un snapshot del precioBase vigente del servicio al momento de
         // agregar la línea (no toca stock, así que no necesita transacción especial).
         public static ResultadoOperacion Agregar(int idOrden, int idServicio, decimal cantidad)
         {
+            var ordenEditable = ValidarOrdenEditable(idOrden);
+            if (!ordenEditable.Exito) return ordenEditable;
+
             if (cantidad <= 0)
                 return ResultadoOperacion.Error("La cantidad debe ser mayor a cero.");
 
@@ -61,9 +79,19 @@ namespace BIZ.Data
             return ResultadoOperacion.Ok("Servicio agregado.");
         }
 
-        // Sin efecto colateral (no toca stock): un DELETE simple alcanza.
+        // Sin efecto colateral (no toca stock): un DELETE simple alcanza, pero primero hay que
+        // saber a qué orden pertenece la línea para poder validar que siga editable.
         public static ResultadoOperacion Quitar(int idDetalle)
         {
+            var idOrden = AccesoDatos.Escalar(
+                "SELECT idOrden FROM DetalleOrdenServicio WHERE idDetalle = @idDetalle",
+                AccesoDatos.Param("@idDetalle", idDetalle));
+            if (idOrden == null)
+                return ResultadoOperacion.Error("La línea no existe.");
+
+            var ordenEditable = ValidarOrdenEditable(System.Convert.ToInt32(idOrden));
+            if (!ordenEditable.Exito) return ordenEditable;
+
             AccesoDatos.Ejecutar(
                 "DELETE FROM DetalleOrdenServicio WHERE idDetalle = @idDetalle",
                 AccesoDatos.Param("@idDetalle", idDetalle));

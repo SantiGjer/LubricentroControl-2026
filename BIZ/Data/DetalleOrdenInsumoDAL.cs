@@ -43,6 +43,13 @@ namespace BIZ.Data
         // stock sin su línea de detalle si la segunda escritura fallara.
         public static ResultadoOperacion Agregar(int idOrden, int idInsumo, decimal cantidad, int idUsuario)
         {
+            var orden = OrdenDeTrabajoDAL.ObtenerPorId(idOrden);
+            if (orden == null)
+                return ResultadoOperacion.Error("La orden no existe.");
+            if (System.Array.IndexOf(OrdenDeTrabajo.EstadosEditables, orden.Estado) < 0)
+                return ResultadoOperacion.Error(
+                    "Una orden " + orden.Estado.ToLowerInvariant() + " no admite cambios en el detalle.");
+
             if (cantidad <= 0)
                 return ResultadoOperacion.Error("La cantidad debe ser mayor a cero.");
 
