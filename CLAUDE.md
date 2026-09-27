@@ -8,8 +8,9 @@ Sistema de gestión para un Lubricentro (clientes, vehículos, turnos, órdenes 
 proveedores, insumos, compras, ventas, pagos, cuentas corrientes y reportes), con control de
 acceso por roles. TP de Programación Avanzada 2026 — USAL.
 
-**Estado real del código: Fase 1 a Fase 5 terminadas — falta Fase 6 (integración, pruebas y
-pulido).** Andan el login, la
+**Estado real del código: Fase 1 a Fase 5 terminadas, Fase 6 en curso** (integración, pruebas y
+pulido — primer frente arrancado el 27/09: pruebas de flujo completo, ver Historial de decisiones
+más abajo). Andan el login, la
 recuperación de contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa
 `BIZ/Data` de punta a punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**,
 **Proveedores**, **Insumos** con kardex de stock, y **Servicios**), las 2 pantallas de Fase 3
@@ -236,6 +237,11 @@ SQL Server del lubricentro por VPN Radmin alcanza con cambiar la cadena `Lubrice
 `Web.config`; los scripts corren igual.
 
 Usuario inicial que siembra `02_DatosIniciales.sql`: **admin@lubricentro.com / Admin123!**
+
+Nota (2026-09-27): `04_DatosDemo.sql` corrido contra la LocalDB de Alexis (los 4 scripts, `01` a
+`04`) — el circuito de 10 clientes/vehículos/proveedores/etc de ejemplo está cargado ahí. Es
+LocalDB, por-usuario: no afecta la base de ningún otro compañero, cada uno decide si lo corre
+en la suya.
 
 ## Contraseñas y mails
 
