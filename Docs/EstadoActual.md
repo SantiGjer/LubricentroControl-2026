@@ -1354,8 +1354,10 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   replica en Clientes, Vehículos, Proveedores y Servicios para consistencia visual; (b) la
   alineación de columnas numéricas (stock, precio) a la derecha, mencionada pero no encarada
   ("opción 2", diferida explícitamente por el usuario).
-- **Borrar los 35 "Insumo generico" de prueba** cargados para poder ver el paginado con datos
-  reales — no deben llegar a la entrega final.
+- ~~Borrar los 35 "Insumo generico" de prueba cargados para ver el paginado~~ — **resuelto solo,
+  sesión 2026-09-27**: ya no existen. El esquema se recreó varias veces desde la sesión 2026-09-07
+  que los cargó (`01_Esquema.sql` borra todo); `Insumo` hoy tiene exactamente las 10 filas de
+  `04_DatosDemo.sql`, verificado por conteo total, sin nombres "genérico" ni activos ni de baja.
 - **Botones de navegación cruzada Cliente↔Vehículo pendientes**: hoy solo existe "Nuevo cliente"
   desde Vehículos. Falta un botón "Ver vehículos" desde la ficha de un Cliente (la consulta
   `VehiculoDAL.ListarPorCliente` ya existe, sin usar, pensada para esto).
