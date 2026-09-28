@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 27 de septiembre de 2026
+**Última actualización:** 28 de septiembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -191,6 +191,35 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-09-28 — Segundo frente de Fase 6: revisión de permisos por rol, sin gaps
+
+Auditoría de solo lectura sobre las ~17-18 pantallas de negocio, contra la matriz de permisos de
+`Docs/Lubricentro_Requerimientos.md` §5 + §9.6 (4 roles: Admin/Encargado/Empleado/Lectura).
+
+**Qué se chequeó:** (1) que las 21 filas de `MenuNivel` en `02_DatosIniciales.sql` coincidan con
+la matriz — qué pantalla ve cada rol y en cuál tiene `soloLectura=1`; (2) que las 17 pantallas de
+negocio+Usuarios+Reportes hereden la clase base correcta (`PaginaSegura` vs `PaginaConSesion` vs
+`Page` público) — un error acá sería hueco de autenticación, no sólo de permisos; (3) que en las
+11 pantallas con banda "solo consulta" (Clientes, Vehículos, Turnos, Órdenes, Proveedores,
+Insumos, Servicios, Compras, las 2 Cuentas corrientes, Pagos), **cada** método de escritura
+arranque con `if (EsSoloLectura) return;` — no sólo que la UI esconda el panel (mismo patrón de
+bug ya encontrado dos veces: rol Lectura 22/09, estado de orden 27/09).
+
+**Resultado: 17/17 pantallas OK, 0 gaps reales.** El mecanismo base (`PaginaSegura` +
+`MenuDAL.ObtenerPermiso`, `INNER JOIN MenuNivel`) bloquea por URL forzada sin necesitar código por
+pantalla — sin fila en `MenuNivel` para (rol, ruta), `PaginaSegura.OnPreInit` redirige a
+`AccesoDenegado` antes de que corra `Page_Load`. Único punto a tener presente, no es un bug: los
+6 rubros de "Insumos, proveedores, compras" con solo-consulta para Empleado en la matriz del
+documento en los hechos son 6 pantallas (se sumó **Servicios** al mismo criterio de catálogo,
+extensión intencional ya documentada, no una desviación).
+
+Ventas y las 3 pantallas de Reportes no necesitan `EsSoloLectura` — Ventas no tiene ningún método
+de escritura (confirmado), Usuarios/Reportes son acceso binario (0 filas en `MenuNivel` para
+Empleado/Lectura, bloqueados por el `INNER JOIN` sin código extra).
+
+**Sigue Fase 6:** mejora de mensajes de error/UX, documentación final, y probar los 3 reportes de
+Fase 5 contra IIS Express (sigue sin hacerse, ver sección 4).
 
 ### 2026-09-27 — Arranca Fase 6: primera prueba de flujo completo, encuentra un bug real
 

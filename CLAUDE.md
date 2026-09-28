@@ -587,3 +587,12 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   `OrdenDeTrabajo.EstadosEditables` dentro de `DetalleOrdenServicioDAL.Agregar`/`Quitar` y
   `DetalleOrdenInsumoDAL.Agregar` (la guarda real vive en el DAL, no sólo en el `Visible` de la
   UI) — re-verificado con el mismo harness, las 3 rutas ahora rechazan y el stock no se mueve.
+
+- **Fase 6 (sesión 2026-09-28, Alexis con Claude) — revisión de permisos por rol, sin gaps.**
+  Auditoría de solo lectura sobre las ~17-18 pantallas de negocio contra la matriz de
+  `Docs/Lubricentro_Requerimientos.md` §5+§9.6 (4 roles): `MenuNivel` en `02_DatosIniciales.sql`
+  coincide con la matriz, las 17 pantallas heredan la clase base correcta
+  (`PaginaSegura`/`PaginaConSesion`/`Page` público, sin huecos de autenticación), y en las 11
+  pantallas con banda "solo consulta" **cada** método de escritura chequea `EsSoloLectura` — no
+  sólo la UI. **17/17 OK, 0 gaps reales** (a diferencia del hallazgo de ayer, que era sobre estado
+  de orden, no sobre rol). Detalle completo en `Docs/EstadoActual.md`, sesión 2026-09-28.
