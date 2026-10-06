@@ -27,6 +27,9 @@ namespace LubricentroControl_2026
 
             CargarFiltroEstado();
             CargarEstados();
+            ddlEstado.SelectedValue = Turno.EstadoSolicitado;
+            ddlEstado.Visible = false;
+            litEstadoNuevo.Visible = true;
             LimpiarVehiculos();
             CargarGrilla();
         }
@@ -205,6 +208,8 @@ namespace LubricentroControl_2026
             txtFecha.Text = turno.FechaHoraAsignada.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             txtHora.Text = turno.FechaHoraAsignada.ToString("HH:mm", CultureInfo.InvariantCulture);
             ddlEstado.SelectedValue = turno.Estado;
+            ddlEstado.Visible = true;
+            litEstadoNuevo.Visible = false;
             txtObservaciones.Text = turno.Observaciones;
 
             litTituloFormulario.Text = "Editar turno";
@@ -228,7 +233,12 @@ namespace LubricentroControl_2026
             LimpiarVehiculos();
             txtFecha.Text = string.Empty;
             txtHora.Text = string.Empty;
+            // Un turno nuevo siempre arranca Solicitado (TurnoDAL.Crear lo fuerza): se muestra
+            // como texto fijo y el desplegable queda solo para editar un turno existente.
+            // ddlEstado conserva sus opciones cargadas aunque esté oculto.
             ddlEstado.SelectedValue = Turno.EstadoSolicitado;
+            ddlEstado.Visible = false;
+            litEstadoNuevo.Visible = true;
             txtObservaciones.Text = string.Empty;
             litTituloFormulario.Text = "Nuevo turno";
         }

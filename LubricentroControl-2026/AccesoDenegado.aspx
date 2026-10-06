@@ -2,10 +2,16 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 
+    <div class="pantalla-abm">
+
     <h1>No tenés acceso a esta pantalla</h1>
-    <p>
+    <p class="texto-inicio">
         Tu rol (<asp:Literal ID="litNivel" runat="server" />) no tiene permiso sobre esta sección.
         Si creés que es un error, consultá con un administrador.
     </p>
-    <a runat="server" href="~/Default">Volver al inicio</a>
+    <div class="texto-nota">
+        <a runat="server" href="~/Default" class="boton-rojo enlace-boton">Volver al inicio</a>
+    </div>
+
+    </div>
 </asp:Content>

@@ -67,7 +67,7 @@ namespace BIZ.Data
         {
             var lista = new List<ComprobanteVenta>();
             foreach (DataRow fila in AccesoDatos.Consultar(
-                SelectBase + " WHERE v.idCliente = @idCliente AND v.saldoPendiente > 0 ORDER BY v.fecha",
+                SelectBase + " WHERE v.idCliente = @idCliente AND v.saldoPendiente > 0 ORDER BY v.fecha, v.idVenta",
                 AccesoDatos.Param("@idCliente", idCliente)).Rows)
                 lista.Add(Mapear(fila));
             return lista;
@@ -123,12 +123,27 @@ namespace BIZ.Data
             var servicios = DetalleOrdenServicioDAL.ListarPorOrden(idOrden);
             var insumos = DetalleOrdenInsumoDAL.ListarPorOrden(idOrden);
 
+            // Una orden sin ninguna línea generaría una venta en $0 que no se puede borrar ni
+            // editar: se rechaza acá, que es donde se leen las líneas, para cubrir cualquier
+            // camino que llegue a generar la venta.
+            if (servicios.Count == 0 && insumos.Count == 0)
+                return ResultadoOperacion.Error(
+                    "La orden no tiene servicios ni insumos cargados, así que no se puede cerrar. " +
+                    "Cargá al menos uno, o cancelá la orden si no corresponde cobrar nada.");
+
             decimal subtotal = 0;
             foreach (var linea in servicios) subtotal += linea.Cantidad * linea.PrecioAplicado;
             foreach (var linea in insumos) subtotal += linea.Cantidad * linea.PrecioUnitario;
 
             const decimal impuestos = 0; // Sin tasa definida en los Requerimientos — ver §9.5.
             var total = subtotal + impuestos;
+
+            // Si el cliente tiene saldo a favor (cuenta corriente negativa, por un pago de más),
+            // se aplica a esta venta: nace con saldoPendiente = total - crédito aplicado. No hace
+            // falta ningún movimiento extra: el débito de la venta ya netea el saldo a favor.
+            var saldoPrevio = CuentaCorrienteClienteDAL.ObtenerSaldoActual(orden.IdCliente);
+            var creditoAplicado = saldoPrevio < 0 ? System.Math.Min(-saldoPrevio, total) : 0;
+            var saldoPendiente = total - creditoAplicado;
 
             var sql = new StringBuilder();
             var parametros = new List<SqlParameter>();
@@ -150,7 +165,7 @@ namespace BIZ.Data
             parametros.Add(AccesoDatos.Param("@subtotal", subtotal));
             parametros.Add(AccesoDatos.Param("@impuestos", impuestos));
             parametros.Add(AccesoDatos.Param("@total", total));
-            parametros.Add(AccesoDatos.Param("@saldoPendiente", total));
+            parametros.Add(AccesoDatos.Param("@saldoPendiente", saldoPendiente));
 
             var indice = 0;
             foreach (var linea in servicios)
@@ -208,7 +223,10 @@ namespace BIZ.Data
 
             AccesoDatos.Escalar(sql.ToString(), parametros.ToArray());
 
-            return ResultadoOperacion.Ok("Venta generada.");
+            return ResultadoOperacion.Ok("Se generó la venta correspondiente." +
+                (creditoAplicado > 0
+                    ? " Se aplicaron " + creditoAplicado.ToString("N2") + " de saldo a favor del cliente."
+                    : ""));
         }
     }
 }

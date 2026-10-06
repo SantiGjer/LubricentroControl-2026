@@ -133,7 +133,11 @@ financieros", que no ve.
 ### 6.7 Pagos
 - Medios de pago aceptados: **efectivo, transferencia, tarjeta**.
 - El cliente puede pagar el total o dejar un **saldo pendiente** (queda registrado en su cuenta corriente).
-- Un pago puede aplicarse a una venta puntual o a la cuenta corriente en general.
+- Un pago se aplica primero a las deudas pendientes del titular, de la más antigua a la más
+  nueva; si el monto supera la deuda, el resto queda a favor en la cuenta corriente (sin tope).
+  Ya no se elige a mano a qué comprobante se imputa (decisión del 2026-10-05).
+- Un saldo a favor se aplica automáticamente a las ventas (y compras a cuenta corriente) que se
+  generen después.
 
 ### 6.8 Cuentas Corrientes (Cliente y Proveedor)
 - **Cuenta corriente de cliente:** registra movimientos (ventas no cobradas del todo, pagos recibidos) con saldo actualizado.

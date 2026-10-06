@@ -1,13 +1,15 @@
 ﻿<%@ Page Title="Reporte de ventas por período" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="VentasPorPeriodo.aspx.cs" Inherits="LubricentroControl_2026.Reportes.VentasPorPeriodo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <h1 class="h3 mb-3">Reporte de ventas por período</h1>
+    <div class="pantalla-abm">
+
+    <h1>Reporte de ventas por período</h1>
 
     <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
         <asp:Literal ID="litMensaje" runat="server" />
     </asp:Panel>
 
-    <div class="row border border-1">
+    <div class="row barra-busqueda barra-fechas">
         <div class="col-3">
             <asp:Label runat="server" AssociatedControlID="txtDesde">Desde</asp:Label>
             <br />
@@ -27,7 +29,7 @@
                 CssClass="text-danger small" Display="Dynamic" ValidationGroup="Filtro"
                 ErrorMessage="La fecha hasta no puede ser anterior a la fecha desde." /></div>
         <div class="col-3 d-flex align-items-end">
-            <asp:Button ID="btnFiltrar" runat="server" Text="Filtrar" CssClass="mb-3"
+            <asp:Button ID="btnFiltrar" runat="server" CssClass="boton-rojo" Text="Filtrar" 
                 OnClick="btnFiltrar_Click" ValidationGroup="Filtro" /></div>
     </div>
 
@@ -36,7 +38,7 @@
     </asp:Panel>
 
     <asp:GridView ID="gvVentas" runat="server"
-        CssClass="table table-striped table-bordered table-hover"
+        CssClass="tabla-abm"
         AutoGenerateColumns="false" DataKeyNames="IdVenta" GridLines="None"
         AllowPaging="true" PageSize="30"
         OnPageIndexChanging="gvVentas_PageIndexChanging"
@@ -64,4 +66,5 @@
                 Visible='<%# ((GridView)Container.NamingContainer).PageIndex < ((GridView)Container.NamingContainer).PageCount - 1 %>' />
         </PagerTemplate>
     </asp:GridView>
+    </div>
 </asp:Content>

@@ -1,7 +1,9 @@
-<%@ Page Title="Proveedores" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Proveedores.aspx.cs" Inherits="LubricentroControl_2026.Proveedores" %>
+﻿<%@ Page Title="Proveedores" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Proveedores.aspx.cs" Inherits="LubricentroControl_2026.Proveedores" %>
 <%@ Import Namespace="BIZ.Modelo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <div class="pantalla-abm">
 
     <h1>Proveedores</h1>
 
@@ -11,19 +13,19 @@
 
     <div class="row">
         <div class="col-7">
-            <div class="row border border-1">
+            <div class="row barra-busqueda">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por razón social o CUIT</asp:Label>
                     <asp:TextBox ID="txtBuscar" runat="server" /></div>
                 <div class="col-6">
-                    <asp:Button ID="btnBuscar" runat="server" Text="Buscar"
+                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
                         OnClick="btnBuscar_Click" CausesValidation="false" />
                     <asp:CheckBox ID="chkIncluirInactivos" runat="server" AutoPostBack="true"
                         OnCheckedChanged="chkIncluirInactivos_CheckedChanged" />
                     <asp:Label runat="server" AssociatedControlID="chkIncluirInactivos">Incluir inactivos</asp:Label></div>
             </div>
 
-            <asp:GridView ID="gvProveedores" runat="server"
+            <asp:GridView ID="gvProveedores" runat="server" CssClass="tabla-abm"
                 AutoGenerateColumns="false" DataKeyNames="IdProveedor" GridLines="None"
                 OnRowCommand="gvProveedores_RowCommand" EmptyDataText="No hay proveedores que coincidan con la búsqueda.">
                 <Columns>
@@ -57,12 +59,12 @@
                 <asp:HiddenField ID="hdnIdProveedor" runat="server" />
                 <asp:HiddenField ID="hdnActivo" runat="server" Value="True" />
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:Label runat="server" AssociatedControlID="txtRazonSocial">Razón social</asp:Label></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:TextBox ID="txtRazonSocial" runat="server" MaxLength="150" />
                         <asp:RequiredFieldValidator runat="server" ControlToValidate="txtRazonSocial"
@@ -70,12 +72,12 @@
                             ErrorMessage="La razón social es obligatoria." /></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:Label runat="server" AssociatedControlID="txtCuit">CUIT</asp:Label></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:TextBox ID="txtCuit" runat="server" MaxLength="13" />
                         <asp:RequiredFieldValidator runat="server" ControlToValidate="txtCuit"
@@ -87,22 +89,22 @@
                             ErrorMessage="El CUIT debe tener 11 números, con o sin guiones." /></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:Label runat="server" AssociatedControlID="txtTelefono">Teléfono</asp:Label></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:TextBox ID="txtTelefono" runat="server" MaxLength="30" /></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:Label runat="server" AssociatedControlID="txtEmail">Mail</asp:Label></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" MaxLength="150" />
                         <asp:CustomValidator runat="server" ControlToValidate="txtEmail"
@@ -111,24 +113,25 @@
                             ErrorMessage="El mail no tiene un formato válido." /></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:Label runat="server" AssociatedControlID="txtDireccion">Dirección</asp:Label></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:TextBox ID="txtDireccion" runat="server" MaxLength="200" /></div>
                 </div>
 
-                <asp:Button ID="btnGuardar" runat="server" Text="Guardar"
+                <asp:Button ID="btnGuardar" runat="server" CssClass="boton-rojo" Text="Guardar"
                     OnClick="btnGuardar_Click" ValidationGroup="Proveedor" />
-                <asp:Button ID="btnNuevo" runat="server" Text="Nuevo proveedor"
+                <asp:Button ID="btnNuevo" runat="server" CssClass="boton-gris" Text="Nuevo proveedor"
                     OnClick="btnNuevo_Click" CausesValidation="false" />
-                <asp:Button ID="btnBorrar" runat="server" Text="Borrar" Visible="false"
+                <asp:Button ID="btnBorrar" runat="server" CssClass="boton-borde-rojo" Text="Borrar" Visible="false"
                     OnClick="btnBorrar_Click" CausesValidation="false"
                     OnClientClick="return confirm('¿Borrar este proveedor?');" />
             </asp:Panel>
         </div>
+    </div>
     </div>
 </asp:Content>

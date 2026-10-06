@@ -300,6 +300,16 @@ La aplicación **no debe mencionar fases de desarrollo, el roadmap ni el estado 
 la interfaz. Las pantallas sin implementar dicen solo «Pendiente». El seguimiento del avance vive
 en `Docs/EstadoActual.md`, no en la UI.
 
+**Estilo de las pantallas (desde 2026-10-06).** Todas las pantallas con menú ponen su contenido dentro
+de `<div class="pantalla-abm">` y usan las clases de `Content\Site.css` (bloque "Pantallas de gestión
+(ABM)"): `barra-busqueda`, `tabla-abm` (+ `tabla-compacta` si tiene muchas columnas), `panel-gris`,
+`boton-rojo`/`boton-gris`/`boton-borde-rojo` (+ `boton-chico` en línea con un campo). Sin bordes
+`border border-1`, sin las clases `table table-striped...` de Bootstrap en las grillas. El fondo gris de
+toda la página sale de `html:has(.pantalla-abm)`, así que una pantalla nueva solo necesita el
+contenedor. Las pantallas de ingreso (Login, Registro, Recuperar/Restablecer clave) mantienen su
+tarjeta oscura propia. Las filas que el código resalta con un fondo en línea (stock bajo, saldo
+pendiente) conservan ese fondo.
+
 ### Formato de DNI, CUIT y patente (Fase 2)
 
 Decisión de negocio en `Docs/Lubricentro_Requerimientos.md` §9.1. Regex de referencia para los
@@ -442,6 +452,18 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   cancelar una orden no tiene este problema (no inserta detalle nuevo) y sí llama a `Registrar`
   directo, tal como se había anticipado en la entrada anterior.
 
+  **Quitar una línea de insumo (sesión 2026-10-05)** es la inversa de `Agregar`
+  (`DetalleOrdenInsumoDAL.Quitar`): mismo batch atómico de tres escrituras (reponer stock, entrada
+  en el kardex, borrar la línea), por lo que es la segunda excepción a "`Registrar` es el único
+  camino". Solo con la orden Abierta o En proceso (guarda en el DAL, no solo en la UI). El kardex usa
+  `TipoCancelacionOrden` con la descripción distinguiendo el caso, para no tocar el CHECK
+  `CK_MovStock_origen`.
+
+  **Un estado que el servidor fuerza no se ofrece como opción en el alta.** `TurnoDAL.Crear` y
+  `OrdenDeTrabajoDAL.Crear` imponen `Solicitado`/`Abierta`; la pantalla debe mostrarlo como texto fijo
+  y dejar el desplegable solo para editar (Turnos lo hacía mal hasta 2026-10-05; Órdenes ya estaba
+  bien). Mantener el `DropDownList` con sus opciones cargadas aunque esté oculto.
+
   **Walk-in con cliente y vehículo nuevos, sin salir de la pantalla.** Como `OrdenDeTrabajo.
   idVehiculo` es `NOT NULL`, se extendió el mecanismo de `Response.Redirect` + query string que ya
   conectaba `Vehiculos.aspx` ↔ `Clientes.aspx` (ver «Cross-page posting no funciona con
@@ -514,6 +536,17 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
 
   Un pago "a cuenta general" (sin comprobante puntual) no tiene techo de monto — solo se valida
   el techo cuando se imputa a un comprobante puntual, contra su `saldoPendiente`.
+
+  **Reemplazado el 2026-10-05 (Fase 6):** ya no se elige comprobante ni existe `ddlComprobante`.
+  `PagoDAL.Registrar` reparte el monto solo: cancela primero las deudas del titular (más vieja
+  primero) y el sobrante queda a favor ("a cuenta"). Como `Pago` tiene un solo `idVenta`/`idCompra`,
+  un pago que toca N comprobantes se guarda como N filas de `Pago` (más una sin comprobante para el
+  sobrante), cada una con su movimiento de cuenta corriente, en un único batch atómico. Ya no hay
+  tope de monto. Además, una venta (al cerrar la orden) o compra a cuenta corriente nueva aprovecha
+  el saldo a favor: nace con `saldoPendiente = total − crédito`, sin movimiento extra. Y cerrar una
+  orden sin servicios ni insumos se rechaza en `ComprobanteVentaDAL.GenerarDesdeOrden` (hay que
+  cancelarla). Sin migración de datos viejos: los datos de desarrollo no importan y los scripts
+  `01` a `04` ya generan una base coherente con esta regla.
 
 - **Rol Lectura y alta pública de usuarios (sesión 2026-09-21/2026-09-22) — fuera de las 6 fases
   del Roadmap.** Pedido explícito del usuario, sin precedente en `Docs/Lubricentro_Requerimientos.md`

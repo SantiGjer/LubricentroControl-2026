@@ -1,16 +1,18 @@
 ﻿<%@ Page Title="Reporte de stock bajo" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="StockBajo.aspx.cs" Inherits="LubricentroControl_2026.Reportes.StockBajo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <h1 class="h3 mb-3">Reporte de stock bajo</h1>
+    <div class="pantalla-abm">
 
-    <p>Insumos activos cuyo stock actual quedó por debajo del mínimo, ordenados por faltante de mayor a menor.</p>
+    <h1>Reporte de stock bajo</h1>
+
+    <p class="texto-nota">Insumos activos cuyo stock actual quedó por debajo del mínimo, ordenados por faltante de mayor a menor.</p>
 
     <asp:Panel ID="pnlResumen" runat="server" CssClass="alert alert-secondary" role="alert">
         <asp:Literal ID="litResumen" runat="server" />
     </asp:Panel>
 
     <asp:GridView ID="gvStockBajo" runat="server"
-        CssClass="table table-striped table-bordered table-hover"
+        CssClass="tabla-abm"
         AutoGenerateColumns="false" DataKeyNames="IdInsumo" GridLines="None"
         AllowPaging="true" PageSize="30"
         OnPageIndexChanging="gvStockBajo_PageIndexChanging"
@@ -45,4 +47,5 @@
                 Visible='<%# ((GridView)Container.NamingContainer).PageIndex < ((GridView)Container.NamingContainer).PageCount - 1 %>' />
         </PagerTemplate>
     </asp:GridView>
+    </div>
 </asp:Content>

@@ -49,6 +49,22 @@ namespace BIZ.Data
             return lista;
         }
 
+        // Órdenes que todavía están en el taller (Abierta o En proceso), la más antigua primero:
+        // es la que hace más que espera. Para el tablero del Inicio.
+        public static List<OrdenDeTrabajo> ListarEnCurso()
+        {
+            const string sql = SelectBase + @"
+                WHERE o.estado IN (@estadoAbierta, @estadoEnProceso)
+                ORDER BY o.fecha ASC, o.idOrden ASC";
+
+            var lista = new List<OrdenDeTrabajo>();
+            foreach (DataRow fila in AccesoDatos.Consultar(sql,
+                AccesoDatos.Param("@estadoAbierta", OrdenDeTrabajo.EstadoAbierta),
+                AccesoDatos.Param("@estadoEnProceso", OrdenDeTrabajo.EstadoEnProceso)).Rows)
+                lista.Add(Mapear(fila));
+            return lista;
+        }
+
         public static OrdenDeTrabajo ObtenerPorId(int idOrden)
         {
             var tabla = AccesoDatos.Consultar(
@@ -228,7 +244,7 @@ namespace BIZ.Data
                 AccesoDatos.Param("@estado", OrdenDeTrabajo.EstadoCerrada),
                 AccesoDatos.Param("@idOrden", idOrden));
 
-            return ResultadoOperacion.Ok("Orden cerrada. Se generó la venta correspondiente.");
+            return ResultadoOperacion.Ok("Orden cerrada. " + venta.Mensaje);
         }
     }
 }

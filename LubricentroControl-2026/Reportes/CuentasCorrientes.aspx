@@ -1,18 +1,20 @@
 ﻿<%@ Page Title="Reporte de cuentas corrientes" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="CuentasCorrientes.aspx.cs" Inherits="LubricentroControl_2026.Reportes.CuentasCorrientes" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
-    <h1 class="h3 mb-3">Reporte de cuentas corrientes</h1>
+    <div class="pantalla-abm">
 
-    <p>Clientes y proveedores con saldo pendiente (positivo = deuda, negativo = a favor).</p>
+    <h1>Reporte de cuentas corrientes</h1>
 
-    <h2 class="h5">Clientes</h2>
+    <p class="texto-nota">Clientes y proveedores con saldo pendiente (positivo = deuda, negativo = a favor).</p>
+
+    <h2 class="titulo-seccion">Clientes</h2>
 
     <asp:Panel ID="pnlResumenClientes" runat="server" CssClass="alert alert-secondary" role="alert">
         <asp:Literal ID="litResumenClientes" runat="server" />
     </asp:Panel>
 
     <asp:GridView ID="gvClientes" runat="server"
-        CssClass="table table-striped table-bordered table-hover"
+        CssClass="tabla-abm"
         AutoGenerateColumns="false" DataKeyNames="IdCliente" GridLines="None"
         AllowPaging="true" PageSize="30"
         OnPageIndexChanging="gvClientes_PageIndexChanging"
@@ -36,14 +38,14 @@
         </PagerTemplate>
     </asp:GridView>
 
-    <h2 class="h5">Proveedores</h2>
+    <h2 class="titulo-seccion">Proveedores</h2>
 
     <asp:Panel ID="pnlResumenProveedores" runat="server" CssClass="alert alert-secondary" role="alert">
         <asp:Literal ID="litResumenProveedores" runat="server" />
     </asp:Panel>
 
     <asp:GridView ID="gvProveedores" runat="server"
-        CssClass="table table-striped table-bordered table-hover"
+        CssClass="tabla-abm"
         AutoGenerateColumns="false" DataKeyNames="IdProveedor" GridLines="None"
         AllowPaging="true" PageSize="30"
         OnPageIndexChanging="gvProveedores_PageIndexChanging"
@@ -66,4 +68,5 @@
                 Visible='<%# ((GridView)Container.NamingContainer).PageIndex < ((GridView)Container.NamingContainer).PageCount - 1 %>' />
         </PagerTemplate>
     </asp:GridView>
+    </div>
 </asp:Content>

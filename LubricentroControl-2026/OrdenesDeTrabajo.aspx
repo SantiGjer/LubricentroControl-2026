@@ -1,6 +1,8 @@
-<%@ Page Title="Órdenes de trabajo" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="OrdenesDeTrabajo.aspx.cs" Inherits="LubricentroControl_2026.OrdenesDeTrabajo" %>
+﻿<%@ Page Title="Órdenes de trabajo" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="OrdenesDeTrabajo.aspx.cs" Inherits="LubricentroControl_2026.OrdenesDeTrabajo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <div class="pantalla-abm">
 
     <h1>Órdenes de trabajo</h1>
 
@@ -10,7 +12,7 @@
 
     <div class="row">
         <div class="col-7">
-            <div class="row border border-1">
+            <div class="row barra-busqueda">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por cliente, DNI o patente</asp:Label>
                     <asp:TextBox ID="txtBuscar" runat="server" /></div>
@@ -18,11 +20,11 @@
                     <asp:Label runat="server" AssociatedControlID="ddlFiltroEstado">Estado</asp:Label>
                     <asp:DropDownList ID="ddlFiltroEstado" runat="server" AutoPostBack="true"
                         OnSelectedIndexChanged="ddlFiltroEstado_SelectedIndexChanged" />
-                    <asp:Button ID="btnBuscar" runat="server" Text="Buscar"
+                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
                         OnClick="btnBuscar_Click" CausesValidation="false" /></div>
             </div>
 
-            <asp:GridView ID="gvOrdenes" runat="server"
+            <asp:GridView ID="gvOrdenes" runat="server" CssClass="tabla-abm"
                 AutoGenerateColumns="false" DataKeyNames="IdOrden" GridLines="None"
                 OnRowCommand="gvOrdenes_RowCommand" EmptyDataText="No hay órdenes que coincidan con la búsqueda.">
                 <Columns>
@@ -46,12 +48,12 @@
             <h2><asp:Literal ID="litTituloFormulario" runat="server" Text="Nueva orden" /></h2>
             <asp:HiddenField ID="hdnIdOrden" runat="server" />
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="txtBuscarCliente">Cliente</asp:Label></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:UpdatePanel ID="upnlCliente" runat="server">
                         <ContentTemplate>
@@ -65,9 +67,9 @@
                             <asp:Panel ID="pnlSeleccionNueva" runat="server">
                                 <br />
                                 <asp:TextBox ID="txtBuscarCliente" runat="server" placeholder="Buscar por nombre, apellido o DNI" />
-                                <asp:Button ID="btnBuscarCliente" runat="server" Text="Buscar"
+                                <asp:Button ID="btnBuscarCliente" runat="server" CssClass="boton-rojo boton-chico" Text="Buscar"
                                     OnClick="btnBuscarCliente_Click" CausesValidation="false" />
-                                <asp:Button ID="btnNuevoCliente" runat="server" Text="Nuevo cliente"
+                                <asp:Button ID="btnNuevoCliente" runat="server" CssClass="boton-gris boton-chico" Text="Nuevo cliente"
                                     OnClick="btnNuevoCliente_Click" CausesValidation="false" />
 
                                 <asp:Panel ID="pnlResultadosCliente" runat="server" Visible="false"
@@ -91,7 +93,7 @@
 
                                 <br />
                                 <asp:Label runat="server" AssociatedControlID="ddlVehiculo">Vehículo</asp:Label>
-                                <asp:Button ID="btnNuevoVehiculo" runat="server" Text="Nuevo vehículo"
+                                <asp:Button ID="btnNuevoVehiculo" runat="server" CssClass="boton-gris boton-chico" Text="Nuevo vehículo"
                                     OnClick="btnNuevoVehiculo_Click" CausesValidation="false" />
                                 <br />
                                 <asp:DropDownList ID="ddlVehiculo" runat="server" />
@@ -121,12 +123,12 @@
                     </asp:UpdatePanel></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="txtKilometraje">Kilometraje (opcional)</asp:Label></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:TextBox ID="txtKilometraje" runat="server" MaxLength="9" />
                     <asp:CompareValidator runat="server" ControlToValidate="txtKilometraje"
@@ -135,37 +137,37 @@
                         ErrorMessage="El kilometraje debe ser un número entero." /></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="txtObservaciones">Observaciones</asp:Label></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:TextBox ID="txtObservaciones" runat="server" MaxLength="500" TextMode="MultiLine" Rows="3" /></div>
             </div>
 
             <asp:Panel ID="pnlEstado" runat="server" Visible="false">
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:Label runat="server" AssociatedControlID="ddlEstado">Estado</asp:Label></div>
                 </div>
 
-                <div class="row border border-1">
+                <div class="row">
                     <div class="col-12">
                         <asp:DropDownList ID="ddlEstado" runat="server" />
                         <asp:Label ID="litEstadoActual" runat="server" Visible="false" Font-Bold="true" /></div>
                 </div>
             </asp:Panel>
 
-            <asp:Button ID="btnGuardar" runat="server" Text="Guardar"
+            <asp:Button ID="btnGuardar" runat="server" CssClass="boton-rojo" Text="Guardar"
                 OnClick="btnGuardar_Click" ValidationGroup="Orden" />
-            <asp:Button ID="btnNuevo" runat="server" Text="Nueva orden"
+            <asp:Button ID="btnNuevo" runat="server" CssClass="boton-gris" Text="Nueva orden"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
-            <asp:Button ID="btnCancelarOrden" runat="server" Text="Cancelar orden" Visible="false"
+            <asp:Button ID="btnCancelarOrden" runat="server" CssClass="boton-borde-rojo" Text="Cancelar orden" Visible="false"
                 OnClick="btnCancelarOrden_Click" CausesValidation="false"
                 OnClientClick="return confirm('¿Cancelar esta orden? Se repondrá el stock de los insumos cargados.');" />
-            <asp:Button ID="btnCerrarOrden" runat="server" Text="Cerrar orden" Visible="false"
+            <asp:Button ID="btnCerrarOrden" runat="server" CssClass="boton-gris" Text="Cerrar orden" Visible="false"
                 OnClick="btnCerrarOrden_Click" CausesValidation="false"
                 OnClientClick="return confirm('¿Cerrar esta orden? Se generará la venta correspondiente.');" />
         </asp:Panel>
@@ -176,12 +178,13 @@
         <hr />
         <div class="row">
             <div class="col-6">
+                <div class="panel-gris">
                 <h2>Servicios</h2>
 
                 <asp:Panel ID="pnlAgregarServicio" runat="server">
                     <asp:DropDownList ID="ddlServicio" runat="server" />
                     <asp:TextBox ID="txtCantidadServicio" runat="server" MaxLength="6" Text="1" Width="60px" />
-                    <asp:Button ID="btnAgregarServicio" runat="server" Text="Agregar"
+                    <asp:Button ID="btnAgregarServicio" runat="server" CssClass="boton-rojo boton-chico" Text="Agregar"
                         OnClick="btnAgregarServicio_Click" ValidationGroup="AgregarServicio" />
                     <br />
                     <asp:RequiredFieldValidator runat="server" ControlToValidate="txtCantidadServicio"
@@ -194,7 +197,7 @@
                 </asp:Panel>
 
                 <asp:GridView ID="gvServicios" runat="server"
-                    CssClass="table table-striped table-bordered table-hover"
+                    CssClass="tabla-abm tabla-compacta"
                     AutoGenerateColumns="false" DataKeyNames="IdDetalle" GridLines="None"
                     OnRowCommand="gvServicios_RowCommand"
                     EmptyDataText="Todavía no se cargaron servicios.">
@@ -212,14 +215,16 @@
                     </Columns>
                 </asp:GridView>
             </div>
+            </div>
 
             <div class="col-6">
+                <div class="panel-gris">
                 <h2>Insumos</h2>
 
                 <asp:Panel ID="pnlAgregarInsumo" runat="server">
                     <asp:DropDownList ID="ddlInsumo" runat="server" />
                     <asp:TextBox ID="txtCantidadInsumo" runat="server" MaxLength="6" Text="1" Width="60px" />
-                    <asp:Button ID="btnAgregarInsumo" runat="server" Text="Agregar"
+                    <asp:Button ID="btnAgregarInsumo" runat="server" CssClass="boton-rojo boton-chico" Text="Agregar"
                         OnClick="btnAgregarInsumo_Click" ValidationGroup="AgregarInsumo" />
                     <br />
                     <asp:RequiredFieldValidator runat="server" ControlToValidate="txtCantidadInsumo"
@@ -232,16 +237,27 @@
                 </asp:Panel>
 
                 <asp:GridView ID="gvInsumosOrden" runat="server"
-                    CssClass="table table-striped table-bordered table-hover"
-                    AutoGenerateColumns="false" GridLines="None"
+                    CssClass="tabla-abm tabla-compacta"
+                    AutoGenerateColumns="false" DataKeyNames="IdDetalle" GridLines="None"
+                    OnRowCommand="gvInsumosOrden_RowCommand"
                     EmptyDataText="Todavía no se cargaron insumos.">
                     <Columns>
                         <asp:BoundField DataField="NombreInsumo" HeaderText="Insumo" />
                         <asp:BoundField DataField="Cantidad" HeaderText="Cantidad" DataFormatString="{0:N2}" />
                         <asp:BoundField DataField="PrecioUnitario" HeaderText="Precio" DataFormatString="{0:N2}" />
+                        <asp:TemplateField HeaderText="Acciones">
+                            <ItemTemplate>
+                                <asp:LinkButton runat="server"
+                                    CommandName="Quitar" CommandArgument='<%# Eval("IdDetalle") %>'
+                                    CausesValidation="false"
+                                    OnClientClick="return confirm('¿Quitar este insumo de la orden? Se repone su stock.');">Quitar</asp:LinkButton>
+                            </ItemTemplate>
+                        </asp:TemplateField>
                     </Columns>
                 </asp:GridView>
             </div>
+            </div>
         </div>
     </asp:Panel>
+    </div>
 </asp:Content>

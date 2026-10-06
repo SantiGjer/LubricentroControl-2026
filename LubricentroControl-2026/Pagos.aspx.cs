@@ -8,7 +8,8 @@ namespace LubricentroControl_2026
 {
     // Alta de pagos de cliente o de proveedor (Fase 4, última pantalla). Acceso completo para
     // los 3 roles (Requerimientos §5) — a diferencia de Compras/Cuentas corrientes, acá Empleado
-    // también puede cobrar. Un pago no se edita ni se borra una vez cargado.
+    // también puede cobrar. Un pago no se edita ni se borra una vez cargado. No se elige
+    // comprobante: PagoDAL.Registrar cancela primero las deudas más viejas y deja el sobrante a favor.
     public partial class Pagos : PaginaSegura
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -20,7 +21,6 @@ namespace LubricentroControl_2026
 
             CargarTipo();
             CargarMedioPago();
-            LimpiarComprobante();
             CargarGrilla();
         }
 
@@ -38,14 +38,15 @@ namespace LubricentroControl_2026
                 ddlMedioPago.Items.Add(new ListItem(medio, medio));
         }
 
-        // Deja ddlComprobante con solo su placeholder. Tiene que quedar poblado así ya en el
-        // primer Page_Load (mismo bug ya documentado con ddlVehiculo/ddlEstado/ddlMedioPago en
-        // sesiones anteriores: un DropDownList sin ningún <option> rechaza cualquier valor
-        // posteado, incluso "").
-        private void LimpiarComprobante()
+        // Texto del saldo actual del titular elegido: positivo = deuda, negativo = a favor.
+        private void MostrarSaldo(decimal saldo)
         {
-            ddlComprobante.Items.Clear();
-            ddlComprobante.Items.Add(new ListItem("(a cuenta general)", ""));
+            lblSaldoTitular.Visible = true;
+            lblSaldoTitular.Text = saldo > 0
+                ? "Deuda actual: " + saldo.ToString("N2")
+                : saldo < 0
+                    ? "Saldo a favor: " + (-saldo).ToString("N2")
+                    : "Sin deuda.";
         }
 
         protected void ddlTipo_SelectedIndexChanged(object sender, EventArgs e)
@@ -58,7 +59,7 @@ namespace LubricentroControl_2026
             litClienteSeleccionado.Text = "(sin seleccionar)";
             hdnIdProveedor.Value = string.Empty;
             litProveedorSeleccionado.Text = "(sin seleccionar)";
-            LimpiarComprobante();
+            lblSaldoTitular.Visible = false;
         }
 
         private void CargarGrilla()
@@ -103,11 +104,7 @@ namespace LubricentroControl_2026
             hdnIdCliente.Value = cliente.IdCliente.ToString();
             litClienteSeleccionado.Text = cliente.NombreCompleto + " — DNI " + cliente.Dni;
 
-            LimpiarComprobante();
-            foreach (var venta in ComprobanteVentaDAL.ListarPendientesPorCliente(idCliente))
-                ddlComprobante.Items.Add(new ListItem(
-                    venta.NumeroComprobante + " (saldo: " + venta.SaldoPendiente.ToString("N2") + ")",
-                    venta.IdVenta.ToString()));
+            MostrarSaldo(CuentaCorrienteClienteDAL.ObtenerSaldoActual(idCliente));
         }
 
         protected void valCliente_ServerValidate(object source, ServerValidateEventArgs args)
@@ -142,11 +139,7 @@ namespace LubricentroControl_2026
             hdnIdProveedor.Value = proveedor.IdProveedor.ToString();
             litProveedorSeleccionado.Text = proveedor.RazonSocial;
 
-            LimpiarComprobante();
-            foreach (var compra in ComprobanteCompraDAL.ListarPendientesPorProveedor(idProveedor))
-                ddlComprobante.Items.Add(new ListItem(
-                    compra.NumeroComprobante + " (saldo: " + compra.SaldoPendiente.ToString("N2") + ")",
-                    compra.IdCompra.ToString()));
+            MostrarSaldo(CuentaCorrienteProveedorDAL.ObtenerSaldoActual(idProveedor));
         }
 
         protected void valProveedor_ServerValidate(object source, ServerValidateEventArgs args)
@@ -162,7 +155,6 @@ namespace LubricentroControl_2026
             if (!Page.IsValid) return;
 
             var esCliente = ddlTipo.SelectedValue == Pago.TipoCliente;
-            var idComprobante = LeerIdOculto(ddlComprobante.SelectedValue);
 
             decimal monto;
             decimal.TryParse(txtMonto.Text, out monto);
@@ -172,8 +164,6 @@ namespace LubricentroControl_2026
                 Tipo = ddlTipo.SelectedValue,
                 IdCliente = esCliente ? LeerIdOculto(hdnIdCliente.Value) : (int?)null,
                 IdProveedor = !esCliente ? LeerIdOculto(hdnIdProveedor.Value) : (int?)null,
-                IdVenta = esCliente && idComprobante > 0 ? idComprobante : (int?)null,
-                IdCompra = !esCliente && idComprobante > 0 ? idComprobante : (int?)null,
                 IdUsuario = UsuarioActual.IdUsuario,
                 MedioPago = ddlMedioPago.SelectedValue,
                 Monto = monto,
@@ -212,7 +202,7 @@ namespace LubricentroControl_2026
             litProveedorSeleccionado.Text = "(sin seleccionar)";
             txtBuscarProveedor.Text = string.Empty;
             pnlResultadosProveedor.Visible = false;
-            LimpiarComprobante();
+            lblSaldoTitular.Visible = false;
             ddlMedioPago.SelectedIndex = 0;
             txtMonto.Text = string.Empty;
             txtObservaciones.Text = string.Empty;

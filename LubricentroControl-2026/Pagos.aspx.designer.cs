@@ -74,8 +74,8 @@ namespace LubricentroControl_2026
         /// <summary>Control rptResultadosProveedor.</summary>
         protected global::System.Web.UI.WebControls.Repeater rptResultadosProveedor;
 
-        /// <summary>Control ddlComprobante.</summary>
-        protected global::System.Web.UI.WebControls.DropDownList ddlComprobante;
+        /// <summary>Control lblSaldoTitular.</summary>
+        protected global::System.Web.UI.WebControls.Label lblSaldoTitular;
 
         /// <summary>Control ddlMedioPago.</summary>
         protected global::System.Web.UI.WebControls.DropDownList ddlMedioPago;

@@ -1,6 +1,8 @@
-<%@ Page Title="Turnos" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Turnos.aspx.cs" Inherits="LubricentroControl_2026.Turnos" %>
+﻿<%@ Page Title="Turnos" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Turnos.aspx.cs" Inherits="LubricentroControl_2026.Turnos" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <div class="pantalla-abm">
 
     <h1>Turnos</h1>
 
@@ -10,7 +12,7 @@
 
     <div class="row">
         <div class="col-7">
-            <div class="row border border-1">
+            <div class="row barra-busqueda">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por nombre, apellido o DNI del cliente</asp:Label>
                     <asp:TextBox ID="txtBuscar" runat="server" /></div>
@@ -18,11 +20,11 @@
                     <asp:Label runat="server" AssociatedControlID="ddlFiltroEstado">Estado</asp:Label>
                     <asp:DropDownList ID="ddlFiltroEstado" runat="server" AutoPostBack="true"
                         OnSelectedIndexChanged="ddlFiltroEstado_SelectedIndexChanged" />
-                    <asp:Button ID="btnBuscar" runat="server" Text="Buscar"
+                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
                         OnClick="btnBuscar_Click" CausesValidation="false" /></div>
             </div>
 
-            <asp:GridView ID="gvTurnos" runat="server"
+            <asp:GridView ID="gvTurnos" runat="server" CssClass="tabla-abm"
                 AutoGenerateColumns="false" DataKeyNames="IdTurno" GridLines="None"
                 OnRowCommand="gvTurnos_RowCommand" EmptyDataText="No hay turnos que coincidan con la búsqueda.">
                 <Columns>
@@ -54,12 +56,12 @@
             <h2><asp:Literal ID="litTituloFormulario" runat="server" Text="Nuevo turno" /></h2>
             <asp:HiddenField ID="hdnIdTurno" runat="server" />
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="txtBuscarCliente">Cliente</asp:Label></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:UpdatePanel ID="upnlCliente" runat="server">
                         <ContentTemplate>
@@ -67,7 +69,7 @@
                             <asp:Label ID="litClienteSeleccionado" runat="server" Text="(sin seleccionar)" />
                             <br />
                             <asp:TextBox ID="txtBuscarCliente" runat="server" placeholder="Buscar por nombre, apellido o DNI" />
-                            <asp:Button ID="btnBuscarCliente" runat="server" Text="Buscar"
+                            <asp:Button ID="btnBuscarCliente" runat="server" CssClass="boton-rojo boton-chico" Text="Buscar"
                                 OnClick="btnBuscarCliente_Click" CausesValidation="false" />
 
                             <asp:Panel ID="pnlResultadosCliente" runat="server" Visible="false"
@@ -97,7 +99,7 @@
                     </asp:UpdatePanel></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtFecha">Fecha</asp:Label>
                     <br />
@@ -114,31 +116,33 @@
                         ErrorMessage="La hora es obligatoria." /></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="ddlEstado">Estado</asp:Label></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
-                    <asp:DropDownList ID="ddlEstado" runat="server" /></div>
+                    <asp:DropDownList ID="ddlEstado" runat="server" />
+                    <asp:Literal ID="litEstadoNuevo" runat="server" Text="Solicitado" /></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="txtObservaciones">Observaciones</asp:Label></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:TextBox ID="txtObservaciones" runat="server" MaxLength="500" TextMode="MultiLine" Rows="3" /></div>
             </div>
 
-            <asp:Button ID="btnGuardar" runat="server" Text="Guardar"
+            <asp:Button ID="btnGuardar" runat="server" CssClass="boton-rojo" Text="Guardar"
                 OnClick="btnGuardar_Click" ValidationGroup="Turno" />
-            <asp:Button ID="btnNuevo" runat="server" Text="Nuevo turno"
+            <asp:Button ID="btnNuevo" runat="server" CssClass="boton-gris" Text="Nuevo turno"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
         </asp:Panel>
         </div>
+    </div>
     </div>
 </asp:Content>

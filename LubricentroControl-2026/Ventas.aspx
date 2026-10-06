@@ -1,6 +1,8 @@
-<%@ Page Title="Ventas" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Ventas.aspx.cs" Inherits="LubricentroControl_2026.Ventas" %>
+﻿<%@ Page Title="Ventas" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Ventas.aspx.cs" Inherits="LubricentroControl_2026.Ventas" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <div class="pantalla-abm">
 
     <h1>Ventas</h1>
 
@@ -8,21 +10,21 @@
         <asp:Literal ID="litMensaje" runat="server" />
     </asp:Panel>
 
-    <p><small>El comprobante de venta se genera automáticamente al cerrar una orden de trabajo
+    <p class="texto-nota"><small>El comprobante de venta se genera automáticamente al cerrar una orden de trabajo
         (pantalla <a href="~/OrdenesDeTrabajo" runat="server">Órdenes de trabajo</a>) — acá solo se consulta.</small></p>
 
     <div class="row">
         <div class="col-7">
-            <div class="row border border-1">
+            <div class="row barra-busqueda">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por cliente, patente o número</asp:Label>
                     <asp:TextBox ID="txtBuscar" runat="server" /></div>
                 <div class="col-6">
-                    <asp:Button ID="btnBuscar" runat="server" Text="Buscar"
+                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
                         OnClick="btnBuscar_Click" CausesValidation="false" /></div>
             </div>
 
-            <asp:GridView ID="gvVentas" runat="server"
+            <asp:GridView ID="gvVentas" runat="server" CssClass="tabla-abm"
                 AutoGenerateColumns="false" DataKeyNames="IdVenta" GridLines="None"
                 OnRowCommand="gvVentas_RowCommand" EmptyDataText="No hay ventas que coincidan con la búsqueda.">
                 <Columns>
@@ -57,7 +59,7 @@
                 </p>
 
                 <asp:GridView ID="gvDetalleVenta" runat="server"
-                    CssClass="table table-striped table-bordered table-hover"
+                    CssClass="tabla-abm tabla-compacta"
                     AutoGenerateColumns="false" GridLines="None"
                     EmptyDataText="Esta venta no tiene líneas.">
                     <Columns>
@@ -69,5 +71,6 @@
                 </asp:GridView>
             </asp:Panel>
         </div>
+    </div>
     </div>
 </asp:Content>

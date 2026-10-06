@@ -348,6 +348,7 @@ namespace LubricentroControl_2026
             pnlAgregarServicio.Visible = !esTerminal;
             pnlAgregarInsumo.Visible = !esTerminal;
             gvServicios.Columns[3].Visible = !esTerminal;
+            gvInsumosOrden.Columns[3].Visible = !esTerminal;
             CargarDetalle(idOrden);
         }
 
@@ -414,6 +415,19 @@ namespace LubricentroControl_2026
             txtCantidadInsumo.Text = "1";
             CargarCatalogos();
             CargarDetalle(idOrden);
+        }
+
+        protected void gvInsumosOrden_RowCommand(object sender, GridViewCommandEventArgs e)
+        {
+            if (EsSoloLectura) return;
+            if (e.CommandName != "Quitar") return;
+
+            var resultado = DetalleOrdenInsumoDAL.Quitar(
+                LeerIdOculto(Convert.ToString(e.CommandArgument)), UsuarioActual.IdUsuario);
+
+            MostrarMensaje(resultado.Mensaje, resultado.Exito);
+            CargarCatalogos();
+            CargarDetalle(LeerIdOculto(hdnIdOrden.Value));
         }
 
         // 0 (ID inexistente, cae en "no existe"/valida en falso) si el campo oculto llegara

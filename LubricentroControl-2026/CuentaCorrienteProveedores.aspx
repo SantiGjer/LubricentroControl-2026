@@ -1,7 +1,9 @@
-<%@ Page Title="Cuenta corriente de proveedores" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="CuentaCorrienteProveedores.aspx.cs" Inherits="LubricentroControl_2026.CuentaCorrienteProveedores" %>
+﻿<%@ Page Title="Cuenta corriente de proveedores" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="CuentaCorrienteProveedores.aspx.cs" Inherits="LubricentroControl_2026.CuentaCorrienteProveedores" %>
 <%@ Import Namespace="BIZ.Modelo" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <div class="pantalla-abm">
 
     <h1>Cuenta corriente de proveedores</h1>
 
@@ -11,16 +13,16 @@
 
     <div class="row">
         <div class="col-7">
-            <div class="row border border-1">
+            <div class="row barra-busqueda">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por razón social o CUIT</asp:Label>
                     <asp:TextBox ID="txtBuscar" runat="server" /></div>
                 <div class="col-6">
-                    <asp:Button ID="btnBuscar" runat="server" Text="Buscar"
+                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
                         OnClick="btnBuscar_Click" CausesValidation="false" /></div>
             </div>
 
-            <asp:GridView ID="gvProveedores" runat="server"
+            <asp:GridView ID="gvProveedores" runat="server" CssClass="tabla-abm"
                 AutoGenerateColumns="false" DataKeyNames="IdProveedor" GridLines="None"
                 OnRowCommand="gvProveedores_RowCommand" EmptyDataText="No hay proveedores que coincidan con la búsqueda.">
                 <Columns>
@@ -47,7 +49,7 @@
                 <p><b>Saldo actual:</b> <asp:Literal ID="litSaldoActual" runat="server" /></p>
 
                 <asp:GridView ID="gvHistorial" runat="server"
-                    CssClass="table table-striped table-bordered table-hover"
+                    CssClass="tabla-abm tabla-compacta"
                     AutoGenerateColumns="false" GridLines="None"
                     EmptyDataText="Todavía no hay movimientos registrados.">
                     <Columns>
@@ -65,12 +67,12 @@
                     <hr />
                     <h3 class="h6">Registrar ajuste</h3>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:Label runat="server" AssociatedControlID="txtMontoAjuste">Monto (negativo reduce la deuda, positivo la aumenta)</asp:Label></div>
                     </div>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:TextBox ID="txtMontoAjuste" runat="server" MaxLength="12" />
                             <asp:RequiredFieldValidator runat="server" ControlToValidate="txtMontoAjuste"
@@ -82,12 +84,12 @@
                                 ErrorMessage="El monto no puede ser cero." /></div>
                     </div>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:Label runat="server" AssociatedControlID="txtMotivoAjuste">Motivo</asp:Label></div>
                     </div>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:TextBox ID="txtMotivoAjuste" runat="server" MaxLength="300" TextMode="MultiLine" Rows="2" />
                             <asp:RequiredFieldValidator runat="server" ControlToValidate="txtMotivoAjuste"
@@ -95,10 +97,11 @@
                                 ErrorMessage="El motivo es obligatorio." /></div>
                     </div>
 
-                    <asp:Button ID="btnRegistrarAjuste" runat="server" Text="Registrar ajuste"
+                    <asp:Button ID="btnRegistrarAjuste" runat="server" CssClass="boton-rojo" Text="Registrar ajuste"
                         OnClick="btnRegistrarAjuste_Click" ValidationGroup="Ajuste" />
                 </asp:Panel>
             </asp:Panel>
         </div>
+    </div>
     </div>
 </asp:Content>

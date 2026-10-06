@@ -1,6 +1,8 @@
-<%@ Page Title="Compras" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Compras.aspx.cs" Inherits="LubricentroControl_2026.Compras" %>
+﻿<%@ Page Title="Compras" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Compras.aspx.cs" Inherits="LubricentroControl_2026.Compras" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <div class="pantalla-abm">
 
     <h1>Compras</h1>
 
@@ -10,19 +12,19 @@
 
     <div class="row">
         <div class="col-7">
-            <div class="row border border-1">
+            <div class="row barra-busqueda">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por proveedor, CUIT o número</asp:Label>
                     <asp:TextBox ID="txtBuscar" runat="server" /></div>
                 <div class="col-6">
-                    <asp:Button ID="btnBuscar" runat="server" Text="Buscar"
+                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
                         OnClick="btnBuscar_Click" CausesValidation="false" />
                     <asp:CheckBox ID="chkSoloConSaldo" runat="server" AutoPostBack="true"
                         OnCheckedChanged="chkSoloConSaldo_CheckedChanged" />
                     <asp:Label runat="server" AssociatedControlID="chkSoloConSaldo">Solo con saldo pendiente</asp:Label></div>
             </div>
 
-            <asp:GridView ID="gvCompras" runat="server"
+            <asp:GridView ID="gvCompras" runat="server" CssClass="tabla-abm"
                 AutoGenerateColumns="false" DataKeyNames="IdCompra" GridLines="None"
                 OnRowCommand="gvCompras_RowCommand" EmptyDataText="No hay compras que coincidan con la búsqueda.">
                 <Columns>
@@ -49,12 +51,12 @@
                 <asp:HiddenField ID="hdnIdCompra" runat="server" />
 
                 <asp:Panel ID="pnlAltaCompra" runat="server">
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:Label runat="server" AssociatedControlID="txtBuscarProveedor">Proveedor</asp:Label></div>
                     </div>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:UpdatePanel ID="upnlProveedor" runat="server">
                                 <ContentTemplate>
@@ -62,7 +64,7 @@
                                     <asp:Label ID="litProveedorSeleccionado" runat="server" Text="(sin seleccionar)" />
                                     <br />
                                     <asp:TextBox ID="txtBuscarProveedor" runat="server" placeholder="Buscar por razón social o CUIT" />
-                                    <asp:Button ID="btnBuscarProveedor" runat="server" Text="Buscar"
+                                    <asp:Button ID="btnBuscarProveedor" runat="server" CssClass="boton-rojo boton-chico" Text="Buscar"
                                         OnClick="btnBuscarProveedor_Click" CausesValidation="false" />
 
                                     <asp:Panel ID="pnlResultadosProveedor" runat="server" Visible="false"
@@ -87,7 +89,7 @@
                             </asp:UpdatePanel></div>
                     </div>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-6">
                             <asp:Label runat="server" AssociatedControlID="ddlCondicionPago">Condición de pago</asp:Label>
                             <br />
@@ -104,12 +106,12 @@
                             </asp:Panel></div>
                     </div>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:Label runat="server" AssociatedControlID="txtImpuestos">Impuestos (opcional)</asp:Label></div>
                     </div>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
                             <asp:TextBox ID="txtImpuestos" runat="server" MaxLength="12" Text="0" />
                             <asp:CompareValidator runat="server" ControlToValidate="txtImpuestos"
@@ -126,11 +128,11 @@
                     <asp:TextBox ID="txtCantidadLinea" runat="server" MaxLength="12" Width="70px" />
                     <asp:Label runat="server" AssociatedControlID="txtPrecioLinea">Precio unitario</asp:Label>
                     <asp:TextBox ID="txtPrecioLinea" runat="server" MaxLength="12" Width="90px" />
-                    <asp:Button ID="btnAgregarLinea" runat="server" Text="Agregar línea"
+                    <asp:Button ID="btnAgregarLinea" runat="server" CssClass="boton-rojo boton-chico" Text="Agregar línea"
                         OnClick="btnAgregarLinea_Click" CausesValidation="false" />
 
                     <asp:GridView ID="gvLineasPendientes" runat="server"
-                        CssClass="table table-striped table-bordered table-hover"
+                        CssClass="tabla-abm tabla-compacta"
                         AutoGenerateColumns="false" GridLines="None"
                         OnRowCommand="gvLineasPendientes_RowCommand"
                         EmptyDataText="Todavía no agregaste ninguna línea.">
@@ -148,7 +150,7 @@
                         </Columns>
                     </asp:GridView>
 
-                    <asp:Button ID="btnGuardarCompra" runat="server" Text="Guardar compra"
+                    <asp:Button ID="btnGuardarCompra" runat="server" CssClass="boton-rojo" Text="Guardar compra"
                         OnClick="btnGuardarCompra_Click" ValidationGroup="Compra" />
                 </asp:Panel>
 
@@ -165,7 +167,7 @@
                     </p>
 
                     <asp:GridView ID="gvDetalleCompra" runat="server"
-                        CssClass="table table-striped table-bordered table-hover"
+                        CssClass="tabla-abm tabla-compacta"
                         AutoGenerateColumns="false" GridLines="None"
                         EmptyDataText="Esta compra no tiene líneas.">
                         <Columns>
@@ -176,9 +178,10 @@
                     </asp:GridView>
                 </asp:Panel>
 
-                <asp:Button ID="btnNuevaCompra" runat="server" Text="Nueva compra"
+                <asp:Button ID="btnNuevaCompra" runat="server" CssClass="boton-gris" Text="Nueva compra"
                     OnClick="btnNuevaCompra_Click" CausesValidation="false" />
             </asp:Panel>
         </div>
+    </div>
     </div>
 </asp:Content>

@@ -68,6 +68,9 @@ namespace LubricentroControl_2026
         /// <summary>Control ddlEstado.</summary>
         protected global::System.Web.UI.WebControls.DropDownList ddlEstado;
 
+        /// <summary>Control litEstadoNuevo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litEstadoNuevo;
+
         /// <summary>Control txtObservaciones.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtObservaciones;
 

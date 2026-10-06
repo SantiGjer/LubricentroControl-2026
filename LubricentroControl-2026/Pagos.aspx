@@ -1,6 +1,8 @@
-<%@ Page Title="Pagos" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Pagos.aspx.cs" Inherits="LubricentroControl_2026.Pagos" %>
+﻿<%@ Page Title="Pagos" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Pagos.aspx.cs" Inherits="LubricentroControl_2026.Pagos" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+
+    <div class="pantalla-abm">
 
     <h1>Pagos</h1>
 
@@ -10,16 +12,16 @@
 
     <div class="row">
         <div class="col-7">
-            <div class="row border border-1">
+            <div class="row barra-busqueda">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por cliente o proveedor</asp:Label>
                     <asp:TextBox ID="txtBuscar" runat="server" /></div>
                 <div class="col-6">
-                    <asp:Button ID="btnBuscar" runat="server" Text="Buscar"
+                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
                         OnClick="btnBuscar_Click" CausesValidation="false" /></div>
             </div>
 
-            <asp:GridView ID="gvPagos" runat="server"
+            <asp:GridView ID="gvPagos" runat="server" CssClass="tabla-abm"
                 AutoGenerateColumns="false" DataKeyNames="IdPago" GridLines="None"
                 EmptyDataText="No hay pagos que coincidan con la búsqueda.">
                 <Columns>
@@ -44,7 +46,7 @@
         <asp:Panel ID="pnlFormulario" runat="server">
             <h2>Registrar pago</h2>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="ddlTipo">Tipo</asp:Label>
                     <br />
@@ -55,17 +57,17 @@
             <asp:UpdatePanel ID="upnlTitular" runat="server">
                 <ContentTemplate>
                     <asp:Panel ID="pnlCliente" runat="server">
-                        <div class="row border border-1">
+                        <div class="row">
                             <div class="col-12">
                                 <asp:Label runat="server" AssociatedControlID="txtBuscarCliente">Cliente</asp:Label></div>
                         </div>
-                        <div class="row border border-1">
+                        <div class="row">
                             <div class="col-12">
                                 <asp:HiddenField ID="hdnIdCliente" runat="server" />
                                 <asp:Label ID="litClienteSeleccionado" runat="server" Text="(sin seleccionar)" />
                                 <br />
                                 <asp:TextBox ID="txtBuscarCliente" runat="server" placeholder="Buscar por nombre, apellido o DNI" />
-                                <asp:Button ID="btnBuscarCliente" runat="server" Text="Buscar"
+                                <asp:Button ID="btnBuscarCliente" runat="server" CssClass="boton-rojo boton-chico" Text="Buscar"
                                     OnClick="btnBuscarCliente_Click" CausesValidation="false" />
 
                                 <asp:Panel ID="pnlResultadosCliente" runat="server" Visible="false"
@@ -90,17 +92,17 @@
                     </asp:Panel>
 
                     <asp:Panel ID="pnlProveedor" runat="server" Visible="false">
-                        <div class="row border border-1">
+                        <div class="row">
                             <div class="col-12">
                                 <asp:Label runat="server" AssociatedControlID="txtBuscarProveedor">Proveedor</asp:Label></div>
                         </div>
-                        <div class="row border border-1">
+                        <div class="row">
                             <div class="col-12">
                                 <asp:HiddenField ID="hdnIdProveedor" runat="server" />
                                 <asp:Label ID="litProveedorSeleccionado" runat="server" Text="(sin seleccionar)" />
                                 <br />
                                 <asp:TextBox ID="txtBuscarProveedor" runat="server" placeholder="Buscar por razón social o CUIT" />
-                                <asp:Button ID="btnBuscarProveedor" runat="server" Text="Buscar"
+                                <asp:Button ID="btnBuscarProveedor" runat="server" CssClass="boton-rojo boton-chico" Text="Buscar"
                                     OnClick="btnBuscarProveedor_Click" CausesValidation="false" />
 
                                 <asp:Panel ID="pnlResultadosProveedor" runat="server" Visible="false"
@@ -124,16 +126,16 @@
                         </div>
                     </asp:Panel>
 
-                    <div class="row border border-1">
+                    <div class="row">
                         <div class="col-12">
-                            <asp:Label runat="server" AssociatedControlID="ddlComprobante">Comprobante a pagar</asp:Label>
-                            <br />
-                            <asp:DropDownList ID="ddlComprobante" runat="server" /></div>
+                            <asp:Label ID="lblSaldoTitular" runat="server" Visible="false" Font-Bold="true" />
+                            <div class="small text-muted">El pago se aplica primero a las deudas más antiguas;
+                                lo que sobre queda a favor.</div></div>
                     </div>
                 </ContentTemplate>
             </asp:UpdatePanel>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-6">
                     <asp:Label runat="server" AssociatedControlID="ddlMedioPago">Medio de pago</asp:Label>
                     <br />
@@ -151,19 +153,20 @@
                         ErrorMessage="El monto debe ser mayor a cero." /></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:Label runat="server" AssociatedControlID="txtObservaciones">Observaciones (opcional)</asp:Label></div>
             </div>
 
-            <div class="row border border-1">
+            <div class="row">
                 <div class="col-12">
                     <asp:TextBox ID="txtObservaciones" runat="server" MaxLength="300" TextMode="MultiLine" Rows="2" /></div>
             </div>
 
-            <asp:Button ID="btnRegistrar" runat="server" Text="Registrar pago"
+            <asp:Button ID="btnRegistrar" runat="server" CssClass="boton-rojo" Text="Registrar pago"
                 OnClick="btnRegistrar_Click" ValidationGroup="Pago" />
         </asp:Panel>
         </div>
+    </div>
     </div>
 </asp:Content>

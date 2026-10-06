@@ -47,6 +47,27 @@ namespace BIZ.Data
             return lista;
         }
 
+        // Turnos de un día que siguen vigentes (Solicitado o Confirmado), por hora. Para el
+        // Inicio: los Completados y Cancelados ya no necesitan atención. "dia" puede traer hora;
+        // se compara contra el día completo (>= medianoche y < medianoche siguiente).
+        public static List<Turno> ListarVigentesDelDia(System.DateTime dia)
+        {
+            const string sql = SelectBase + @"
+                WHERE t.fechaHoraAsignada >= @desde AND t.fechaHoraAsignada < @hasta
+                  AND t.estado IN (@estadoSolicitado, @estadoConfirmado)
+                ORDER BY t.fechaHoraAsignada ASC";
+
+            var desde = dia.Date;
+            var lista = new List<Turno>();
+            foreach (DataRow fila in AccesoDatos.Consultar(sql,
+                AccesoDatos.Param("@desde", desde),
+                AccesoDatos.Param("@hasta", desde.AddDays(1)),
+                AccesoDatos.Param("@estadoSolicitado", Turno.EstadoSolicitado),
+                AccesoDatos.Param("@estadoConfirmado", Turno.EstadoConfirmado)).Rows)
+                lista.Add(Mapear(fila));
+            return lista;
+        }
+
         public static Turno ObtenerPorId(int idTurno)
         {
             var tabla = AccesoDatos.Consultar(

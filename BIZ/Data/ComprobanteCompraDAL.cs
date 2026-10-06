@@ -59,7 +59,7 @@ namespace BIZ.Data
         {
             var lista = new List<ComprobanteCompra>();
             foreach (DataRow fila in AccesoDatos.Consultar(
-                SelectBase + " WHERE c.idProveedor = @idProveedor AND c.saldoPendiente > 0 ORDER BY c.fecha",
+                SelectBase + " WHERE c.idProveedor = @idProveedor AND c.saldoPendiente > 0 ORDER BY c.fecha, c.idCompra",
                 AccesoDatos.Param("@idProveedor", idProveedor)).Rows)
                 lista.Add(Mapear(fila));
             return lista;
@@ -126,6 +126,19 @@ namespace BIZ.Data
             compra.Total = compra.Subtotal + compra.Impuestos;
             compra.SaldoPendiente = compra.CondicionPago == ComprobanteCompra.CondicionCuentaCorriente
                 ? compra.Total : 0;
+
+            // Misma regla que en las ventas: si ya le pagamos de más al proveedor (cuenta
+            // corriente negativa), ese saldo a favor se aplica a esta compra a cuenta corriente.
+            var creditoAplicado = 0m;
+            if (compra.CondicionPago == ComprobanteCompra.CondicionCuentaCorriente)
+            {
+                var saldoPrevio = CuentaCorrienteProveedorDAL.ObtenerSaldoActual(compra.IdProveedor);
+                if (saldoPrevio < 0)
+                {
+                    creditoAplicado = System.Math.Min(-saldoPrevio, compra.Total);
+                    compra.SaldoPendiente = compra.Total - creditoAplicado;
+                }
+            }
 
             var sql = new StringBuilder();
             var parametros = new List<SqlParameter>();
@@ -204,7 +217,10 @@ namespace BIZ.Data
             var id = AccesoDatos.Escalar(sql.ToString(), parametros.ToArray());
             compra.IdCompra = System.Convert.ToInt32(id);
 
-            return ResultadoOperacion.Ok("Compra registrada.");
+            return ResultadoOperacion.Ok("Compra registrada." +
+                (creditoAplicado > 0
+                    ? " Se aplicaron " + creditoAplicado.ToString("N2") + " de saldo a favor con el proveedor."
+                    : ""));
         }
     }
 }

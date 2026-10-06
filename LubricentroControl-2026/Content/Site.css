@@ -22,6 +22,14 @@ textarea {
 
 /* ===== Login ===== */
 
+/* Mismo gris de fondo que el resto de las pantallas (ver "Pantallas de gestión"), para las
+   cuatro pantallas de ingreso: Login, Registro, Recuperar y Restablecer clave. */
+html:has(.login-page),
+body:has(.login-page) {
+    background: #cdd0d4;
+    min-height: 100vh;
+}
+
 .login-page {
     display: flex;
     align-items: center;
@@ -174,3 +182,357 @@ textarea {
     color: #e13a41;
     text-decoration: underline;
 }
+
+/* ===== Pantallas de gestión (ABM): estilo básico =====
+   Empezó en Clientes y se extendió a los demás ABM y a Inicio. Cada pantalla pone su contenido
+   dentro de un contenedor con la clase pantalla-abm.
+   Todo está acotado a .pantalla-abm para no afectar a las demás pantallas.
+   Sin bordes entre filas/campos, relleno general, tabla con aire para leer y
+   paleta rojo / negro / gris. Respaldo del estado anterior en Respaldos\. */
+
+/* Fondo gris de toda la página, solo cuando está la pantalla de Clientes. */
+html:has(.pantalla-abm),
+body:has(.pantalla-abm) {
+    background: #cdd0d4;
+    min-height: 100vh;
+}
+
+.pantalla-abm {
+    padding: 1rem 0 2rem;
+    color: #212529;
+    background: #cdd0d4;
+}
+
+.pantalla-abm h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #0d0f11;
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.pantalla-abm h2 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #0d0f11;
+    margin-bottom: 0.5rem;
+}
+
+.pantalla-abm > .row {
+    --bs-gutter-x: 2rem;
+}
+
+.pantalla-abm .alert {
+    border: 0;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+}
+
+/* --- Buscador --- */
+.pantalla-abm .barra-busqueda {
+    --bs-gutter-x: 0;
+    background: #e6e8ea;
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 0 0 1.25rem;
+    align-items: flex-end;
+}
+
+.pantalla-abm .barra-busqueda > [class*="col-"] {
+    padding: 0.25rem 0.5rem;
+}
+
+.pantalla-abm .barra-busqueda label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.35rem;
+}
+
+/* El "Incluir inactivos" va en línea con su casilla. */
+.pantalla-abm .barra-busqueda [class*="col-"] + [class*="col-"] label {
+    display: inline;
+    font-weight: 400;
+    margin-left: 0.25rem;
+}
+
+/* --- Campos de texto --- */
+.pantalla-abm input[type="text"],
+.pantalla-abm input[type="email"],
+.pantalla-abm input[type="password"],
+.pantalla-abm input[type="date"],
+.pantalla-abm input[type="time"] {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.5rem 0.7rem;
+    background: #f2f3f4;
+    border: 1px solid #c4c8cc;
+    border-radius: 6px;
+    color: #212529;
+}
+
+.pantalla-abm input[type="text"]:focus,
+.pantalla-abm input[type="email"]:focus,
+.pantalla-abm input[type="password"]:focus,
+.pantalla-abm input[type="date"]:focus,
+.pantalla-abm input[type="time"]:focus {
+    outline: none;
+    border-color: #c0272d;
+    box-shadow: 0 0 0 3px rgba(192, 39, 45, 0.2);
+}
+
+/* --- Formulario ---
+   Panel gris: la columna derecha de los ABM (col-5) o cualquier bloque con .panel-gris. */
+.pantalla-abm .col-5 > div,
+.pantalla-abm .panel-gris {
+    background: #e6e8ea;
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.pantalla-abm .panel-gris {
+    max-width: 560px;
+    margin-bottom: 1.5rem;
+}
+
+/* Paneles de detalle a media pantalla (Órdenes: servicios e insumos) o a todo el ancho
+   (tablero del Inicio): sin tope de ancho. */
+.pantalla-abm .col-6 > .panel-gris,
+.pantalla-abm .col-12 > .panel-gris {
+    max-width: none;
+}
+
+/* Resúmenes de los reportes y notas de página. */
+.pantalla-abm .alert-secondary {
+    background: #e6e8ea;
+    color: #212529;
+}
+
+.pantalla-abm .texto-nota {
+    padding-left: 1.5rem;
+    color: #343a40;
+    margin-bottom: 1rem;
+}
+
+.pantalla-abm .titulo-accesos,
+.pantalla-abm .titulo-seccion {
+    padding-left: 1.5rem;
+}
+
+.pantalla-abm .barra-busqueda br {
+    display: none;
+}
+
+/* Filtros por fecha (Reporte de ventas): todas las etiquetas arriba de su campo. */
+.pantalla-abm .barra-fechas [class*="col-"] label {
+    display: block !important;
+    font-weight: 600 !important;
+    margin-left: 0 !important;
+}
+
+/* Enlace con aspecto de botón (Acceso denegado). */
+.pantalla-abm a.enlace-boton {
+    display: inline-block;
+    text-decoration: none;
+    margin-top: 0;
+    color: #fff;
+}
+
+.pantalla-abm .col-5 .row,
+.pantalla-abm .panel-gris .row {
+    --bs-gutter-x: 0;
+    margin: 0;
+}
+
+.pantalla-abm .col-5 .row > [class*="col-"] label,
+.pantalla-abm .panel-gris .row > [class*="col-"] label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin: 0.9rem 0 0.3rem;
+}
+
+/* Etiqueta que va en línea con su casilla (p. ej. "Activo"). */
+.pantalla-abm .etiqueta-inline {
+    display: inline !important;
+    font-weight: 400 !important;
+    margin: 0 0 0 0.25rem !important;
+}
+
+.pantalla-abm select {
+    max-width: 100%;
+    padding: 0.45rem 0.6rem;
+    background: #f2f3f4;
+    border: 1px solid #c4c8cc;
+    border-radius: 6px;
+    color: #212529;
+}
+
+.pantalla-abm textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.5rem 0.7rem;
+    background: #f2f3f4;
+    border: 1px solid #c4c8cc;
+    border-radius: 6px;
+    color: #212529;
+}
+
+.pantalla-abm hr {
+    display: none;
+}
+
+/* Lista desplegable de resultados del buscador de dueño: pisa los estilos en línea. */
+.pantalla-abm div[id$="pnlResultadosCliente"] {
+    background: #f2f3f4 !important;
+    border: 1px solid #c4c8cc !important;
+    border-radius: 6px;
+}
+
+/* --- Botones --- */
+.pantalla-abm .boton-rojo,
+.pantalla-abm .boton-gris,
+.pantalla-abm .boton-borde-rojo {
+    border-radius: 6px;
+    padding: 0.5rem 1.2rem;
+    font-weight: 600;
+    margin: 1.25rem 0.5rem 0 0;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pantalla-abm .boton-rojo {
+    background: #c0272d;
+    border: 1px solid #c0272d;
+    color: #fff;
+}
+
+.pantalla-abm .boton-rojo:hover {
+    background: #a11f24;
+    border-color: #a11f24;
+}
+
+.pantalla-abm .boton-gris {
+    background: #495057;
+    border: 1px solid #495057;
+    color: #fff;
+}
+
+.pantalla-abm .boton-gris:hover {
+    background: #343a40;
+    border-color: #343a40;
+}
+
+.pantalla-abm .boton-borde-rojo {
+    background: transparent;
+    border: 1px solid #c0272d;
+    color: #c0272d;
+}
+
+.pantalla-abm .boton-borde-rojo:hover {
+    background: #c0272d;
+    color: #fff;
+}
+
+/* Los botones del buscador y de los avisos no necesitan el margen superior grande. */
+.pantalla-abm .barra-busqueda .boton-rojo,
+.pantalla-abm .alert .boton-gris {
+    margin-top: 0;
+}
+
+.pantalla-abm .alert .boton-gris {
+    margin-left: 0.75rem;
+}
+
+/* Botones chicos en línea con un campo (p. ej. buscar/crear dueño en Vehículos). */
+.pantalla-abm .boton-chico {
+    margin: 0.5rem 0.4rem 0 0;
+    padding: 0.35rem 0.9rem;
+}
+
+/* --- Tabla --- */
+.pantalla-abm .tabla-abm {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #b8bcc1;
+    font-size: 0.92rem;
+}
+
+.pantalla-abm .tabla-abm th {
+    background: #212529;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-align: left;
+    padding: 0.8rem 1rem;
+    border: 1px solid #3b4046;
+}
+
+.pantalla-abm .tabla-abm td {
+    padding: 0.85rem 1rem;
+    border: 1px solid #b8bcc1;
+    background: #e6e8ea;
+    color: #212529;
+    vertical-align: middle;
+}
+
+.pantalla-abm .tabla-abm tr:nth-child(odd) td {
+    background: #dcdfe2;
+}
+
+.pantalla-abm .tabla-abm tr:hover td {
+    background: #efc9cb;
+}
+
+.pantalla-abm .tabla-abm a {
+    color: #c0272d;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.pantalla-abm .tabla-abm a:hover {
+    text-decoration: underline;
+}
+
+/* Acciones con varios enlaces (Usuarios): separados entre sí. */
+.pantalla-abm .tabla-abm a + a {
+    margin-left: 0.75rem;
+}
+
+/* Filas con fondo propio puesto desde el código (Insumos: stock bajo) conservan ese fondo. */
+.pantalla-abm .tabla-abm tr[style*="background-color"] td {
+    background: transparent;
+}
+
+/* Grillas con muchas columnas (Insumos): menos relleno para que no se corten. */
+.pantalla-abm .tabla-compacta th,
+.pantalla-abm .tabla-compacta td {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+/* --- Inicio (tablero) --- */
+.pantalla-abm .resumen-tablero {
+    color: #495057;
+    margin: 0 0 1rem;
+    min-height: 1.5rem;
+}
+
+.pantalla-abm .tabla-vacia td {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.pantalla-abm .enlace-tablero {
+    margin-top: 1.25rem;
+}
+
+.pantalla-abm .texto-inicio {
+    font-size: 1.1rem;
+    color: #343a40;
+    padding-left: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+

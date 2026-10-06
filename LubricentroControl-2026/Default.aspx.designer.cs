@@ -8,13 +8,31 @@ namespace LubricentroControl_2026
 {
     public partial class _Default
     {
-        /// <summary>Control litNombre.</summary>
-        protected global::System.Web.UI.WebControls.Literal litNombre;
+        /// <summary>Control litResumenTurnos.</summary>
+        protected global::System.Web.UI.WebControls.Literal litResumenTurnos;
 
-        /// <summary>Control litNivel.</summary>
-        protected global::System.Web.UI.WebControls.Literal litNivel;
+        /// <summary>Control gvTurnosHoy.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvTurnosHoy;
 
-        /// <summary>Control litAccesos.</summary>
-        protected global::System.Web.UI.WebControls.Literal litAccesos;
+        /// <summary>Control lnkTurnos.</summary>
+        protected global::System.Web.UI.WebControls.HyperLink lnkTurnos;
+
+        /// <summary>Control litResumenStock.</summary>
+        protected global::System.Web.UI.WebControls.Literal litResumenStock;
+
+        /// <summary>Control gvStockBajo.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvStockBajo;
+
+        /// <summary>Control lnkStock.</summary>
+        protected global::System.Web.UI.WebControls.HyperLink lnkStock;
+
+        /// <summary>Control litResumenOrdenes.</summary>
+        protected global::System.Web.UI.WebControls.Literal litResumenOrdenes;
+
+        /// <summary>Control gvOrdenesEnCurso.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvOrdenesEnCurso;
+
+        /// <summary>Control lnkOrdenes.</summary>
+        protected global::System.Web.UI.WebControls.HyperLink lnkOrdenes;
     }
 }

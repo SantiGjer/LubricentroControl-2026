@@ -89,38 +89,43 @@ namespace BIZ.Data
             return lista;
         }
 
-        // Registra el pago y, en el mismo batch atómico, descuenta el saldoPendiente del
-        // comprobante puntual (si vino uno) y deja el movimiento en la cuenta corriente que
-        // corresponda (Cliente o Proveedor) — mismo mecanismo que ComprobanteCompraDAL.Crear/
-        // ComprobanteVentaDAL.GenerarDesdeOrden. Un pago "a cuenta general" (sin IdVenta/IdCompra)
-        // solo hace las últimas dos escrituras.
+        // Una fila de reparto de un pago: el comprobante al que se imputa (null = "a cuenta
+        // general", el sobrante) y cuánto se le aplica.
+        private class Imputacion
+        {
+            public int? IdComprobante;
+            public string Numero;
+            public decimal Monto;
+        }
+
+        // Registra el pago repartiéndolo solo: primero cancela las deudas del titular, de la más
+        // vieja a la más nueva (saldoPendiente > 0), y lo que sobre queda "a cuenta general", o
+        // sea a favor en la cuenta corriente. No se elige comprobante: siempre se cancela primero
+        // la deuda. Como Pago tiene un solo idVenta/idCompra, un pago que toca varios comprobantes
+        // se guarda como una fila de Pago por comprobante (más una sin comprobante para el
+        // sobrante), cada una con su movimiento de cuenta corriente — todo en un solo batch
+        // atómico, mismo mecanismo que ComprobanteCompraDAL.Crear/ComprobanteVentaDAL.GenerarDesdeOrden.
         public static ResultadoOperacion Registrar(Pago pago)
         {
             var validacion = pago.Validar();
             if (!validacion.Exito) return validacion;
 
-            string descripcionCC;
+            var esCliente = pago.Tipo == Pago.TipoCliente;
+            var imputaciones = new List<Imputacion>();
+            var restante = pago.Monto;
 
-            if (pago.Tipo == Pago.TipoCliente)
+            if (esCliente)
             {
                 pago.IdProveedor = null;
                 var cliente = ClienteDAL.ObtenerPorId(pago.IdCliente.Value);
                 if (cliente == null) return ResultadoOperacion.Error("El cliente no existe.");
 
-                if (pago.IdVenta.HasValue)
+                foreach (var venta in ComprobanteVentaDAL.ListarPendientesPorCliente(pago.IdCliente.Value))
                 {
-                    var venta = ComprobanteVentaDAL.ObtenerPorId(pago.IdVenta.Value);
-                    if (venta == null) return ResultadoOperacion.Error("La venta no existe.");
-                    if (venta.IdCliente != pago.IdCliente.Value)
-                        return ResultadoOperacion.Error("La venta seleccionada no pertenece a ese cliente.");
-                    if (pago.Monto > venta.SaldoPendiente)
-                        return ResultadoOperacion.Error("El monto supera el saldo pendiente de la venta.");
-                    descripcionCC = "Pago de venta " + venta.NumeroComprobante;
-                }
-                else
-                {
-                    pago.IdCompra = null;
-                    descripcionCC = "Pago a cuenta";
+                    if (restante <= 0) break;
+                    var aplicado = System.Math.Min(restante, venta.SaldoPendiente);
+                    imputaciones.Add(new Imputacion { IdComprobante = venta.IdVenta, Numero = venta.NumeroComprobante, Monto = aplicado });
+                    restante -= aplicado;
                 }
             }
             else
@@ -129,22 +134,17 @@ namespace BIZ.Data
                 var proveedor = ProveedorDAL.ObtenerPorId(pago.IdProveedor.Value);
                 if (proveedor == null) return ResultadoOperacion.Error("El proveedor no existe.");
 
-                if (pago.IdCompra.HasValue)
+                foreach (var compra in ComprobanteCompraDAL.ListarPendientesPorProveedor(pago.IdProveedor.Value))
                 {
-                    var compra = ComprobanteCompraDAL.ObtenerPorId(pago.IdCompra.Value);
-                    if (compra == null) return ResultadoOperacion.Error("La compra no existe.");
-                    if (compra.IdProveedor != pago.IdProveedor.Value)
-                        return ResultadoOperacion.Error("La compra seleccionada no pertenece a ese proveedor.");
-                    if (pago.Monto > compra.SaldoPendiente)
-                        return ResultadoOperacion.Error("El monto supera el saldo pendiente de la compra.");
-                    descripcionCC = "Pago de compra " + compra.NumeroComprobante;
-                }
-                else
-                {
-                    pago.IdVenta = null;
-                    descripcionCC = "Pago a cuenta";
+                    if (restante <= 0) break;
+                    var aplicado = System.Math.Min(restante, compra.SaldoPendiente);
+                    imputaciones.Add(new Imputacion { IdComprobante = compra.IdCompra, Numero = compra.NumeroComprobante, Monto = aplicado });
+                    restante -= aplicado;
                 }
             }
+
+            if (restante > 0)
+                imputaciones.Add(new Imputacion { IdComprobante = null, Numero = null, Monto = restante });
 
             var sql = new StringBuilder();
             var parametros = new List<SqlParameter>();
@@ -153,68 +153,103 @@ namespace BIZ.Data
                 SET XACT_ABORT ON;
                 BEGIN TRANSACTION;
 
-                INSERT INTO Pago (tipo, idCliente, idProveedor, idVenta, idCompra, idUsuario, medioPago, monto, observaciones)
-                VALUES (@tipo, @idCliente, @idProveedor, @idVenta, @idCompra, @idUsuario, @medioPago, @monto, @observaciones);
-
-                DECLARE @idPago INT = CAST(SCOPE_IDENTITY() AS INT);
+                DECLARE @idPago INT;
+                DECLARE @primerIdPago INT = NULL;
             ");
 
             parametros.Add(AccesoDatos.Param("@tipo", pago.Tipo));
             parametros.Add(AccesoDatos.Param("@idCliente", pago.IdCliente));
             parametros.Add(AccesoDatos.Param("@idProveedor", pago.IdProveedor));
-            parametros.Add(AccesoDatos.Param("@idVenta", pago.IdVenta));
-            parametros.Add(AccesoDatos.Param("@idCompra", pago.IdCompra));
             parametros.Add(AccesoDatos.Param("@idUsuario", pago.IdUsuario));
             parametros.Add(AccesoDatos.Param("@medioPago", pago.MedioPago));
-            parametros.Add(AccesoDatos.Param("@monto", pago.Monto));
             parametros.Add(AccesoDatos.Param("@observaciones", pago.Observaciones));
+            parametros.Add(AccesoDatos.Param("@tipoMovimientoCC",
+                esCliente ? CuentaCorrienteCliente.TipoPago : CuentaCorrienteProveedor.TipoPago));
 
-            if (pago.IdVenta.HasValue)
+            for (var i = 0; i < imputaciones.Count; i++)
             {
-                sql.Append("UPDATE ComprobanteVenta SET saldoPendiente = saldoPendiente - @monto WHERE idVenta = @idVenta;");
-            }
-            else if (pago.IdCompra.HasValue)
-            {
-                sql.Append("UPDATE ComprobanteCompra SET saldoPendiente = saldoPendiente - @monto WHERE idCompra = @idCompra;");
-            }
+                var imp = imputaciones[i];
+                var suf = i.ToString();
+                var descripcion = imp.IdComprobante.HasValue
+                    ? (esCliente ? "Pago de venta " : "Pago de compra ") + imp.Numero
+                    : "Pago a cuenta";
 
-            if (pago.Tipo == Pago.TipoCliente)
-            {
                 sql.Append(@"
-                    INSERT INTO CuentaCorrienteCliente
-                        (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
-                    VALUES (
-                        @idCliente, @tipoMovimientoCC, NULL, @idPago, 0, @monto,
-                        ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteCliente
-                                WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0) - @monto,
-                        @descripcionCC, NULL);
+                    INSERT INTO Pago (tipo, idCliente, idProveedor, idVenta, idCompra, idUsuario, medioPago, monto, observaciones)
+                    VALUES (@tipo, @idCliente, @idProveedor, @idVenta" + suf + @", @idCompra" + suf + @", @idUsuario, @medioPago, @monto" + suf + @", @observaciones);
+
+                    SET @idPago = CAST(SCOPE_IDENTITY() AS INT);
+                    IF @primerIdPago IS NULL SET @primerIdPago = @idPago;
                 ");
-                parametros.Add(AccesoDatos.Param("@tipoMovimientoCC", CuentaCorrienteCliente.TipoPago));
+
+                parametros.Add(AccesoDatos.Param("@idVenta" + suf, esCliente ? imp.IdComprobante : null));
+                parametros.Add(AccesoDatos.Param("@idCompra" + suf, !esCliente ? imp.IdComprobante : null));
+                parametros.Add(AccesoDatos.Param("@monto" + suf, imp.Monto));
+                parametros.Add(AccesoDatos.Param("@descripcionCC" + suf, descripcion));
+
+                if (imp.IdComprobante.HasValue)
+                {
+                    sql.Append(esCliente
+                        ? "UPDATE ComprobanteVenta SET saldoPendiente = saldoPendiente - @monto" + suf + " WHERE idVenta = @idVenta" + suf + ";"
+                        : "UPDATE ComprobanteCompra SET saldoPendiente = saldoPendiente - @monto" + suf + " WHERE idCompra = @idCompra" + suf + ";");
+                }
+
+                if (esCliente)
+                {
+                    sql.Append(@"
+                        INSERT INTO CuentaCorrienteCliente
+                            (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
+                        VALUES (
+                            @idCliente, @tipoMovimientoCC, NULL, @idPago, 0, @monto" + suf + @",
+                            ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteCliente
+                                    WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0) - @monto" + suf + @",
+                            @descripcionCC" + suf + @", NULL);
+                    ");
+                }
+                else
+                {
+                    sql.Append(@"
+                        INSERT INTO CuentaCorrienteProveedor
+                            (idProveedor, tipoMovimiento, idCompra, idPago, debe, haber, saldo, descripcion, idUsuario)
+                        VALUES (
+                            @idProveedor, @tipoMovimientoCC, NULL, @idPago, 0, @monto" + suf + @",
+                            ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteProveedor
+                                    WHERE idProveedor = @idProveedor ORDER BY idMovimiento DESC), 0) - @monto" + suf + @",
+                            @descripcionCC" + suf + @", NULL);
+                    ");
+                }
             }
-            else
-            {
-                sql.Append(@"
-                    INSERT INTO CuentaCorrienteProveedor
-                        (idProveedor, tipoMovimiento, idCompra, idPago, debe, haber, saldo, descripcion, idUsuario)
-                    VALUES (
-                        @idProveedor, @tipoMovimientoCC, NULL, @idPago, 0, @monto,
-                        ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteProveedor
-                                WHERE idProveedor = @idProveedor ORDER BY idMovimiento DESC), 0) - @monto,
-                        @descripcionCC, NULL);
-                ");
-                parametros.Add(AccesoDatos.Param("@tipoMovimientoCC", CuentaCorrienteProveedor.TipoPago));
-            }
-            parametros.Add(AccesoDatos.Param("@descripcionCC", descripcionCC));
 
             sql.Append(@"
                 COMMIT TRANSACTION;
-                SELECT @idPago;
+                SELECT @primerIdPago;
             ");
 
             var id = AccesoDatos.Escalar(sql.ToString(), parametros.ToArray());
             pago.IdPago = System.Convert.ToInt32(id);
 
-            return ResultadoOperacion.Ok("Pago registrado.");
+            return ResultadoOperacion.Ok(ArmarMensaje(imputaciones));
+        }
+
+        // Cuenta cómo quedó repartido el pago: qué deudas canceló y cuánto quedó a favor.
+        private static string ArmarMensaje(List<Imputacion> imputaciones)
+        {
+            var aplicadas = new List<string>();
+            decimal aFavor = 0;
+            foreach (var imp in imputaciones)
+            {
+                if (imp.IdComprobante.HasValue)
+                    aplicadas.Add(imp.Numero + " (" + imp.Monto.ToString("N2") + ")");
+                else
+                    aFavor = imp.Monto;
+            }
+
+            var mensaje = "Pago registrado.";
+            if (aplicadas.Count > 0)
+                mensaje += " Se aplicó a: " + string.Join(", ", aplicadas) + ".";
+            if (aFavor > 0)
+                mensaje += " Quedaron " + aFavor.ToString("N2") + " a favor.";
+            return mensaje;
         }
     }
 }

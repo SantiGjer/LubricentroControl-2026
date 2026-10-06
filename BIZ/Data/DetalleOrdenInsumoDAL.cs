@@ -92,5 +92,65 @@ namespace BIZ.Data
 
             return ResultadoOperacion.Ok("Insumo agregado. Stock actualizado.");
         }
+
+        public static DetalleOrdenInsumo ObtenerPorId(int idDetalle)
+        {
+            var tabla = AccesoDatos.Consultar(
+                SelectBase + " WHERE d.idDetalle = @idDetalle",
+                AccesoDatos.Param("@idDetalle", idDetalle));
+
+            return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
+        }
+
+        // Inverso de Agregar: repone el stock, deja la entrada en el kardex y borra la línea,
+        // las tres escrituras juntas (mismo patrón XACT_ABORT/BEGIN TRAN/COMMIT). Solo sobre una
+        // orden Abierta o En proceso: una Cerrada ya copió la línea a la venta, y una Cancelada
+        // ya repuso el stock de todas sus líneas (quitar una repondría dos veces). El kardex usa
+        // TipoCancelacionOrden (ya admitido por CK_MovStock_origen) para no tocar el esquema.
+        public static ResultadoOperacion Quitar(int idDetalle, int idUsuario)
+        {
+            var detalle = ObtenerPorId(idDetalle);
+            if (detalle == null)
+                return ResultadoOperacion.Error("La línea de insumo no existe.");
+
+            var orden = OrdenDeTrabajoDAL.ObtenerPorId(detalle.IdOrden);
+            if (orden == null)
+                return ResultadoOperacion.Error("La orden no existe.");
+            if (orden.Estado == OrdenDeTrabajo.EstadoCerrada || orden.Estado == OrdenDeTrabajo.EstadoCancelada)
+                return ResultadoOperacion.Error("Una orden " + orden.Estado.ToLowerInvariant() + " no se puede modificar.");
+
+            var insumo = InsumoDAL.ObtenerPorId(detalle.IdInsumo);
+            if (insumo == null)
+                return ResultadoOperacion.Error("El insumo no existe.");
+
+            var stockResultante = insumo.StockActual + detalle.Cantidad;
+
+            const string sql = @"
+                SET XACT_ABORT ON;
+                BEGIN TRANSACTION;
+
+                UPDATE Insumo SET stockActual = @stockResultante WHERE idInsumo = @idInsumo;
+
+                INSERT INTO MovimientoStock
+                    (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+                VALUES
+                    (@idInsumo, @tipoMovimiento, NULL, @idOrden, @idUsuario, @cantidad, 0, @stockResultante, @descripcion);
+
+                DELETE FROM DetalleOrdenInsumo WHERE idDetalle = @idDetalle;
+
+                COMMIT TRANSACTION;";
+
+            AccesoDatos.Ejecutar(sql,
+                AccesoDatos.Param("@idInsumo", detalle.IdInsumo),
+                AccesoDatos.Param("@tipoMovimiento", MovimientoStock.TipoCancelacionOrden),
+                AccesoDatos.Param("@idOrden", detalle.IdOrden),
+                AccesoDatos.Param("@idUsuario", idUsuario),
+                AccesoDatos.Param("@cantidad", detalle.Cantidad),
+                AccesoDatos.Param("@stockResultante", stockResultante),
+                AccesoDatos.Param("@descripcion", "Reposición por quitar insumo de la orden #" + detalle.IdOrden),
+                AccesoDatos.Param("@idDetalle", idDetalle));
+
+            return ResultadoOperacion.Ok("Insumo quitado. Se repuso el stock.");
+        }
     }
 }

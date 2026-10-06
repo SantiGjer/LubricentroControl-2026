@@ -2,10 +2,12 @@ using System;
 
 namespace BIZ.Modelo
 {
-    // Pago de cliente o de proveedor (Docs/Lubricentro_Requerimientos.md §6.7). Puede imputarse
-    // a un comprobante puntual (IdVenta para tipo Cliente, IdCompra para tipo Proveedor) o
-    // quedar "a cuenta general" (los dos en null) — en los dos casos genera un movimiento de
-    // cuenta corriente. No se edita ni se borra una vez cargado.
+    // Pago de cliente o de proveedor (Docs/Lubricentro_Requerimientos.md §6.7). Cada fila puede
+    // imputarse a un comprobante puntual (IdVenta para tipo Cliente, IdCompra para tipo
+    // Proveedor) o quedar "a cuenta general" (los dos en null) — en los dos casos genera un
+    // movimiento de cuenta corriente. El reparto lo decide PagoDAL.Registrar (deudas más viejas
+    // primero, sobrante a favor): un pago puede terminar guardado como varias filas. No se edita
+    // ni se borra una vez cargado.
     public class Pago
     {
         public const string TipoCliente = "C";

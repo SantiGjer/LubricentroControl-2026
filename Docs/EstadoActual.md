@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 28 de septiembre de 2026
+**Última actualización:** 6 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -43,7 +43,7 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
 | 3 | Turnos y Órdenes de trabajo | ✅ Completa |
 | 4 | Compras, Ventas, Pagos, Cuentas corrientes | ✅ Completa |
 | 5 | Reportes | ✅ Completa |
-| 6 | Integración, pruebas y pulido | 🔶 En curso |
+| 6 | Integración, pruebas y pulido | 🔶 En curso (flujo completo y permisos revisados) |
 
 ### Qué funciona hoy
 
@@ -84,7 +84,8 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   Empleado.
 - **Turnos** (primera pantalla de Fase 3): alta/edición, sin baja lógica (no aplica — `Turno` no
   tiene columna `activo`; "cancelar" es simplemente llevar el campo `estado` a `Cancelado` desde
-  el mismo formulario). Selector de cliente con el mismo buscador desplegable de
+  el mismo formulario; en el alta el estado se muestra como texto fijo "Solicitado" y el
+  desplegable de estado aparece recién al editar). Selector de cliente con el mismo buscador desplegable de
   Clientes/Vehículos, **sin** el atajo "Nuevo cliente" (decisión de alcance: no está en el
   requerimiento de Turnos, sí lo está en el walk-in de Órdenes). Selector de vehículo opcional,
   poblado con los vehículos activos del cliente elegido. Búsqueda por nombre/apellido/DNI del
@@ -96,9 +97,11 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   orden ya creada) con dos columnas Servicios/Insumos, cada una con su mini-alta + grilla —
   agregar un insumo descuenta stock automáticamente (kardex con `MovimientoStock.TipoOrden`) y
   agregar un servicio no toca stock. "Cancelar orden" (botón aparte de "Guardar", con confirmación)
-  repone el stock de todos los insumos cargados (`TipoCancelacionOrden`) y es irreversible. Sin
-  "Quitar" en líneas de insumo (si hay que corregir, se cancela la orden entera); sí en líneas de
-  servicio (`DELETE` simple, sin efecto colateral). El walk-in con cliente **y vehículo** nuevos
+  repone el stock de todos los insumos cargados (`TipoCancelacionOrden`) y es irreversible.
+  "Quitar" en líneas de insumo (`DetalleOrdenInsumoDAL.Quitar`, con confirmación) repone el stock
+  de esa línea y deja la entrada en el kardex (`TipoCancelacionOrden`, descripción "quitar
+  insumo"), solo con la orden Abierta o En proceso; en líneas de servicio es un `DELETE` simple,
+  sin efecto colateral. El walk-in con cliente **y vehículo** nuevos
   funciona de punta a punta: "Nuevo cliente"/"Nuevo vehículo" desde Órdenes reutilizan y extienden
   el mecanismo de `Response.Redirect` + query string que ya conectaba Vehículos↔Clientes (un
   tercer origen `"orden"` agregado en paralelo al `"vehiculo"` existente, sin tocarlo). Acceso
@@ -137,11 +140,11 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   matiz de permisos (solo consulta esconde nada más la franja de ajuste, no toda la pantalla). Sin
   DAL nuevo: `CuentaCorrienteClienteDAL` ya había quedado escrito en la sesión de Ventas.
 - **Pagos** (quinta y última pantalla de Fase 4, **cierra la fase**): alta de pago de cliente o
-  de proveedor, imputado a un comprobante puntual con saldo pendiente (`ddlComprobante`, filtra
-  `saldoPendiente > 0` del cliente/proveedor elegido) o "a cuenta general" (sin comprobante,
-  entra directo a la cuenta corriente). Reutiliza los dos buscadores desplegables ya existentes
-  (cliente, de Turnos/Órdenes; proveedor, de Compras) alternados con un `ddlTipo`. Rechaza un
-  monto mayor al saldo pendiente del comprobante elegido (sin tope para "a cuenta general"). Un
+  de proveedor. **Sin elegir comprobante** (cambio del 2026-10-05): el monto se reparte solo,
+  primero cancela las deudas más viejas (`saldoPendiente > 0`) y lo que sobre queda "a cuenta
+  general", o sea a favor en la cuenta corriente — sin tope de monto. La pantalla muestra la
+  deuda o el saldo a favor del titular elegido. Reutiliza los dos buscadores desplegables ya
+  existentes (cliente, de Turnos/Órdenes; proveedor, de Compras) alternados con un `ddlTipo`. Un
   pago no se edita ni se borra. **Acceso completo para los 3 roles** (a diferencia de Compras/
   Cuentas corrientes, acá Empleado también puede cobrar — Requerimientos §5).
 - **Reporte de Stock bajo** (primero de los 3 reportes de Fase 5): grilla de solo lectura sobre
@@ -191,6 +194,301 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-06 (cont. 2) — Inicio como tablero: turnos de hoy y stock bajo
+
+Pedido del usuario: sacar "Tus accesos" del Inicio y convertirlo en un tablero con información
+importante. Primera tanda con dos tarjetas, cada una con su botón a la pantalla donde se resuelve.
+Sin cambio de esquema.
+
+- **Turnos de hoy:** los turnos de la fecha actual que siguen vigentes (**Solicitado** y **Confirmado**),
+  ordenados por hora, con hora, cliente, vehículo y estado; resumen arriba ("2 turnos pendientes para
+  hoy (2 solicitados, 0 confirmados)") y botón "Ir a Turnos". Método nuevo
+  `TurnoDAL.ListarVigentesDelDia(dia)`. Se interpretó "turnos abiertos y solicitados para el día" como
+  los vigentes de hoy; los Completados y Cancelados no aparecen.
+- **Stock bajo:** los 3 insumos con mayor faltante (mínimo menos actual, desempate por nombre), con
+  resumen ("1 insumo por debajo del mínimo; se muestran los 3 con mayor faltante") y el insumo en cero
+  resaltado en rojo, igual que en el reporte. Sin DAL nuevo: usa `InsumoDAL.ListarStockBajo()`.
+- **El botón respeta los permisos del rol.** Reportes no está disponible para Empleado ni Lectura, así
+  que el botón de stock lleva a "Stock bajo" (reporte) si el rol puede verlo, a Insumos si no, y se
+  oculta si no tiene ninguna de las dos (idem el de Turnos). Se decide con
+  `MenuDAL.ObtenerPermiso(idNivel, path)`, el mismo chequeo que usa la guarda de `PaginaSegura`.
+- **Se eliminó** la lista "Tus accesos" (`MostrarAccesos`/`AgregarAcceso`, el literal `litAccesos` y sus
+  estilos). Respaldo del Inicio anterior en `Respaldos\2026-10-06_inicio_antes_del_tablero`.
+- **Verificación:** rebuild limpio y `aspnet_compiler -v /` sin errores; con login real como Admin,
+  Empleado y Lectura el Inicio responde 200, muestra los 2 turnos solicitados de hoy y el insumo bajo
+  de la base de desarrollo, y el botón de stock apunta a "Stock bajo" para Admin y a Insumos para
+  Empleado y Lectura. **No se vio en el navegador.** Un login de prueba devolvió un 500 aislado que no
+  se repitió (coincidió con una recompilación de la app).
+- **Tarjeta "Órdenes en curso" (misma sesión, a pedido):** tercera tarjeta, **horizontal y a todo el
+  ancho** debajo de las otras dos (`col-12`, en vez de dos mitades). Lista las órdenes que siguen en el
+  taller — **Abierta y En proceso**, no solo "Abierta", porque las dos son trabajo sin cerrar — con
+  número, ingreso, cliente, vehículo y estado, la más antigua primero (las que más llevan esperando),
+  hasta 10 filas y resumen arriba ("1 orden en curso (1 abierta, 0 en proceso)"). Botón "Ir a Órdenes
+  de trabajo" sujeto al permiso del rol. Método nuevo `OrdenDeTrabajoDAL.ListarEnCurso()`. Verificado
+  con login real como Admin y Empleado (se ve la orden abierta de la base de desarrollo).
+- **Título del tablero (misma sesión, a pedido):** se quitó el saludo "Hola, <nombre>" y la línea
+  "Estás trabajando con el rol …"; el Inicio ahora se titula **"Panel de control"** (en español, a
+  diferencia de "Dashboard"). Se sacaron `litNombre`/`litNivel` del markup, del designer y de
+  `Page_Load`. El nombre y el rol ya no se ven en esta pantalla.
+- **Fondo de las pantallas de ingreso (misma sesión, a pedido):** Login, Registro, Recuperar clave y
+  Restablecer clave tenían el fondo blanco del sitio con su tarjeta oscura; ahora llevan el mismo gris
+  (`#cdd0d4`) que el resto, con una regla `html:has(.login-page)` / `body:has(.login-page)` en
+  `Content\Site.css`. Se revisaron todas las pantallas: esas cuatro eran las únicas con fondo blanco
+  (Cambiar contraseña y Acceso denegado ya quedaron en gris con la tanda de estilos). La tarjeta
+  oscura del Login no cambió. **No se vio en el navegador.**
+- **Integración con el remoto (al subir el repo):** `origin/main` tenía 4 commits de Alexis Pallares
+  (27 y 28 de septiembre: validación de que una orden Cerrada/Cancelada no admita cambios en el
+  detalle, y la revisión de permisos por rol). Se integraron con `rebase`. No chocan con lo de esta
+  sesión: su guarda vive en `Agregar` de insumos y servicios, y `Quitar` de insumos (nuevo) trae la
+  suya. Hubo un único conflicto, en este mismo documento (fecha de actualización, fila de Fase 6 y
+  orden de la bitácora), resuelto conservando las dos versiones.
+- **Pendiente para próximas tandas:** más tarjetas (la idea es ir sumando información importante).
+
+### 2026-10-06 (cont.) — Fase 6: estilo básico en todas las pantallas restantes
+
+Segunda tanda del mismo día: el estilo básico llegó a **todas** las pantallas del menú. Solo markup y
+CSS (sin code-behind ni designer, mismos ids).
+
+- **Pantallas:** Turnos, Órdenes de trabajo, Compras, Pagos, Cuenta corriente de clientes y de
+  proveedores, Ventas, los tres Reportes (Stock bajo, Ventas por período, Cuentas corrientes), Cambiar
+  contraseña y Acceso denegado. Quedan **con su estilo propio, sin tocar**, las pantallas de ingreso
+  (Login, Registro, Recuperar y Restablecer clave), que usan la tarjeta oscura del Login.
+- **Casos particulares:** en Órdenes, las columnas de servicios e insumos van en paneles grises
+  (`panel-gris`) y los botones "Cerrar orden" (gris oscuro) y "Cancelar orden" (borde rojo) se
+  distinguen de "Guardar" (rojo); en Reportes, los resúmenes (`alert-secondary`) y las filas
+  resaltadas (fondo puesto desde el código) se conservan, el filtro de fechas lleva todas las
+  etiquetas arriba (`barra-fechas`) y los títulos/notas llevan sangría (`titulo-seccion`,
+  `texto-nota`); Cambiar contraseña pasó de columnas `col-4` vacías a un panel único; en Acceso
+  denegado el enlace "Volver al inicio" es un botón (`enlace-boton`). Los campos de fecha, hora y
+  contraseña entraron al estilo de los campos de texto.
+- **Respaldo:** carpeta `Respaldos\2026-10-06_resto_antes_del_estilo` con los `.bak` de las 12 pantallas
+  y `Site.css`, más un `LEEME.txt` (los de Reportes llevan el prefijo `Reportes_`).
+- **Verificación:** rebuild limpio, `aspnet_compiler -v /` sin errores, `div` abiertos y cerrados
+  balanceados en las 17 pantallas tocadas y, con un login real, las 19 pantallas responden 200 con el
+  contenedor de estilo, sin bordes viejos y sin errores. **No se vieron en el navegador**; conviene
+  recorrerlas con F5, sobre todo Órdenes (con una orden abierta, para ver el detalle), Compras y Pagos.
+
+### 2026-10-06 — Fase 6: estilo básico extendido al resto de los ABM y a Inicio
+
+Se extendió a las demás pantallas de gestión el estilo básico probado en Clientes (ver la entrada
+del 2026-10-05 más abajo). Solo markup y CSS: sin cambios de code-behind ni de designer.
+
+- **Pantallas:** Vehículos, Proveedores, Insumos, Servicios, Usuarios e Inicio (Clientes ya lo tenía).
+  El resto se hizo en la entrada "(cont.)" de arriba.
+- **CSS genérico:** las clases pasaron de `pantalla-clientes`/`tabla-clientes` a `pantalla-abm`/
+  `tabla-abm`; cada pantalla pone su contenido dentro de `<div class="pantalla-abm">`. Clases nuevas en
+  `Content\Site.css`: `panel-gris` (panel de formulario fuera de la columna derecha, usado en
+  Usuarios), `boton-chico` (botones en línea con un campo, Vehículos), `etiqueta-inline` (etiqueta
+  junto a una casilla), `tabla-compacta` (grillas con muchas columnas, Insumos) y las de Inicio
+  (`lista-accesos`, `texto-inicio`, `titulo-accesos`). También se estilaron `select`, `textarea`, el
+  desplegable de resultados del buscador de dueño y se ocultaron los `hr`.
+- **Casos particulares:** Insumos conserva el rojo de las filas con stock bajo (el código lo pone como
+  estilo en la fila; hay una regla para que las celdas no lo tapen) y su panel "Ajustar stock" quedó
+  dentro de su propio contenedor; Usuarios pasó de columnas `col-4` vacías a un panel único; la grilla
+  de Insumos y su historial dejaron las clases `table table-striped...` de Bootstrap.
+- **Inicio:** se quitó la frase "El menú de arriba muestra solo las secciones habilitadas para ese rol."
+  (queda "Estás trabajando con el rol …") y los accesos pasaron de lista con viñetas a botones.
+- **Respaldo para volver atrás:** carpeta `Respaldos\2026-10-06_ABM_antes_del_estilo` con los `.bak` de
+  Clientes, Vehículos, Proveedores, Insumos, Servicios, Usuarios, Inicio (`Default.aspx.bak`, con la
+  frase original) y `Site.css` en su estado anterior, más un `LEEME.txt`.
+- **Verificación:** rebuild limpio, `aspnet_compiler -v /` sin errores y, con un login real, las 7
+  pantallas responden 200 con el contenedor de estilo y sin errores. **No se vieron en el navegador.**
+
+### 2026-10-05 (cont. 2) — Fase 6: estilo básico de CSS en Clientes
+
+Restyling visual de `Clientes.aspx`, a pedido del usuario. Sin cambios de code-behind ni de designer
+(mismos controles y `id`). Un primer intento con el estilo del Login se descartó y se revirtió; esta
+versión es más simple.
+
+- **Acotado a la pantalla:** el contenido va dentro de `<div class="pantalla-clientes">` y todas las
+  reglas nuevas de `Content\Site.css` (bloque "Pantalla Clientes: estilo básico") cuelgan de esa clase,
+  así que no afectan a ninguna otra pantalla.
+- **Qué cambió:** se sacaron los bordes (`row border border-1`) de todas las filas; relleno general en
+  el buscador y el formulario (paneles gris claro con esquinas redondeadas); etiquetas arriba de cada
+  campo; inputs a ancho completo; grilla con encabezado negro, filas alternadas en gris claro, más
+  aire en cada celda y resaltado rojo claro al pasar el mouse; botones en rojo (acción principal),
+  gris (secundaria) y borde rojo (Borrar). Paleta rojo `#c0272d`, negro `#212529` y grises.
+  Ajustes posteriores del mismo día: la tabla lleva líneas en todas las celdas (grilla completa) y el
+  fondo de toda la página es gris claro (`#cdd0d4`; se probó un gris oscuro `#3a3e43` y se volvió atrás),
+  con los blancos suavizados (paneles `#e6e8ea`, campos `#f2f3f4`, filas `#e6e8ea`/`#dcdfe2`) para que no
+  brillen, y títulos más grandes y oscuros (`h1` 2.4rem y `h2` 1.7rem, ambos en negro `#0d0f11` y
+  peso 800), aplicado con `html:has(.pantalla-clientes)` /
+  `body:has(...)` para que no afecte a otras pantallas; las filas de la tabla se aclararon
+  (`#fafafa` / `#eef0f1`) para distinguirse del fondo. `:has()` necesita un navegador moderno
+  (Chrome/Edge 105+, Firefox 121+); en uno viejo solo se pinta el contenedor.
+  **Por qué "no se veían los cambios":** la página enlaza `/Content/Site.css` sin número de versión
+  (con `debug="true"` el bundle no lo agrega) y el navegador seguía usando la copia vieja en caché;
+  el servidor ya entregaba el CSS nuevo (verificado con un login real y el HTML de Clientes). Se agregó
+  a `Web.config` `<system.webServer><staticContent><clientCache cacheControlMode="DisableCache" />`
+  — **solo para desarrollo, quitarlo o poner `UseMaxAge` antes de la entrega.**
+- **Respaldo para volver atrás:** carpeta `Respaldos\2026-10-05_Clientes_antes_del_estilo` (fuera del
+  proyecto web) con `Clientes.aspx.bak`, `Site.css.bak` y un `LEEME.txt` con los pasos.
+- **Verificación:** rebuild limpio y `aspnet_compiler -v /` sin errores. **No se vio en el navegador**:
+  revisar con F5 y Ctrl+F5 (caché del bundle `~/Content/css`). El BOM de `Clientes.aspx` y de
+  `Site.css` se conservó.
+
+### 2026-10-05 (cont.) — Fase 6: cierre de órdenes vacías, pagos que cancelan primero la deuda y saldo a favor
+
+Corrige los dos hallazgos de la sesión de pruebas del 2026-10-03. Sin cambio de esquema.
+
+**Cerrar una orden sin líneas.** `ComprobanteVentaDAL.GenerarDesdeOrden` (donde ya se leen las líneas)
+rechaza si no hay ningún servicio ni insumo: "...no se puede cerrar. Cargá al menos uno, o cancelá la
+orden si no corresponde cobrar nada." La orden queda como estaba y no se genera venta. Cancelar una
+orden vacía ya funcionaba. `Cerrar` ahora propaga el mensaje de la venta.
+
+**Pagos: primero se cancela la deuda.** Regla decidida con el usuario: un pago ya no se imputa a un
+comprobante elegido a mano. `PagoDAL.Registrar` lee los comprobantes con `saldoPendiente > 0` del
+titular (más viejo primero, desempate por id), reparte el monto y el sobrante queda "a cuenta" (cuenta
+corriente a favor, sin tope). Vale igual para clientes (ventas) y proveedores (compras).
+- **Opción A, sin cambio de esquema:** como `Pago` tiene un solo `idVenta`/`idCompra`, un pago que toca
+  N comprobantes se guarda como N filas de `Pago` (una por comprobante, más una sin comprobante para
+  el sobrante), cada una con su movimiento de cuenta corriente (`idPago` propio) — todo en un solo
+  batch atómico. Así queda trazado qué venta/compra canceló cada parte; el costo es que un pago
+  aparece como varias líneas en la grilla de Pagos y en la cuenta corriente.
+- **Se sacó el tope** "El monto supera el saldo pendiente": ahora el exceso es válido (queda a favor).
+- `Pagos.aspx`: sin `ddlComprobante`; muestra "Deuda actual / Saldo a favor / Sin deuda" del titular
+  elegido y un texto de ayuda. El mensaje del resultado cuenta el reparto ("Se aplicó a: V-000002
+  (11.000,00), V-000005 (1.000,00). Quedaron 2.000,00 a favor.").
+
+**Saldo a favor en ventas y compras nuevas.** Si el cliente tiene la cuenta corriente en negativo, la
+venta que se genera al cerrar una orden nace con `saldoPendiente = total − crédito` (el débito de la
+venta ya netea la cuenta corriente, sin movimiento extra). Lo mismo para una compra a cuenta corriente
+con un proveedor al que se le pagó de más. Los mensajes lo informan. Limitación conocida: el crédito se
+toma de la cuenta corriente completa, así que un ajuste manual a favor con deudas pendientes sin
+cancelar se descuenta de la venta nueva y no de la más vieja.
+
+**Datos existentes: sin script de migración.** Se escribió un script para reconciliar los
+`saldoPendiente` viejos con la nueva regla y se descartó: el usuario aclaró que los datos de la base
+de desarrollo no importan, solo hacen falta los scripts para crearla (`01`, `02`) y cargar datos
+genéricos (`03`, `04`). Los datos demo de `04` ya cumplen la regla nueva (se comprobó que una
+reconciliación no cambiaba nada), así que **no hizo falta tocar ningún script de `Database/`**. Para
+llevar una base con datos viejos a la regla nueva basta recrearla (`01` a `04`).
+
+**Verificación:** rebuild limpio y `aspnet_compiler -v /` sin errores. Probado contra una base
+descartable (`01`→`04` con otro nombre, ya borrada) con un programa de consola que llama a los DAL
+reales: pago que cubre dos ventas con sobrante, pago menor y exacto, pago sin deuda, pago a proveedor,
+venta con crédito aplicado, compra con crédito aplicado, cierre de orden vacía rechazado, cancelar
+orden vacía, monto 0 rechazado — todo correcto. **No se probó en el navegador** (IIS Express/F5): faltan las pantallas Pagos y
+Órdenes. Los `.aspx` perdieron el BOM al editarlos y se restauró.
+
+### 2026-10-05 — Fase 6: "Quitar" insumo de una orden y estado fijo en el alta de Turnos
+
+Dos correcciones de pulido pedidas por el usuario, ambas sobre pantallas ya entregadas. Sin cambio
+de esquema.
+
+**"Quitar" una línea de insumo de una orden.** Hasta hoy no existía: era una decisión de diseño de
+Fase 3 (si había un error, se cancelaba la orden entera), no un bug. Se agregó
+`DetalleOrdenInsumoDAL.Quitar(idDetalle, idUsuario)` (más `ObtenerPorId`), que invierte `Agregar`
+en un solo batch `XACT_ABORT`/`BEGIN TRAN`/`COMMIT`: repone `Insumo.stockActual`, inserta la entrada
+en `MovimientoStock` y borra la línea. Decisiones:
+
+- **Solo con la orden Abierta o En proceso, y la guarda vive en el DAL**, no solo en la UI (el botón
+  además se esconde en estados terminales). Cerrada: la venta ya copió las líneas. Cancelada: el
+  stock ya se repuso entero, quitar una línea lo repondría dos veces.
+- **El kardex usa `TipoCancelacionOrden`** (ya admitido por `CK_MovStock_origen`), distinguido por
+  la descripción ("Reposición por quitar insumo de la orden #N"), en vez de un tipo nuevo — evita
+  tocar el CHECK de `01_Esquema.sql` y migrar la base en uso.
+- UI: columna "Acciones" con "Quitar" y confirmación en `gvInsumosOrden`, calco de `gvServicios`;
+  `gvInsumosOrden_RowCommand` corta con `EsSoloLectura` y refresca catálogo (el combo muestra stock)
+  y detalle. Sin controles nuevos, el designer no cambió.
+- Cruces revisados: Cancelar orden repone solo las líneas que sigan cargadas (sin doble reposición);
+  Cerrar/Ventas copia las líneas existentes al cerrar; el invariante de kardex se mantiene.
+- **Efecto a tener presente:** ahora se puede quitar la última línea y cerrar, lo que facilitaba
+  caer en la venta de $0 — corregido ese mismo día (ver la entrada "cont.").
+
+**Turnos: estado fijo en el alta.** `TurnoDAL.Crear` ya forzaba `Solicitado`, pero el formulario
+dejaba elegir cualquier estado y descartaba la elección sin avisar. Ahora, en el alta, se muestra el
+texto fijo "Solicitado" (`litEstadoNuevo`, control nuevo) y `ddlEstado` solo aparece al editar un
+turno existente (`Page_Load`, `LimpiarFormulario` y `Seleccionar`). `ddlEstado` conserva sus opciones
+cargadas aunque esté oculto, para no repetir el bug de postback de un `DropDownList` sin `<option>`.
+Se revisaron el resto de las pantallas con desplegables: Órdenes ya lo hacía bien (`pnlEstado` oculto
+en el alta), y los demás (Compras, Pagos, Usuarios, Vehículos) son datos que sí se guardan.
+
+**Verificación:** rebuild limpio (`MSBuild`, Debug) y `aspnet_compiler -v /` sin errores en ambos
+cambios. **No se probó contra IIS Express** — queda para F5 (agregar insumo ×3, quitar y ver stock
+y kardex; quitar con dos líneas del mismo insumo; cancelar tras quitar; Turnos: alta, editar,
+"Nuevo"). Nota: la herramienta de edición saca el BOM de los `.aspx`; se restauró a mano en
+`OrdenesDeTrabajo.aspx` y `Turnos.aspx` (ver «Codificación» en `CLAUDE.md`).
+
+### 2026-10-03 — Arranca Fase 6: pruebas de flujo completo (Turno → Orden → Venta → Pago → Cuenta corriente)
+
+Primera sesión de Fase 6. Alcance acordado con el usuario: solo el frente "pruebas de flujo
+completo", sin tocar código — los bugs que aparecieran quedan documentados acá para una sesión
+futura de "validaciones cruzadas" (el otro frente de Fase 6). Antes de probar se investigó el
+código real (`TurnoDAL`, `OrdenDeTrabajoDAL`, `DetalleOrdenServicioDAL`, `DetalleOrdenInsumoDAL`,
+`ComprobanteVentaDAL`, `PagoDAL`, `CuentaCorrienteClienteDAL`) cruzado contra
+`Docs/Lubricentro_Requerimientos.md`, para saber qué casos borde ejercitar a propósito.
+
+**Metodológico: sin browser real disponible, otra vez, pero por un motivo distinto al de
+sesiones anteriores.** Esta sesión sí tenía herramientas de automatización de Chrome
+(`claude-in-chrome`) cargadas, pero el Chrome que controlan corre en una red distinta a la de
+este entorno (llega a internet, no a `localhost:8123` donde corre IIS Express acá) — se descartó
+en los primeros minutos con una prueba directa. Se volvió al método ya usado en sesiones
+anteriores: requests HTTP armados a mano con PowerShell (`Invoke-WebRequest` con `-WebSession`,
+extrayendo `__VIEWSTATE`/`__EVENTVALIDATION`/`__EVENTTARGET` de cada respuesta). Dato nuevo para
+la próxima vez que se necesite este método: los campos dentro de un `<asp:UpdatePanel>` casi
+siempre **no** llevan el ID del UpdatePanel como prefijo en su `name` renderizado (confirmado
+mirando el HTML real en Vehículos/Turnos/Pagos) — conviene volcar todos los `name="..."` de la
+página con una regex amplia antes de adivinar un prefijo, en vez de asumir por analogía con otra
+pantalla.
+
+**Datos de prueba:** un Cliente, un Vehículo, un Servicio y un Insumo dedicados (sufijo "E2E"),
+más un Turno, creados y editados vía los ABM reales (no por SQL directo). Todo borrado al cerrar
+la sesión — los conteos de tabla volvieron exactos a los de antes de empezar.
+
+**Pasada A (con turno):** Turno `Solicitado` → editado a `Confirmado` → Orden de trabajo creada
+desde ese turno (vía el atajo `?idVehiculoNuevo=&idCliente=&idTurno=` que ya usa el flujo de
+"Nuevo vehículo desde Órdenes") → línea de servicio (x2) + línea de insumo (x3, bajó stock
+100→97) → **Cerrar orden** → Venta `V-000005` generada por $3.500 (2×$1.000 + 3×$500),
+`CuentaCorrienteCliente` con `debe=3.500`. Pago parcial de $2.000 imputado a esa venta
+(`saldoPendiente` 3.500→1.500) + pago de $1.500 "a cuenta general" (sin comprobante puntual) →
+saldo de cuenta corriente en $0. Todo correcto.
+
+**Pasada B (walk-in, sin turno):** misma cliente/vehículo, orden creada sin `idTurno` → una línea
+de servicio → Cerrar → Venta `V-000006` por $1.000. Correcto. (No se re-probó el alta en cascada
+de cliente/vehículo nuevos desde cero — ya extensamente verificada en la sesión de Fase 3 — esta
+pasada reusó las entidades E2E para enfocarse en el camino "sin turno" del lado de la orden.)
+
+**Casos borde ejercitados (ver tabla de pendientes en sección 4 para el único que resultó bug
+real):**
+
+- **Cerrar una orden sin ninguna línea → BUG CONFIRMADO.** Generó `V-000007` por $0,00 con un
+  movimiento de `CuentaCorrienteCliente` `debe=0/haber=0` — exactamente el gap que había
+  anticipado la lectura de código (`OrdenDeTrabajoDAL.Cerrar`/`ComprobanteVentaDAL.
+  GenerarDesdeOrden` no chequean que la orden tenga líneas). Queda en sección 4.
+- Cerrar o cancelar una orden ya `Cerrada`: la UI ni siquiera renderiza los botones
+  `btnCerrarOrden`/`btnCancelarOrden` para una orden terminal (confirmado inspeccionando los
+  campos de la página, no solo leyendo el código) — doble resguardo con el bloqueo del DAL ya
+  confirmado por lectura de código. No es un bug.
+- Cancelar una orden `Abierta` con un insumo cargado: stock reconstruido correctamente
+  (92→97) y kardex completo y correcto (`Orden` seguido de `CancelacionOrden` con las cantidades
+  exactas). No es un bug.
+- Pagar más del saldo pendiente de una venta puntual (intento de $1.500 contra una venta con
+  $1.000 pendientes): rechazado con "El monto supera el saldo pendiente de la venta.", sin
+  insertar ninguna fila en `Pago`. No es un bug.
+- Pago "a cuenta general" sin tope: se aceptó sin problema (confirmado con el pago de $1.500 de
+  la Pasada A). **Confirmado con el usuario como comportamiento intencional, no bug** — un
+  cliente puede dejar un anticipo mayor a lo que debe puntualmente.
+- Rol Lectura en Turnos/Órdenes/Pagos (con el usuario de prueba `lectura@lubricentro.com`): las
+  tres pantallas siguen sin botón de escritura y sin columna Acciones — sin regresión del bug
+  histórico corregido en la sesión de Alta pública de usuario.
+
+**Hallazgo nuevo, no bug pero sí confuso — anotado en sección 4:** `ComprobanteVenta.
+saldoPendiente` y el saldo corrido de `CuentaCorrienteCliente` son dos campos independientes (ya
+señalado como posible punto débil al leer `PagoDAL.Registrar`). Se confirmó en la práctica: tras
+el pago "a cuenta general" de la Pasada A, la cuenta corriente del cliente quedó en $0, pero
+`ComprobanteVenta` de `V-000005` sigue mostrando `saldoPendiente = 1.500` porque ese pago nunca
+apuntó a esa venta puntual. Es coherente con el diseño (un pago a cuenta general no se imputa a
+ningún comprobante), pero `Ventas.aspx` seguiría mostrando esa venta como "con saldo pendiente"
+aunque el cliente ya no deba nada en términos generales — puede confundir a quien mire solo esa
+pantalla.
+
+**Verificación:** rebuild limpio (`MSBuild`, Debug) antes de empezar. Cada paso confirmado con una
+consulta `sqlcmd` de solo lectura contra LocalDB (stock, saldo, `saldoPendiente`, numeración de
+comprobantes, kardex). Al cerrar, limpieza completa vía un solo batch SQL transaccional (orden de
+dependencia inversa) y los conteos de las 9 tablas tocadas volvieron exactos a los de antes de
+empezar la sesión.
 
 ### 2026-09-28 — Segundo frente de Fase 6: revisión de permisos por rol, sin gaps
 
@@ -1357,6 +1655,13 @@ falta es decidir si se unifica el criterio.
 
 Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
 
+- ~~**BUG: cerrar una orden sin ninguna línea genera una venta en $0.**~~ **Resuelto el
+  2026-10-05**: `GenerarDesdeOrden` rechaza el cierre si no hay servicios ni insumos (ver la
+  entrada de esa fecha).
+- ~~**Hallazgo: `ComprobanteVenta.saldoPendiente` desactualizado frente a la cuenta corriente.**~~
+  **Resuelto el 2026-10-05**: los pagos cancelan primero las deudas más viejas y el sobrante queda
+  a favor; ver la entrada de esa fecha. Los saldos viejos de la base de desarrollo no se migran
+  (esos datos no importan): una base recreada con `01` a `04` ya sale coherente.
 - **Cambiar la contraseña del administrador.** Hoy es la sembrada por el script (`Admin123!`).
 - **Borrar los usuarios de prueba** (`encargado@lubricentro.com`, `empleado@lubricentro.com`,
   `lectura@lubricentro.com`) y el script `03_UsuariosDePrueba.sql` de la entrega final.
