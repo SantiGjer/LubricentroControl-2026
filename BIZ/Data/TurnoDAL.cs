@@ -77,29 +77,6 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Buscador rápido por nombre/apellido/DNI del cliente, con filtro opcional de estado.
-        public static List<Turno> Buscar(string texto, string estado = null)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar(estado);
-
-            var sql = SelectBase +
-                      " WHERE (c.nombre LIKE @texto OR c.apellido LIKE @texto OR c.dni LIKE @texto)" +
-                      (string.IsNullOrWhiteSpace(estado) ? "" : " AND t.estado = @estado") +
-                      " ORDER BY t.fechaHoraAsignada ASC";
-
-            var lista = new List<Turno>();
-            var tabla = string.IsNullOrWhiteSpace(estado)
-                ? AccesoDatos.Consultar(sql, AccesoDatos.Param("@texto", "%" + texto.Trim() + "%"))
-                : AccesoDatos.Consultar(sql,
-                    AccesoDatos.Param("@texto", "%" + texto.Trim() + "%"),
-                    AccesoDatos.Param("@estado", estado));
-
-            foreach (DataRow fila in tabla.Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         // Turnos vigentes (Solicitado/Confirmado) de un cliente, para poblar el selector de
         // turno de OrdenesDeTrabajo.aspx — no tiene sentido enlazar una orden a un turno ya
         // Completado o Cancelado.

@@ -14,17 +14,8 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control txtBuscar.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscar;
-
-        /// <summary>Control btnBuscar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscar;
-
         /// <summary>Control gvVentas.</summary>
         protected global::System.Web.UI.WebControls.GridView gvVentas;
-
-        /// <summary>Control pnlDetalle.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlDetalle;
 
         /// <summary>Control litTituloDetalle.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloDetalle;

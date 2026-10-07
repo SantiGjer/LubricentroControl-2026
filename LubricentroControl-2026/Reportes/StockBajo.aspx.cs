@@ -55,12 +55,6 @@ namespace LubricentroControl_2026.Reportes
             return texto + ".";
         }
 
-        protected void gvStockBajo_PageIndexChanging(object sender, GridViewPageEventArgs e)
-        {
-            gvStockBajo.PageIndex = e.NewPageIndex;
-            CargarReporte();
-        }
-
         // Todas las filas están bajo el mínimo, así que resaltarlas todas no diría nada: se marca
         // solo el caso grave, el insumo que ya quedó en cero y frena el trabajo.
         protected void gvStockBajo_RowDataBound(object sender, GridViewRowEventArgs e)

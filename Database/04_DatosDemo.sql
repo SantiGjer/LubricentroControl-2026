@@ -30,18 +30,21 @@ DECLARE @admin INT = (SELECT idUsuario FROM Usuario WHERE email = 'admin@lubrice
 DECLARE @encargado INT = ISNULL((SELECT idUsuario FROM Usuario WHERE email = 'encargado@lubricentro.com'), @admin);
 DECLARE @empleado INT = ISNULL((SELECT idUsuario FROM Usuario WHERE email = 'empleado@lubricentro.com'), @admin);
 
-/* --- 1. Clientes (10) ----------------------------------------------------- */
-INSERT INTO Cliente (nombre, apellido, dni, telefono, email, direccion) VALUES
-    ('Juan', 'Pérez', '30111222', '11-4321-5678', 'juan.perez@gmail.com', 'Av. Rivadavia 1234, CABA'),
-    ('María', 'Gómez', '28222333', '11-4555-1122', 'maria.gomez@gmail.com', 'Calle San Martín 456, Vicente López'),
-    ('Carlos', 'Rodríguez', '25333444', '11-4666-2233', 'carlos.rodriguez@gmail.com', 'Av. Cabildo 789, CABA'),
-    ('Ana', 'López', '32444555', '11-4777-3344', 'ana.lopez@hotmail.com', 'Belgrano 234, San Isidro'),
-    ('Luis', 'Fernández', '27555666', '11-4888-4455', 'luis.fernandez@gmail.com', 'Av. Mitre 1560, Avellaneda'),
-    ('Laura', 'Martínez', '31666777', '11-4999-5566', 'laura.martinez@gmail.com', 'Sarmiento 890, Morón'),
-    ('Diego', 'Sánchez', '29777888', '11-4111-6677', 'diego.sanchez@gmail.com', 'Av. Corrientes 3200, CABA'),
-    ('Sofía', 'Romero', '33888999', '11-4222-7788', 'sofia.romero@hotmail.com', 'Moreno 550, Quilmes'),
-    ('Martín', 'Díaz', '26999000', '11-4333-8899', 'martin.diaz@gmail.com', 'Av. Pueyrredón 1122, CABA'),
-    ('Valentina', 'Torres', '34000111', '11-4444-9900', 'valentina.torres@gmail.com', 'Independencia 678, La Plata');
+/* --- 1. Clientes (10) -----------------------------------------------------
+   Con cuenta corriente solo los tres que la usan más abajo: Carlos y Valentina
+   quedan debiendo parte de su venta, y Juan deja un pago a cuenta. El resto
+   paga al cerrar la orden (cuentaCorriente = 0).                            */
+INSERT INTO Cliente (nombre, apellido, dni, telefono, email, direccion, cuentaCorriente) VALUES
+    ('Juan', 'Pérez', '30111222', '11-4321-5678', 'juan.perez@gmail.com', 'Av. Rivadavia 1234, CABA', 1),
+    ('María', 'Gómez', '28222333', '11-4555-1122', 'maria.gomez@gmail.com', 'Calle San Martín 456, Vicente López', 0),
+    ('Carlos', 'Rodríguez', '25333444', '11-4666-2233', 'carlos.rodriguez@gmail.com', 'Av. Cabildo 789, CABA', 1),
+    ('Ana', 'López', '32444555', '11-4777-3344', 'ana.lopez@hotmail.com', 'Belgrano 234, San Isidro', 0),
+    ('Luis', 'Fernández', '27555666', '11-4888-4455', 'luis.fernandez@gmail.com', 'Av. Mitre 1560, Avellaneda', 0),
+    ('Laura', 'Martínez', '31666777', '11-4999-5566', 'laura.martinez@gmail.com', 'Sarmiento 890, Morón', 0),
+    ('Diego', 'Sánchez', '29777888', '11-4111-6677', 'diego.sanchez@gmail.com', 'Av. Corrientes 3200, CABA', 0),
+    ('Sofía', 'Romero', '33888999', '11-4222-7788', 'sofia.romero@hotmail.com', 'Moreno 550, Quilmes', 0),
+    ('Martín', 'Díaz', '26999000', '11-4333-8899', 'martin.diaz@gmail.com', 'Av. Pueyrredón 1122, CABA', 0),
+    ('Valentina', 'Torres', '34000111', '11-4444-9900', 'valentina.torres@gmail.com', 'Independencia 678, La Plata', 1);
 
 DECLARE @cliJuan INT = (SELECT idCliente FROM Cliente WHERE dni = '30111222');
 DECLARE @cliMaria INT = (SELECT idCliente FROM Cliente WHERE dni = '28222333');

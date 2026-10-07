@@ -8,20 +8,29 @@ namespace LubricentroControl_2026
 {
     public partial class Usuarios
     {
-        /// <summary>Control btnNuevo.</summary>
-        protected global::System.Web.UI.WebControls.Button btnNuevo;
-
         /// <summary>Control pnlMensaje.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlMensaje;
 
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
+        /// <summary>Control btnNuevo.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevo;
+
+        /// <summary>Control gvUsuarios.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvUsuarios;
+
         /// <summary>Control pnlFormulario.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlFormulario;
 
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;
+
+        /// <summary>Control pnlErrorFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlErrorFormulario;
+
+        /// <summary>Control litErrorFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litErrorFormulario;
 
         /// <summary>Control hdnIdUsuario.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdUsuario;
@@ -41,13 +50,10 @@ namespace LubricentroControl_2026
         /// <summary>Control chkActivo.</summary>
         protected global::System.Web.UI.WebControls.CheckBox chkActivo;
 
+        /// <summary>Control btnReactivar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnReactivar;
+
         /// <summary>Control btnGuardar.</summary>
         protected global::System.Web.UI.WebControls.Button btnGuardar;
-
-        /// <summary>Control btnCancelar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnCancelar;
-
-        /// <summary>Control gvUsuarios.</summary>
-        protected global::System.Web.UI.WebControls.GridView gvUsuarios;
     }
 }

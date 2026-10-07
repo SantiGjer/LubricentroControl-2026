@@ -1,40 +1,40 @@
 using System;
 using BIZ.Data;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
     // Cuenta corriente de proveedores (Fase 4). Admin y Encargado pueden ver el historial y
     // registrar ajustes manuales; Empleado, solo consulta (Requerimientos §5) — a diferencia de
     // Proveedores/Insumos, acá "solo consulta" no esconde toda la pantalla: Empleado igual puede
-    // buscar un proveedor y ver su historial/saldo, solo se le esconde la franja de ajuste.
+    // buscar un proveedor y ver su historial/saldo, solo se le esconde el ajuste. El detalle se
+    // abre en un modal sobre la lista.
     public partial class CuentaCorrienteProveedores : PaginaSegura
     {
+        private const string IdModal = "modalCuenta";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+            pnlMensajeFormulario.Visible = false;
+
             if (IsPostBack) return;
 
             CargarGrilla();
         }
 
+        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            var texto = txtBuscar.Text;
-
-            gvProveedores.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? ProveedorDAL.Listar(incluirInactivos: true)
-                : ProveedorDAL.Buscar(texto, incluirInactivos: true);
+            gvProveedores.DataSource = ProveedorDAL.Listar(incluirInactivos: true);
             gvProveedores.DataBind();
-        }
-
-        protected void btnBuscar_Click(object sender, EventArgs e)
-        {
-            CargarGrilla();
         }
 
         protected void gvProveedores_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
         {
-            if (e.CommandName != "Seleccionar") return;
+            if (e.CommandName != "Ver") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
@@ -51,24 +51,31 @@ namespace LubricentroControl_2026
 
             ViewState["IdProveedor"] = idProveedor;
 
-            pnlDetalle.Visible = true;
             pnlAjuste.Visible = !EsSoloLectura;
-            litProveedorSeleccionado.Text = "Cuenta corriente: " + proveedor.RazonSocial;
+            pnlHistorial.CssClass = EsSoloLectura ? "col-12" : "col-lg-8";
+            litProveedorSeleccionado.Text = "Cuenta corriente: " + Server.HtmlEncode(proveedor.RazonSocial);
             litSaldoActual.Text = CuentaCorrienteProveedorDAL.ObtenerSaldoActual(idProveedor).ToString("N2");
 
             gvHistorial.DataSource = CuentaCorrienteProveedorDAL.ListarPorProveedor(idProveedor);
             gvHistorial.DataBind();
+
+            Interfaz.AbrirModal(this, IdModal);
         }
 
         protected void btnRegistrarAjuste_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
-            if (!Page.IsValid) return;
 
             var idProveedor = LeerIdOculto(Convert.ToString(ViewState["IdProveedor"]));
             if (idProveedor <= 0)
             {
                 MostrarMensaje("Seleccioná un proveedor antes de registrar un ajuste.", false);
+                return;
+            }
+
+            if (!Page.IsValid)
+            {
+                Interfaz.AbrirModal(this, IdModal);
                 return;
             }
 
@@ -78,14 +85,20 @@ namespace LubricentroControl_2026
             var resultado = CuentaCorrienteProveedorDAL.RegistrarAjuste(
                 idProveedor, monto, txtMotivoAjuste.Text, UsuarioActual.IdUsuario);
 
-            MostrarMensaje(resultado.Mensaje, resultado.Exito);
-
             if (resultado.Exito)
             {
                 txtMontoAjuste.Text = string.Empty;
                 txtMotivoAjuste.Text = string.Empty;
                 Seleccionar(idProveedor);
             }
+            else
+            {
+                Interfaz.AbrirModal(this, IdModal);
+            }
+
+            pnlMensajeFormulario.CssClass = "alert " + (resultado.Exito ? "alert-success" : "alert-danger");
+            litMensajeFormulario.Text = resultado.Mensaje;
+            pnlMensajeFormulario.Visible = true;
         }
 
         // 0 (ID inexistente, cae en "no existe"/valida en falso) si el campo llegara vacío o

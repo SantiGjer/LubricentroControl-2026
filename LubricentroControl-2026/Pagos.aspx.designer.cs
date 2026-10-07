@@ -14,11 +14,8 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control txtBuscar.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscar;
-
-        /// <summary>Control btnBuscar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscar;
+        /// <summary>Control btnNuevo.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevo;
 
         /// <summary>Control gvPagos.</summary>
         protected global::System.Web.UI.WebControls.GridView gvPagos;
@@ -26,53 +23,41 @@ namespace LubricentroControl_2026
         /// <summary>Control pnlFormulario.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlFormulario;
 
-        /// <summary>Control ddlTipo.</summary>
-        protected global::System.Web.UI.WebControls.DropDownList ddlTipo;
+        /// <summary>Control pnlErrorFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlErrorFormulario;
+
+        /// <summary>Control litErrorFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litErrorFormulario;
+
+        /// <summary>Control pnlVieneDeOrden.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlVieneDeOrden;
+
+        /// <summary>Control litVieneDeOrden.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVieneDeOrden;
 
         /// <summary>Control upnlTitular.</summary>
         protected global::System.Web.UI.UpdatePanel upnlTitular;
 
+        /// <summary>Control ddlTipo.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlTipo;
+
         /// <summary>Control pnlCliente.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlCliente;
+
+        /// <summary>Control txtCliente.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtCliente;
 
         /// <summary>Control hdnIdCliente.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdCliente;
 
-        /// <summary>Control litClienteSeleccionado.</summary>
-        protected global::System.Web.UI.WebControls.Label litClienteSeleccionado;
-
-        /// <summary>Control txtBuscarCliente.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscarCliente;
-
-        /// <summary>Control btnBuscarCliente.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscarCliente;
-
-        /// <summary>Control pnlResultadosCliente.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlResultadosCliente;
-
-        /// <summary>Control rptResultadosCliente.</summary>
-        protected global::System.Web.UI.WebControls.Repeater rptResultadosCliente;
-
         /// <summary>Control pnlProveedor.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlProveedor;
 
+        /// <summary>Control txtProveedor.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtProveedor;
+
         /// <summary>Control hdnIdProveedor.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdProveedor;
-
-        /// <summary>Control litProveedorSeleccionado.</summary>
-        protected global::System.Web.UI.WebControls.Label litProveedorSeleccionado;
-
-        /// <summary>Control txtBuscarProveedor.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscarProveedor;
-
-        /// <summary>Control btnBuscarProveedor.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscarProveedor;
-
-        /// <summary>Control pnlResultadosProveedor.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlResultadosProveedor;
-
-        /// <summary>Control rptResultadosProveedor.</summary>
-        protected global::System.Web.UI.WebControls.Repeater rptResultadosProveedor;
 
         /// <summary>Control lblSaldoTitular.</summary>
         protected global::System.Web.UI.WebControls.Label lblSaldoTitular;

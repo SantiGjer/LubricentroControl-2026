@@ -74,30 +74,6 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Buscador por nombre/apellido/DNI del cliente o por patente del vehículo, con filtro
-        // opcional de estado.
-        public static List<OrdenDeTrabajo> Buscar(string texto, string estado = null)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar(estado);
-
-            var sql = SelectBase +
-                      " WHERE (c.nombre LIKE @texto OR c.apellido LIKE @texto OR c.dni LIKE @texto OR v.patente LIKE @texto)" +
-                      (string.IsNullOrWhiteSpace(estado) ? "" : " AND o.estado = @estado") +
-                      " ORDER BY o.fecha DESC";
-
-            var lista = new List<OrdenDeTrabajo>();
-            var tabla = string.IsNullOrWhiteSpace(estado)
-                ? AccesoDatos.Consultar(sql, AccesoDatos.Param("@texto", "%" + texto.Trim() + "%"))
-                : AccesoDatos.Consultar(sql,
-                    AccesoDatos.Param("@texto", "%" + texto.Trim() + "%"),
-                    AccesoDatos.Param("@estado", estado));
-
-            foreach (DataRow fila in tabla.Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         // Cliente activo; vehículo activo y de ese cliente; si vino turno, que exista y sea
         // de ese cliente. Mismo criterio que TurnoDAL.ValidarReferencias.
         private static ResultadoOperacion ValidarReferencias(OrdenDeTrabajo orden)

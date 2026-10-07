@@ -4,15 +4,24 @@ using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
     // ABM de usuarios y asignación de rol. En el menú solo la ve Admin;
     // PaginaSegura vuelve a chequearlo por si se entra escribiendo la URL.
+    // El formulario de alta/edición se abre en un modal sobre la lista.
     public partial class Usuarios : PaginaSegura
     {
+        private const string IdModal = "modalUsuario";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez: además de no repetir el último aviso en cada
+            // postback, así la contraseña temporal no queda a la vista más de lo necesario.
+            pnlMensaje.Visible = false;
+            pnlErrorFormulario.Visible = false;
+
             if (IsPostBack) return;
 
             CargarNiveles();
@@ -36,19 +45,16 @@ namespace LubricentroControl_2026
         protected void btnNuevo_Click(object sender, EventArgs e)
         {
             LimpiarFormulario();
-            litTituloFormulario.Text = "Nuevo usuario";
-            pnlFormulario.Visible = true;
-        }
-
-        protected void btnCancelar_Click(object sender, EventArgs e)
-        {
-            pnlFormulario.Visible = false;
-            LimpiarFormulario();
+            MostrarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
-            if (!Page.IsValid) return;
+            if (!Page.IsValid)
+            {
+                MostrarFormulario();
+                return;
+            }
 
             var usuario = new Usuario
             {
@@ -78,11 +84,27 @@ namespace LubricentroControl_2026
 
             if (!resultado.Exito)
             {
-                MostrarMensaje(resultado.Mensaje, false);
+                MostrarErrorFormulario(resultado.Mensaje);
                 return;
             }
 
-            pnlFormulario.Visible = false;
+            LimpiarFormulario();
+            CargarGrilla();
+        }
+
+        protected void btnReactivar_Click(object sender, EventArgs e)
+        {
+            int idUsuario;
+            int.TryParse(hdnIdUsuario.Value, out idUsuario);
+
+            var alta = UsuarioDAL.Reactivar(idUsuario);
+            if (!alta.Exito)
+            {
+                MostrarErrorFormulario(alta.Mensaje);
+                return;
+            }
+
+            MostrarMensaje(alta.Mensaje, true);
             LimpiarFormulario();
             CargarGrilla();
         }
@@ -133,9 +155,10 @@ namespace LubricentroControl_2026
             txtEmail.Text = usuario.Email;
             ddlNivel.SelectedValue = usuario.IdNivel.ToString();
             chkActivo.Checked = usuario.Activo;
+            btnReactivar.Visible = !usuario.Activo;
 
-            litTituloFormulario.Text = "Editar usuario";
-            pnlFormulario.Visible = true;
+            litTituloFormulario.Text = usuario.Activo ? "Editar usuario" : "Editar usuario (inactivo)";
+            MostrarFormulario();
         }
 
         private void LimpiarFormulario()
@@ -146,6 +169,21 @@ namespace LubricentroControl_2026
             txtEmail.Text = string.Empty;
             chkActivo.Checked = true;
             if (ddlNivel.Items.Count > 0) ddlNivel.SelectedIndex = 0;
+            btnReactivar.Visible = false;
+            litTituloFormulario.Text = "Nuevo usuario";
+        }
+
+        private void MostrarFormulario()
+        {
+            Interfaz.AbrirModal(this, IdModal);
+        }
+
+        // Un error al guardar se muestra adentro del modal, que vuelve a abrirse con lo cargado.
+        private void MostrarErrorFormulario(string mensajeHtml)
+        {
+            litErrorFormulario.Text = mensajeHtml;
+            pnlErrorFormulario.Visible = true;
+            MostrarFormulario();
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

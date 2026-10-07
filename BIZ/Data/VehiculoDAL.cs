@@ -63,24 +63,6 @@ namespace BIZ.Data
             return lista;
         }
 
-        // Buscador rápido por patente, marca o modelo (Requerimientos §6.2/§9.2).
-        public static List<Vehiculo> Buscar(string texto, bool incluirInactivos = false)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar(incluirInactivos);
-
-            var sql = SelectBase +
-                      " WHERE (v.patente LIKE @texto OR v.marca LIKE @texto OR v.modelo LIKE @texto)" +
-                      (incluirInactivos ? "" : " AND v.activo = 1") +
-                      " ORDER BY c.apellido, c.nombre, v.patente";
-
-            var lista = new List<Vehiculo>();
-            foreach (DataRow fila in AccesoDatos.Consultar(
-                sql, AccesoDatos.Param("@texto", "%" + texto.Trim() + "%")).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         public static bool ExistePatente(string patente, int idVehiculoExcluido = 0)
         {
             var cantidad = AccesoDatos.Escalar(
@@ -175,6 +157,23 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idVehiculo", idVehiculo));
 
             return ResultadoOperacion.Ok("Vehículo desactivado.");
+        }
+
+        // Deshace la baja lógica: el vehículo vuelve con el mismo dueño y sus órdenes intactas.
+        public static ResultadoOperacion Reactivar(int idVehiculo)
+        {
+            var vehiculo = ObtenerPorId(idVehiculo);
+            if (vehiculo == null)
+                return ResultadoOperacion.Error("El vehículo no existe.");
+
+            if (vehiculo.Activo)
+                return ResultadoOperacion.Ok("El vehículo ya estaba activo.");
+
+            AccesoDatos.Ejecutar(
+                "UPDATE Vehiculo SET activo = 1 WHERE idVehiculo = @idVehiculo",
+                AccesoDatos.Param("@idVehiculo", idVehiculo));
+
+            return ResultadoOperacion.Ok("Vehículo reactivado.");
         }
     }
 }

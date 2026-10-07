@@ -46,24 +46,6 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Buscador rápido por nombre o marca.
-        public static List<Insumo> Buscar(string texto, bool incluirInactivos = false)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar(incluirInactivos);
-
-            var sql = SelectBase +
-                      " WHERE (nombre LIKE @texto OR marca LIKE @texto)" +
-                      (incluirInactivos ? "" : " AND activo = 1") +
-                      " ORDER BY nombre";
-
-            var lista = new List<Insumo>();
-            foreach (DataRow fila in AccesoDatos.Consultar(
-                sql, AccesoDatos.Param("@texto", "%" + texto.Trim() + "%")).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         // Insumos con stock por debajo del mínimo — referencia directa para el futuro
         // reporte "Stock bajo / a reponer" (Requerimientos §6.9).
         public static List<Insumo> ListarStockBajo()
@@ -165,6 +147,23 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idInsumo", idInsumo));
 
             return ResultadoOperacion.Ok("Insumo desactivado.");
+        }
+
+        // Deshace la baja lógica. El stock no se toca: quedó como estaba al desactivarlo.
+        public static ResultadoOperacion Reactivar(int idInsumo)
+        {
+            var insumo = ObtenerPorId(idInsumo);
+            if (insumo == null)
+                return ResultadoOperacion.Error("El insumo no existe.");
+
+            if (insumo.Activo)
+                return ResultadoOperacion.Ok("El insumo ya estaba activo.");
+
+            AccesoDatos.Ejecutar(
+                "UPDATE Insumo SET activo = 1 WHERE idInsumo = @idInsumo",
+                AccesoDatos.Param("@idInsumo", idInsumo));
+
+            return ResultadoOperacion.Ok("Insumo reactivado.");
         }
     }
 }

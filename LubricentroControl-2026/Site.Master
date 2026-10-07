@@ -17,7 +17,10 @@
     <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
 
 </head>
-<body>
+<%-- Los separadores del formato regional del servidor, para que Lubricentro.js ordene bien
+     las columnas con importes (N2 sale "1.234,50" o "1,234.50" según la cultura). --%>
+<body data-separador-decimal="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator %>"
+      data-separador-miles="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator %>">
     <form runat="server">
         <asp:ScriptManager runat="server">
             <Scripts>
@@ -37,6 +40,17 @@
                 <%--Site Scripts--%>
             </Scripts>
         </asp:ScriptManager>
+
+        <%-- Tablas ordenables/filtrables, selectores con búsqueda y modales. Va acá, después de los
+             scripts de MS Ajax, porque se engancha a Sys.Application para volver a iniciarse después
+             de cada postback parcial de un UpdatePanel. --%>
+        <asp:PlaceHolder runat="server">
+            <%: Scripts.Render("~/Scripts/Lubricentro.js") %>
+        </asp:PlaceHolder>
+
+        <%-- Filtro, orden y página de cada tabla: Lubricentro.js lo guarda acá para que sobreviva
+             a los postbacks (un GET nuevo lo trae vacío y las tablas arrancan de cero). --%>
+        <asp:HiddenField ID="hdnEstadoTablas" runat="server" ClientIDMode="Static" />
 
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark">
             <div class="container">

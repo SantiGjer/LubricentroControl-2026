@@ -199,6 +199,11 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
 - **Patente (`Vehiculo.patente`):** acepta **ambos formatos** vigentes en Argentina —
   el viejo (3 letras + 3 números, ej. `ABC123`) y el Mercosur (2 letras + 3 números + 2 letras,
   ej. `AB123CD`). Se guarda en mayúsculas.
+- **Teléfono (`Cliente.telefono`, `Proveedor.telefono`, agregado 2026-10-07):** opcional. Solo
+  números y los separadores habituales (espacios, guiones, puntos, paréntesis y un `+` adelante),
+  con entre 6 y 15 dígitos. Se guarda tal cual se escribió.
+- **Año del vehículo (`Vehiculo.anio`, agregado 2026-10-07):** opcional, desde 1900 hasta el año
+  siguiente al actual (un 0 km puede salir con el modelo del año que viene).
 
 ### 9.2 Diseño de Clientes y Vehículos (confirmado 2026-09-06)
 
@@ -211,7 +216,11 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
   cliente" en la fila del vehículo).
 - **El mismo buscador de clientes se reutiliza como selector de dueño** en el alta de un
   Vehículo, en vez de un `DropDownList` con todos los clientes (no escala igual que el de roles
-  en `Usuarios`, que es una lista fija de 3).
+  en `Usuarios`, que es una lista fija de 3). **Cambio del 2026-10-07:** a pedido del usuario, el
+  selector (de dueño, de cliente y de proveedor, en todas las pantallas que lo usan) es ahora una
+  lista desplegable con todos los activos que además se filtra al escribir, con el botón de
+  búsqueda dentro del mismo campo. Las listas de cada pantalla se filtran y ordenan al instante, sin
+  botón "Buscar".
 - **Tipo de combustible:** `DropDownList` con lista fija — Nafta, Diésel, GNC, Eléctrico,
   Híbrido.
 
@@ -298,6 +307,22 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
   excepción puntual a lo que dice §10 sobre no tener portal público — acá no es un portal para que
   el *cliente* pida turno (eso sigue fuera de alcance), es una vía de autoservicio para que
   personal del lubricentro se cree su propia cuenta de solo consulta sin depender de un Admin.
+
+### 9.7 Cuenta corriente opcional por cliente (confirmado 2026-10-07)
+
+- **No todo cliente opera "a cuenta".** Cada cliente tiene un interruptor de cuenta corriente
+  (`Cliente.cuentaCorriente`, columna nueva), en el alta y en la edición. Por defecto viene
+  apagado.
+- **Sin cuenta corriente, la orden se cobra al cerrarla:** cerrar la orden de trabajo lleva
+  directo a registrar el pago de esa venta, con el cliente y el saldo ya cargados. Con cuenta
+  corriente, la venta puede quedar pendiente en su cuenta, como hasta ahora (§6.7/§6.8).
+- La pantalla de cuenta corriente de clientes muestra por defecto solo a los clientes que la
+  tienen habilitada, con un acceso para editar el cliente y cambiarla.
+- Habilitarla es una decisión de cuenta corriente: la toman los roles que escriben en Cuentas
+  corrientes (Admin y Encargado, §5). Para Empleado el interruptor se ve pero no se puede cambiar
+  (a confirmar con el dueño del negocio).
+- Los proveedores no tienen este interruptor: la compra a cuenta corriente se sigue eligiendo
+  compra por compra (§9.5).
 
 ---
 

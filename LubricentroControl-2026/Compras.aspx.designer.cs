@@ -14,14 +14,11 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control txtBuscar.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscar;
-
-        /// <summary>Control btnBuscar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscar;
-
         /// <summary>Control chkSoloConSaldo.</summary>
         protected global::System.Web.UI.WebControls.CheckBox chkSoloConSaldo;
+
+        /// <summary>Control btnNuevaCompra.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevaCompra;
 
         /// <summary>Control gvCompras.</summary>
         protected global::System.Web.UI.WebControls.GridView gvCompras;
@@ -32,32 +29,26 @@ namespace LubricentroControl_2026
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;
 
+        /// <summary>Control upnlCompra.</summary>
+        protected global::System.Web.UI.UpdatePanel upnlCompra;
+
+        /// <summary>Control pnlMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlMensajeFormulario;
+
+        /// <summary>Control litMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litMensajeFormulario;
+
         /// <summary>Control hdnIdCompra.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdCompra;
 
         /// <summary>Control pnlAltaCompra.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlAltaCompra;
 
-        /// <summary>Control upnlProveedor.</summary>
-        protected global::System.Web.UI.UpdatePanel upnlProveedor;
+        /// <summary>Control txtProveedor.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtProveedor;
 
         /// <summary>Control hdnIdProveedor.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdProveedor;
-
-        /// <summary>Control litProveedorSeleccionado.</summary>
-        protected global::System.Web.UI.WebControls.Label litProveedorSeleccionado;
-
-        /// <summary>Control txtBuscarProveedor.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscarProveedor;
-
-        /// <summary>Control btnBuscarProveedor.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscarProveedor;
-
-        /// <summary>Control pnlResultadosProveedor.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlResultadosProveedor;
-
-        /// <summary>Control rptResultadosProveedor.</summary>
-        protected global::System.Web.UI.WebControls.Repeater rptResultadosProveedor;
 
         /// <summary>Control ddlCondicionPago.</summary>
         protected global::System.Web.UI.WebControls.DropDownList ddlCondicionPago;
@@ -70,6 +61,9 @@ namespace LubricentroControl_2026
 
         /// <summary>Control txtImpuestos.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtImpuestos;
+
+        /// <summary>Control pnlAgregarLinea.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlAgregarLinea;
 
         /// <summary>Control ddlInsumo.</summary>
         protected global::System.Web.UI.WebControls.DropDownList ddlInsumo;
@@ -85,9 +79,6 @@ namespace LubricentroControl_2026
 
         /// <summary>Control gvLineasPendientes.</summary>
         protected global::System.Web.UI.WebControls.GridView gvLineasPendientes;
-
-        /// <summary>Control btnGuardarCompra.</summary>
-        protected global::System.Web.UI.WebControls.Button btnGuardarCompra;
 
         /// <summary>Control pnlCompraExistente.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlCompraExistente;
@@ -119,7 +110,10 @@ namespace LubricentroControl_2026
         /// <summary>Control gvDetalleCompra.</summary>
         protected global::System.Web.UI.WebControls.GridView gvDetalleCompra;
 
-        /// <summary>Control btnNuevaCompra.</summary>
-        protected global::System.Web.UI.WebControls.Button btnNuevaCompra;
+        /// <summary>Control litBotonCerrar.</summary>
+        protected global::System.Web.UI.WebControls.Literal litBotonCerrar;
+
+        /// <summary>Control btnGuardarCompra.</summary>
+        protected global::System.Web.UI.WebControls.Button btnGuardarCompra;
     }
 }

@@ -11,11 +11,10 @@
         <asp:Literal ID="litResumen" runat="server" />
     </asp:Panel>
 
-    <asp:GridView ID="gvStockBajo" runat="server"
+    <%-- Orden, filtro y paginado los hace la tabla en el navegador (Lubricentro.js). --%>
+    <asp:GridView ID="gvStockBajo" runat="server" data-filas-por-pagina="30"
         CssClass="tabla-abm"
         AutoGenerateColumns="false" DataKeyNames="IdInsumo" GridLines="None"
-        AllowPaging="true" PageSize="30"
-        OnPageIndexChanging="gvStockBajo_PageIndexChanging"
         OnRowDataBound="gvStockBajo_RowDataBound"
         EmptyDataText="Ningún insumo activo está por debajo de su stock mínimo.">
         <Columns>
@@ -35,17 +34,6 @@
             <asp:BoundField DataField="PrecioVenta" HeaderText="Precio venta" DataFormatString="{0:N2}"
                 ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
         </Columns>
-        <PagerStyle HorizontalAlign="Center" />
-        <PagerTemplate>
-            <asp:LinkButton runat="server" CommandName="Page" CommandArgument="Prev" CausesValidation="false"
-                Text="◄ Anterior"
-                Visible='<%# ((GridView)Container.NamingContainer).PageIndex > 0 %>' />
-            &nbsp;Página <%# ((GridView)Container.NamingContainer).PageIndex + 1 %>
-            de <%# ((GridView)Container.NamingContainer).PageCount %>&nbsp;
-            <asp:LinkButton runat="server" CommandName="Page" CommandArgument="Next" CausesValidation="false"
-                Text="Siguiente ►"
-                Visible='<%# ((GridView)Container.NamingContainer).PageIndex < ((GridView)Container.NamingContainer).PageCount - 1 %>' />
-        </PagerTemplate>
     </asp:GridView>
     </div>
 </asp:Content>

@@ -13,64 +13,70 @@
     <p class="texto-nota"><small>El comprobante de venta se genera automáticamente al cerrar una orden de trabajo
         (pantalla <a href="~/OrdenesDeTrabajo" runat="server">Órdenes de trabajo</a>) — acá solo se consulta.</small></p>
 
-    <div class="row">
-        <div class="col-7">
-            <div class="row barra-busqueda">
-                <div class="col-6">
-                    <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por cliente, patente o número</asp:Label>
-                    <asp:TextBox ID="txtBuscar" runat="server" /></div>
-                <div class="col-6">
-                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
-                        OnClick="btnBuscar_Click" CausesValidation="false" /></div>
+    <div class="barra-herramientas">
+        <input type="search" id="filtroVentas" class="filtro-tabla-texto"
+            placeholder="Filtrar por número, cliente, patente o fecha" aria-label="Filtrar ventas" />
+    </div>
+
+    <asp:GridView ID="gvVentas" runat="server" CssClass="tabla-abm" data-filtro="filtroVentas"
+        AutoGenerateColumns="false" DataKeyNames="IdVenta" GridLines="None"
+        OnRowCommand="gvVentas_RowCommand" EmptyDataText="Todavía no hay ventas.">
+        <Columns>
+            <asp:BoundField DataField="NumeroComprobante" HeaderText="Número" />
+            <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy}" />
+            <asp:BoundField DataField="NombreCliente" HeaderText="Cliente" />
+            <asp:BoundField DataField="Patente" HeaderText="Vehículo" />
+            <asp:BoundField DataField="Total" HeaderText="Total" DataFormatString="{0:N2}" />
+            <asp:BoundField DataField="SaldoPendiente" HeaderText="Saldo pendiente" DataFormatString="{0:N2}" />
+            <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
+                <ItemTemplate>
+                    <asp:LinkButton runat="server"
+                        CommandName="Ver" CommandArgument='<%# Eval("IdVenta") %>'
+                        CausesValidation="false">Ver</asp:LinkButton>
+                </ItemTemplate>
+            </asp:TemplateField>
+        </Columns>
+    </asp:GridView>
+
+    <div class="modal fade" id="modalVenta" tabindex="-1" aria-labelledby="tituloModalVenta" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="tituloModalVenta">
+                        <asp:Literal ID="litTituloDetalle" runat="server" /></h2>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <dl class="datos-resumen">
+                        <dt>Cliente</dt><dd><asp:Literal ID="litClienteInfo" runat="server" /></dd>
+                        <dt>Vehículo</dt><dd><asp:Literal ID="litVehiculoInfo" runat="server" /></dd>
+                        <dt>Fecha</dt><dd><asp:Literal ID="litFechaInfo" runat="server" /></dd>
+                        <dt>Subtotal</dt><dd><asp:Literal ID="litSubtotalInfo" runat="server" /></dd>
+                        <dt>Impuestos</dt><dd><asp:Literal ID="litImpuestosInfo" runat="server" /></dd>
+                        <dt>Total</dt><dd><asp:Literal ID="litTotalInfo" runat="server" /></dd>
+                        <dt>Saldo pendiente</dt><dd><asp:Literal ID="litSaldoInfo" runat="server" /></dd>
+                    </dl>
+
+                    <asp:GridView ID="gvDetalleVenta" runat="server" data-sin-filtro="true"
+                        CssClass="tabla-abm tabla-compacta"
+                        AutoGenerateColumns="false" GridLines="None"
+                        EmptyDataText="Esta venta no tiene líneas.">
+                        <Columns>
+                            <asp:BoundField DataField="Descripcion" HeaderText="Ítem" />
+                            <asp:BoundField DataField="Cantidad" HeaderText="Cantidad" DataFormatString="{0:N2}" />
+                            <asp:BoundField DataField="PrecioUnitario" HeaderText="Precio unitario" DataFormatString="{0:N2}" />
+                            <asp:BoundField DataField="Subtotal" HeaderText="Subtotal" DataFormatString="{0:N2}" />
+                        </Columns>
+                    </asp:GridView>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="boton-gris" data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </div>
-
-            <asp:GridView ID="gvVentas" runat="server" CssClass="tabla-abm"
-                AutoGenerateColumns="false" DataKeyNames="IdVenta" GridLines="None"
-                OnRowCommand="gvVentas_RowCommand" EmptyDataText="No hay ventas que coincidan con la búsqueda.">
-                <Columns>
-                    <asp:BoundField DataField="NumeroComprobante" HeaderText="Número" />
-                    <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy}" />
-                    <asp:BoundField DataField="NombreCliente" HeaderText="Cliente" />
-                    <asp:BoundField DataField="Patente" HeaderText="Vehículo" />
-                    <asp:BoundField DataField="Total" HeaderText="Total" DataFormatString="{0:N2}" />
-                    <asp:BoundField DataField="SaldoPendiente" HeaderText="Saldo pendiente" DataFormatString="{0:N2}" />
-                    <asp:TemplateField HeaderText="Acciones">
-                        <ItemTemplate>
-                            <asp:LinkButton runat="server"
-                                CommandName="Seleccionar" CommandArgument='<%# Eval("IdVenta") %>'
-                                CausesValidation="false">Ver</asp:LinkButton>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                </Columns>
-            </asp:GridView>
-        </div>
-
-        <div class="col-5">
-            <asp:Panel ID="pnlDetalle" runat="server" Visible="false">
-                <h2><asp:Literal ID="litTituloDetalle" runat="server" /></h2>
-                <p>
-                    <b>Cliente:</b> <asp:Literal ID="litClienteInfo" runat="server" /><br />
-                    <b>Vehículo:</b> <asp:Literal ID="litVehiculoInfo" runat="server" /><br />
-                    <b>Fecha:</b> <asp:Literal ID="litFechaInfo" runat="server" /><br />
-                    <b>Subtotal:</b> <asp:Literal ID="litSubtotalInfo" runat="server" /><br />
-                    <b>Impuestos:</b> <asp:Literal ID="litImpuestosInfo" runat="server" /><br />
-                    <b>Total:</b> <asp:Literal ID="litTotalInfo" runat="server" /><br />
-                    <b>Saldo pendiente:</b> <asp:Literal ID="litSaldoInfo" runat="server" />
-                </p>
-
-                <asp:GridView ID="gvDetalleVenta" runat="server"
-                    CssClass="tabla-abm tabla-compacta"
-                    AutoGenerateColumns="false" GridLines="None"
-                    EmptyDataText="Esta venta no tiene líneas.">
-                    <Columns>
-                        <asp:BoundField DataField="Descripcion" HeaderText="Ítem" />
-                        <asp:BoundField DataField="Cantidad" HeaderText="Cantidad" DataFormatString="{0:N2}" />
-                        <asp:BoundField DataField="PrecioUnitario" HeaderText="Precio unitario" DataFormatString="{0:N2}" />
-                        <asp:BoundField DataField="Subtotal" HeaderText="Subtotal" DataFormatString="{0:N2}" />
-                    </Columns>
-                </asp:GridView>
-            </asp:Panel>
         </div>
     </div>
+
     </div>
 </asp:Content>

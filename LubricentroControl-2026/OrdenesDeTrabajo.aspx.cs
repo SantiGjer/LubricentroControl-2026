@@ -3,24 +3,37 @@ using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
-    // ABM de órdenes de trabajo (Fase 3). Acceso completo para los 3 roles (Requerimientos §5).
-    // Cliente/vehículo/turno quedan fijos una vez creada la orden (ver Docs/EstadoActual.md,
-    // sesión de esta pantalla): el buscador/desplegables interactivos solo se muestran en
-    // "Nueva orden"; editando una ya creada se ven como texto de solo lectura.
+    // ABM de órdenes de trabajo (Fase 3). Acceso completo para Admin, Encargado y Empleado
+    // (Requerimientos §5); Lectura, solo consulta. La lista arranca filtrada en las órdenes
+    // Abiertas, de la más nueva a la más vieja. Alta y edición en un modal: cliente/vehículo/turno
+    // quedan fijos una vez creada la orden (ver Docs/EstadoActual.md, sesión de esta pantalla):
+    // el selector y los desplegables solo se muestran en "Nueva orden"; editando una ya creada se
+    // ven como texto fijo, junto con el detalle de servicios e insumos.
     public partial class OrdenesDeTrabajo : PaginaSegura
     {
         // Índice de la columna "Acciones" en gvOrdenes.Columns.
         private const int ColumnaAcciones = 4;
 
+        // Índice de la columna "Acciones" (Quitar) en gvServicios/gvInsumosOrden.
+        private const int ColumnaQuitar = 3;
+
+        private const string IdModal = "modalOrden";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+            pnlMensajeFormulario.Visible = false;
+
             if (IsPostBack) return;
 
             if (EsSoloLectura)
             {
+                btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
                 gvOrdenes.Columns[ColumnaAcciones].Visible = false;
             }
@@ -28,8 +41,10 @@ namespace LubricentroControl_2026
             CargarFiltroEstado();
             CargarEstados();
             CargarCatalogos();
-            LimpiarVehiculosYTurnos();
+            LimpiarFormulario();
             CargarGrilla();
+
+            if (EsSoloLectura) return;
 
             // Vuelta de Clientes.aspx/Vehiculos.aspx (origen "orden", ver btnNuevoCliente_Click/
             // btnNuevoVehiculo_Click más abajo) — incluido "volver sin crear", que no manda
@@ -39,6 +54,12 @@ namespace LubricentroControl_2026
                 || Request.QueryString["idTurno"] != null || Request.QueryString["idClienteNuevo"] != null
                 || Request.QueryString["idVehiculoNuevo"] != null)
                 RehidratarDesdeRetorno();
+        }
+
+        // Opciones del selector de cliente (los clientes activos). Se evalúa al dibujar el modal.
+        protected string OpcionesClientes
+        {
+            get { return Selectores.OpcionesClientes(); }
         }
 
         // Vuelta de Clientes.aspx/Vehiculos.aspx: repone los datos de la orden en curso y, si
@@ -65,6 +86,8 @@ namespace LubricentroControl_2026
             var idTurno = Request.QueryString["idTurno"];
             if (!string.IsNullOrEmpty(idTurno) && ddlTurno.Items.FindByValue(idTurno) != null)
                 ddlTurno.SelectedValue = idTurno;
+
+            MostrarFormulario();
         }
 
         // "Nuevo cliente"/"Nuevo vehículo": mandan a Clientes.aspx/Vehiculos.aspx los datos de
@@ -88,7 +111,7 @@ namespace LubricentroControl_2026
             var idCliente = LeerIdOculto(hdnIdCliente.Value);
             if (idCliente <= 0)
             {
-                MostrarMensaje("Seleccioná un cliente antes de crear un vehículo.", false);
+                MostrarMensajeFormulario("Seleccioná un cliente antes de crear un vehículo.", false);
                 return;
             }
 
@@ -100,12 +123,16 @@ namespace LubricentroControl_2026
                 + "&idTurno=" + Server.UrlEncode(ddlTurno.SelectedValue));
         }
 
+        // Arranca en "Abierta": lo que se busca casi siempre al entrar son las órdenes nuevas que
+        // todavía no se empezaron. Las demás se ven cambiando el filtro.
         private void CargarFiltroEstado()
         {
             ddlFiltroEstado.Items.Clear();
             ddlFiltroEstado.Items.Add(new ListItem("(Todos)", ""));
             foreach (var estado in OrdenDeTrabajo.Estados)
                 ddlFiltroEstado.Items.Add(new ListItem(estado, estado));
+
+            ddlFiltroEstado.SelectedValue = OrdenDeTrabajo.EstadoAbierta;
         }
 
         private void CargarEstados()
@@ -115,8 +142,8 @@ namespace LubricentroControl_2026
                 ddlEstado.Items.Add(new ListItem(estado, estado));
         }
 
-        // Catálogos de las mini-altas de la franja de detalle. El de insumos muestra el stock
-        // actual junto al nombre para que el operador vea si alcanza antes de agregar.
+        // Catálogos de las mini-altas del detalle. El de insumos muestra el stock actual junto
+        // al nombre para que el operador vea si alcanza antes de agregar.
         private void CargarCatalogos()
         {
             ddlServicio.Items.Clear();
@@ -130,20 +157,20 @@ namespace LubricentroControl_2026
                     insumo.IdInsumo.ToString()));
         }
 
+        // El estado filtra en el servidor; el texto, la tabla en el navegador (Lubricentro.js).
+        // OrdenDeTrabajoDAL.Listar ya las trae de la más nueva a la más vieja.
         private void CargarGrilla()
         {
-            var texto = txtBuscar.Text;
-            var estado = ddlFiltroEstado.SelectedValue;
-
-            gvOrdenes.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? OrdenDeTrabajoDAL.Listar(estado)
-                : OrdenDeTrabajoDAL.Buscar(texto, estado);
+            gvOrdenes.DataSource = OrdenDeTrabajoDAL.Listar(ddlFiltroEstado.SelectedValue);
             gvOrdenes.DataBind();
         }
 
-        protected void btnBuscar_Click(object sender, EventArgs e)
+        // El filtro de la tabla busca también por DNI, que no es una columna: va en data-buscar.
+        protected void gvOrdenes_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            CargarGrilla();
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            e.Row.Attributes["data-buscar"] = ((OrdenDeTrabajo)e.Row.DataItem).Dni;
         }
 
         protected void ddlFiltroEstado_SelectedIndexChanged(object sender, EventArgs e)
@@ -151,32 +178,28 @@ namespace LubricentroControl_2026
             CargarGrilla();
         }
 
-        // --- Selector de cliente: buscador desplegable dentro del UpdatePanel -----------
+        // --- Selector de cliente -----------------------------------------------------------
 
-        protected void btnBuscarCliente_Click(object sender, EventArgs e)
+        // Lo dispara el selector con búsqueda al elegir un cliente (postback parcial del
+        // UpdatePanel): carga sus vehículos y turnos.
+        protected void hdnIdCliente_ValueChanged(object sender, EventArgs e)
         {
-            rptResultadosCliente.DataSource = ClienteDAL.Buscar(txtBuscarCliente.Text, incluirInactivos: false);
-            rptResultadosCliente.DataBind();
-            pnlResultadosCliente.Visible = true;
-        }
-
-        protected void rptResultadosCliente_ItemCommand(object source, RepeaterCommandEventArgs e)
-        {
-            if (e.CommandName != "Seleccionar") return;
-
-            SeleccionarCliente(LeerIdOculto(Convert.ToString(e.CommandArgument)));
-
-            pnlResultadosCliente.Visible = false;
-            txtBuscarCliente.Text = string.Empty;
+            SeleccionarCliente(LeerIdOculto(hdnIdCliente.Value));
         }
 
         private void SeleccionarCliente(int idCliente)
         {
             var cliente = ClienteDAL.ObtenerPorId(idCliente);
-            if (cliente == null) return;
+            if (cliente == null)
+            {
+                hdnIdCliente.Value = string.Empty;
+                txtCliente.Text = string.Empty;
+                LimpiarVehiculosYTurnos();
+                return;
+            }
 
             hdnIdCliente.Value = cliente.IdCliente.ToString();
-            litClienteSeleccionado.Text = cliente.NombreCompleto + " — DNI " + cliente.Dni;
+            txtCliente.Text = Selectores.TextoCliente(cliente);
 
             CargarVehiculosDelCliente(idCliente);
             CargarTurnosDelCliente(idCliente);
@@ -239,12 +262,17 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
 
             LimpiarFormulario();
+            MostrarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
-            if (!Page.IsValid) return;
+            if (!Page.IsValid)
+            {
+                MostrarFormulario();
+                return;
+            }
 
             int kilometraje;
             var orden = new OrdenDeTrabajo
@@ -265,13 +293,14 @@ namespace LubricentroControl_2026
 
             if (!resultado.Exito)
             {
-                MostrarMensaje(resultado.Mensaje, false);
+                MostrarMensajeFormulario(resultado.Mensaje, false);
                 return;
             }
 
-            MostrarMensaje(resultado.Mensaje, true);
+            // El modal sigue abierto con la orden ya creada: lo que sigue es cargarle el detalle.
             CargarGrilla();
             Seleccionar(orden.IdOrden);
+            MostrarMensajeFormulario(resultado.Mensaje, true);
         }
 
         protected void btnCancelarOrden_Click(object sender, EventArgs e)
@@ -281,11 +310,14 @@ namespace LubricentroControl_2026
             var idOrden = LeerIdOculto(hdnIdOrden.Value);
             var resultado = OrdenDeTrabajoDAL.Cancelar(idOrden, UsuarioActual.IdUsuario);
 
-            MostrarMensaje(resultado.Mensaje, resultado.Exito);
             CargarGrilla();
             if (resultado.Exito) Seleccionar(idOrden);
+            MostrarMensajeFormulario(resultado.Mensaje, resultado.Exito);
         }
 
+        // Cerrar genera la venta. Si el cliente no tiene cuenta corriente no puede quedar
+        // debiendo: se pasa directo a cobrar esa venta en Pagos (con el cliente y el monto ya
+        // cargados). Con cuenta corriente, la deuda queda en su cuenta como hasta ahora.
         protected void btnCerrarOrden_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
@@ -293,15 +325,26 @@ namespace LubricentroControl_2026
             var idOrden = LeerIdOculto(hdnIdOrden.Value);
             var resultado = OrdenDeTrabajoDAL.Cerrar(idOrden);
 
-            MostrarMensaje(resultado.Mensaje, resultado.Exito);
+            if (resultado.Exito)
+            {
+                var venta = ComprobanteVentaDAL.ObtenerPorOrden(idOrden);
+                var cliente = venta == null ? null : ClienteDAL.ObtenerPorId(venta.IdCliente);
+                if (venta != null && cliente != null && !cliente.CuentaCorriente && venta.SaldoPendiente > 0)
+                {
+                    Response.Redirect("~/Pagos?idVenta=" + venta.IdVenta);
+                    return;
+                }
+            }
+
             CargarGrilla();
             if (resultado.Exito) Seleccionar(idOrden);
+            MostrarMensajeFormulario(resultado.Mensaje, resultado.Exito);
         }
 
         protected void gvOrdenes_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (EsSoloLectura) return;
-            if (e.CommandName != "Seleccionar") return;
+            if (e.CommandName != "Editar") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
@@ -318,12 +361,12 @@ namespace LubricentroControl_2026
 
             hdnIdOrden.Value = orden.IdOrden.ToString();
             hdnIdCliente.Value = orden.IdCliente.ToString();
-            litClienteSeleccionado.Text = orden.NombreCliente + " — DNI " + orden.Dni;
 
             pnlSeleccionNueva.Visible = false;
             pnlSeleccionFija.Visible = true;
-            litVehiculoInfo.Text = "Vehículo: " + orden.Patente;
-            litTurnoInfo.Text = "Turno: " + DescribirTurno(orden.IdTurno);
+            litClienteInfo.Text = Server.HtmlEncode(orden.NombreCliente + " — DNI " + orden.Dni);
+            litVehiculoInfo.Text = Server.HtmlEncode(orden.Patente);
+            litTurnoInfo.Text = Server.HtmlEncode(DescribirTurno(orden.IdTurno));
 
             txtKilometraje.Text = orden.Kilometraje.HasValue ? orden.Kilometraje.Value.ToString() : string.Empty;
             txtObservaciones.Text = orden.Observaciones;
@@ -342,14 +385,17 @@ namespace LubricentroControl_2026
             btnCancelarOrden.Visible = !esTerminal;
             btnCerrarOrden.Visible = !esTerminal;
 
-            litTituloFormulario.Text = "Editar orden";
+            litTituloFormulario.Text = "Orden #" + orden.IdOrden + " — " + orden.Estado;
 
+            pnlDialogo.CssClass = "modal-dialog modal-xl";
             pnlDetalle.Visible = true;
             pnlAgregarServicio.Visible = !esTerminal;
             pnlAgregarInsumo.Visible = !esTerminal;
-            gvServicios.Columns[3].Visible = !esTerminal;
-            gvInsumosOrden.Columns[3].Visible = !esTerminal;
+            gvServicios.Columns[ColumnaQuitar].Visible = !esTerminal;
+            gvInsumosOrden.Columns[ColumnaQuitar].Visible = !esTerminal;
             CargarDetalle(idOrden);
+
+            MostrarFormulario();
         }
 
         private static string DescribirTurno(int? idTurno)
@@ -371,7 +417,7 @@ namespace LubricentroControl_2026
             gvInsumosOrden.DataBind();
         }
 
-        // --- Franja de detalle: servicios ---------------------------------------------------
+        // --- Detalle: servicios (postbacks parciales del UpdatePanel, el modal no se cierra) ----
 
         protected void btnAgregarServicio_Click(object sender, EventArgs e)
         {
@@ -384,7 +430,7 @@ namespace LubricentroControl_2026
 
             var resultado = DetalleOrdenServicioDAL.Agregar(idOrden, idServicio, cantidad);
 
-            MostrarMensaje(resultado.Mensaje, resultado.Exito);
+            MostrarMensajeFormulario(resultado.Mensaje, resultado.Exito);
             txtCantidadServicio.Text = "1";
             CargarDetalle(idOrden);
         }
@@ -394,11 +440,13 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
             if (e.CommandName != "Quitar") return;
 
-            DetalleOrdenServicioDAL.Quitar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
+            var resultado = DetalleOrdenServicioDAL.Quitar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
+            if (!resultado.Exito) MostrarMensajeFormulario(resultado.Mensaje, false);
+
             CargarDetalle(LeerIdOculto(hdnIdOrden.Value));
         }
 
-        // --- Franja de detalle: insumos ------------------------------------------------------
+        // --- Detalle: insumos ------------------------------------------------------------------
 
         protected void btnAgregarInsumo_Click(object sender, EventArgs e)
         {
@@ -411,7 +459,7 @@ namespace LubricentroControl_2026
 
             var resultado = DetalleOrdenInsumoDAL.Agregar(idOrden, idInsumo, cantidad, UsuarioActual.IdUsuario);
 
-            MostrarMensaje(resultado.Mensaje, resultado.Exito);
+            MostrarMensajeFormulario(resultado.Mensaje, resultado.Exito);
             txtCantidadInsumo.Text = "1";
             CargarCatalogos();
             CargarDetalle(idOrden);
@@ -425,7 +473,7 @@ namespace LubricentroControl_2026
             var resultado = DetalleOrdenInsumoDAL.Quitar(
                 LeerIdOculto(Convert.ToString(e.CommandArgument)), UsuarioActual.IdUsuario);
 
-            MostrarMensaje(resultado.Mensaje, resultado.Exito);
+            MostrarMensajeFormulario(resultado.Mensaje, resultado.Exito);
             CargarCatalogos();
             CargarDetalle(LeerIdOculto(hdnIdOrden.Value));
         }
@@ -442,9 +490,7 @@ namespace LubricentroControl_2026
         {
             hdnIdOrden.Value = string.Empty;
             hdnIdCliente.Value = string.Empty;
-            litClienteSeleccionado.Text = "(sin seleccionar)";
-            txtBuscarCliente.Text = string.Empty;
-            pnlResultadosCliente.Visible = false;
+            txtCliente.Text = string.Empty;
             pnlSeleccionNueva.Visible = true;
             pnlSeleccionFija.Visible = false;
             LimpiarVehiculosYTurnos();
@@ -455,7 +501,23 @@ namespace LubricentroControl_2026
             btnCancelarOrden.Visible = false;
             btnCerrarOrden.Visible = false;
             litTituloFormulario.Text = "Nueva orden";
+            pnlDialogo.CssClass = "modal-dialog modal-lg";
             pnlDetalle.Visible = false;
+        }
+
+        private void MostrarFormulario()
+        {
+            Interfaz.AbrirModal(this, IdModal);
+        }
+
+        // Aviso adentro del modal (resultado de guardar, cerrar, cancelar o de una línea del
+        // detalle). En un postback parcial el modal ya está abierto y solo se actualiza el aviso.
+        private void MostrarMensajeFormulario(string mensajeHtml, bool exito)
+        {
+            pnlMensajeFormulario.CssClass = "alert " + (exito ? "alert-success" : "alert-danger");
+            litMensajeFormulario.Text = mensajeHtml;
+            pnlMensajeFormulario.Visible = true;
+            MostrarFormulario();
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

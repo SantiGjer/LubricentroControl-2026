@@ -3,30 +3,48 @@ using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
-    // ABM de vehículos. Acceso completo para los 3 roles (Requerimientos §5). El dueño se
-    // elige con el mismo buscador de clientes que usa la pantalla Clientes, mostrado como un
-    // desplegable dentro de un UpdatePanel en vez de un DropDownList con todos los clientes
-    // (Requerimientos §9.2).
+    // ABM de vehículos. Acceso completo para Admin, Encargado y Empleado (Requerimientos §5);
+    // Lectura, solo consulta. El formulario se abre en un modal sobre la lista. El dueño se elige
+    // con un selector con búsqueda: la lista desplegable trae todos los clientes activos y el
+    // mismo campo filtra mientras se escribe (Scripts\Lubricentro.js, .selector-busqueda).
     public partial class Vehiculos : PaginaSegura
     {
         // Índice de la columna "Acciones" en gvVehiculos.Columns.
         private const int ColumnaAcciones = 6;
 
+        private const string IdModal = "modalVehiculo";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+            pnlErrorFormulario.Visible = false;
+
+            // El rango del año sale del modelo (Vehiculo.AnioMinimo/AnioMaximo); se fija en cada
+            // request porque el máximo depende de la fecha.
+            valAnio.MinimumValue = Vehiculo.AnioMinimo.ToString();
+            valAnio.MaximumValue = Vehiculo.AnioMaximo.ToString();
+            valAnio.ErrorMessage = "El año tiene que estar entre " + Vehiculo.AnioMinimo + " y " + Vehiculo.AnioMaximo + ".";
+            txtAnio.Attributes["min"] = valAnio.MinimumValue;
+            txtAnio.Attributes["max"] = valAnio.MaximumValue;
+
             if (IsPostBack) return;
 
             if (EsSoloLectura)
             {
+                btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
                 gvVehiculos.Columns[ColumnaAcciones].Visible = false;
             }
 
             CargarTiposCombustible();
             CargarGrilla();
+
+            if (EsSoloLectura) return;
 
             if (Request.QueryString["idClienteNuevo"] != null)
                 RehidratarDesdeRetorno();
@@ -46,7 +64,16 @@ namespace LubricentroControl_2026
                 var idClienteActual = LeerIdOculto(Request.QueryString["idClienteActual"]);
                 if (idClienteActual > 0)
                     SeleccionarCliente(idClienteActual);
+
+                MostrarFormulario();
             }
+        }
+
+        // Opciones del selector de dueño (los clientes activos). Se evalúa al dibujar el modal
+        // (data-opciones en el .aspx).
+        protected string OpcionesClientes
+        {
+            get { return Selectores.OpcionesClientes(); }
         }
 
         // Vuelta de "Nuevo cliente" en Clientes.aspx (ver Clientes.aspx.cs, ArmarUrlVuelta):
@@ -68,11 +95,14 @@ namespace LubricentroControl_2026
             SeleccionarCliente(LeerIdOculto(Request.QueryString["idClienteNuevo"]));
 
             var esEdicion = LeerIdOculto(hdnIdVehiculo.Value) > 0;
-            btnBorrar.Visible = esEdicion && ActivoDesdeHidden();
+            var activo = ActivoDesdeHidden();
+            btnBorrar.Visible = esEdicion && activo;
+            btnReactivar.Visible = esEdicion && !activo;
             litTituloFormulario.Text = esEdicion ? "Editar vehículo" : "Nuevo vehículo";
+            MostrarFormulario();
         }
 
-        // "Nuevo cliente" al lado del buscador: manda a Clientes.aspx los datos del
+        // "Nuevo cliente" al lado del selector: manda a Clientes.aspx los datos del
         // vehículo en curso por query string (no PostBackUrl/PreviousPage — esos rompen
         // acá porque FriendlyUrls no publica un archivo físico en la ruta amigable, y
         // PreviousPage necesita reconstruir la página de origen a partir de esa ruta).
@@ -102,7 +132,7 @@ namespace LubricentroControl_2026
         // Arma la URL de vuelta a OrdenesDeTrabajo.aspx con los datos de la orden en curso más
         // el cliente/vehículo a seleccionar (los recién creados, o ninguno si se vuelve sin
         // crear). Usa el dueño real del vehículo creado, no el que vino en la query string por
-        // si se cambió el desplegable de dueño ya estando en esta pantalla.
+        // si se cambió el dueño ya estando en esta pantalla.
         private string ArmarUrlVueltaOrden(int idCliente, int idVehiculo)
         {
             var url = "~/OrdenesDeTrabajo"
@@ -123,20 +153,11 @@ namespace LubricentroControl_2026
                 ddlTipoCombustible.Items.Add(new ListItem(tipo, tipo));
         }
 
+        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            var incluirInactivos = chkIncluirInactivos.Checked;
-            var texto = txtBuscar.Text;
-
-            gvVehiculos.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? VehiculoDAL.Listar(incluirInactivos)
-                : VehiculoDAL.Buscar(texto, incluirInactivos);
+            gvVehiculos.DataSource = VehiculoDAL.Listar(chkIncluirInactivos.Checked);
             gvVehiculos.DataBind();
-        }
-
-        protected void btnBuscar_Click(object sender, EventArgs e)
-        {
-            CargarGrilla();
         }
 
         protected void chkIncluirInactivos_CheckedChanged(object sender, EventArgs e)
@@ -144,32 +165,15 @@ namespace LubricentroControl_2026
             CargarGrilla();
         }
 
-        // --- Selector de dueño: buscador desplegable dentro del UpdatePanel -----------
-
-        protected void btnBuscarCliente_Click(object sender, EventArgs e)
-        {
-            rptResultadosCliente.DataSource = ClienteDAL.Buscar(txtBuscarCliente.Text, incluirInactivos: false);
-            rptResultadosCliente.DataBind();
-            pnlResultadosCliente.Visible = true;
-        }
-
-        protected void rptResultadosCliente_ItemCommand(object source, RepeaterCommandEventArgs e)
-        {
-            if (e.CommandName != "Seleccionar") return;
-
-            SeleccionarCliente(LeerIdOculto(Convert.ToString(e.CommandArgument)));
-
-            pnlResultadosCliente.Visible = false;
-            txtBuscarCliente.Text = string.Empty;
-        }
-
+        // Deja elegido un dueño desde el servidor (vuelta de Clientes/Órdenes, edición). Cuando
+        // lo elige el usuario, el selector con búsqueda completa hdnIdCliente en el navegador.
         private void SeleccionarCliente(int idCliente)
         {
             var cliente = ClienteDAL.ObtenerPorId(idCliente);
             if (cliente == null) return;
 
             hdnIdCliente.Value = cliente.IdCliente.ToString();
-            litClienteSeleccionado.Text = cliente.NombreCompleto + " — DNI " + cliente.Dni;
+            txtCliente.Text = Selectores.TextoCliente(cliente);
         }
 
         // No usa ControlToValidate: valida la selección guardada en el hidden, no un TextBox.
@@ -190,12 +194,17 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
 
             LimpiarFormulario();
+            MostrarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
-            if (!Page.IsValid) return;
+            if (!Page.IsValid)
+            {
+                MostrarFormulario();
+                return;
+            }
 
             int anioParsed;
             int? anio = int.TryParse(txtAnio.Text, out anioParsed) ? anioParsed : (int?)null;
@@ -219,7 +228,7 @@ namespace LubricentroControl_2026
 
             if (!resultado.Exito)
             {
-                MostrarMensaje(resultado.Mensaje, false);
+                MostrarErrorFormulario(resultado.Mensaje);
                 return;
             }
 
@@ -241,8 +250,29 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
 
             var baja = VehiculoDAL.Desactivar(LeerIdOculto(hdnIdVehiculo.Value));
+            if (!baja.Exito)
+            {
+                MostrarErrorFormulario(baja.Mensaje);
+                return;
+            }
 
-            MostrarMensaje(baja.Mensaje, baja.Exito);
+            MostrarMensaje(baja.Mensaje, true);
+            LimpiarFormulario();
+            CargarGrilla();
+        }
+
+        protected void btnReactivar_Click(object sender, EventArgs e)
+        {
+            if (EsSoloLectura) return;
+
+            var alta = VehiculoDAL.Reactivar(LeerIdOculto(hdnIdVehiculo.Value));
+            if (!alta.Exito)
+            {
+                MostrarErrorFormulario(alta.Mensaje);
+                return;
+            }
+
+            MostrarMensaje(alta.Mensaje, true);
             LimpiarFormulario();
             CargarGrilla();
         }
@@ -250,7 +280,7 @@ namespace LubricentroControl_2026
         protected void gvVehiculos_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (EsSoloLectura) return;
-            if (e.CommandName != "Seleccionar") return;
+            if (e.CommandName != "Editar") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
@@ -274,8 +304,10 @@ namespace LubricentroControl_2026
             txtAnio.Text = vehiculo.Anio.HasValue ? vehiculo.Anio.Value.ToString() : string.Empty;
             ddlTipoCombustible.SelectedValue = vehiculo.TipoCombustible ?? string.Empty;
             btnBorrar.Visible = vehiculo.Activo;
+            btnReactivar.Visible = !vehiculo.Activo;
 
-            litTituloFormulario.Text = "Editar vehículo";
+            litTituloFormulario.Text = vehiculo.Activo ? "Editar vehículo" : "Editar vehículo (inactivo)";
+            MostrarFormulario();
         }
 
         // Por defecto activo si el campo oculto llegara vacío o manipulado
@@ -299,16 +331,28 @@ namespace LubricentroControl_2026
             hdnIdVehiculo.Value = string.Empty;
             hdnActivo.Value = bool.TrueString;
             hdnIdCliente.Value = string.Empty;
-            litClienteSeleccionado.Text = "(sin seleccionar)";
-            txtBuscarCliente.Text = string.Empty;
-            pnlResultadosCliente.Visible = false;
+            txtCliente.Text = string.Empty;
             txtPatente.Text = string.Empty;
             txtMarca.Text = string.Empty;
             txtModelo.Text = string.Empty;
             txtAnio.Text = string.Empty;
             ddlTipoCombustible.SelectedIndex = 0;
             btnBorrar.Visible = false;
+            btnReactivar.Visible = false;
             litTituloFormulario.Text = "Nuevo vehículo";
+        }
+
+        private void MostrarFormulario()
+        {
+            Interfaz.AbrirModal(this, IdModal);
+        }
+
+        // Un error al guardar se muestra adentro del modal, que vuelve a abrirse con lo cargado.
+        private void MostrarErrorFormulario(string mensajeHtml)
+        {
+            litErrorFormulario.Text = mensajeHtml;
+            pnlErrorFormulario.Visible = true;
+            MostrarFormulario();
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

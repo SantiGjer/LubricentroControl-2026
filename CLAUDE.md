@@ -48,7 +48,8 @@ Documentos de referencia (leer antes de diseñar algo del dominio):
 - `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Fase 5 terminada** (Reportes — §6.9: los tres hechos); **falta Fase 6** (integración, pruebas
   y pulido — sin empezar). Los ABM de Fase 2, las pantallas de Fase 3 y las
   de Fase 4 quedan como referencia de patrón — Proveedores/Insumos/Servicios para el modo
-  solo-consulta, Clientes/Vehículos para el layout de dos columnas y el buscador desplegable,
+  solo-consulta, Clientes/Vehículos para la lista con formulario en modal y el selector con
+  búsqueda (desde 2026-10-07, ver «Formularios en modales y listas en el navegador» más abajo),
   Turnos/Órdenes para pantallas con cliente/vehículo fijo post-alta y (en Órdenes) franja de
   detalle con líneas. Compras suma un patrón nuevo: líneas armadas en memoria (`ViewState`) y
   guardadas todas juntas en un solo batch atómico, en vez de la franja progresiva de Órdenes —
@@ -58,8 +59,8 @@ Documentos de referencia (leer antes de diseñar algo del dominio):
   escritura — porque la pantalla ya es de consulta para todos los roles, lo único que cambia es
   si además puede escribir un ajuste. Ventas es la primera pantalla puramente de solo lectura del
   proyecto (sin alta, sin `EsSoloLectura` que manejar) y la primera vez que una pantalla de Fase 4
-  modifica código de una fase ya entregada (Órdenes de trabajo). Pagos reutiliza tal cual los dos
-  buscadores desplegables ya existentes (cliente, de Turnos/Órdenes; proveedor, de Compras).
+  modifica código de una fase ya entregada (Órdenes de trabajo). Pagos usa los mismos selectores
+  con búsqueda de cliente y de proveedor que el resto (`Utilidades/Selectores.cs`).
 
 ## Restricciones del stack (no negociables)
 
@@ -159,11 +160,35 @@ Reglas transversales de la capa web:
 - `PaginaSegura` expone `EsSoloLectura` para los casos "👁️ Solo consulta" de la matriz de permisos.
   **Una pantalla nueva debe deshabilitar sus acciones de escritura cuando vale true.** Patrón ya
   implementado en `Proveedores.aspx` (primera pantalla real que lo necesita, aplica igual a
-  Insumos y Servicios): esconder el `Panel` del formulario entero
-  (`pnlFormulario.Visible = !EsSoloLectura`) y la columna "Acciones" de la grilla
-  (`gvX.Columns[n].Visible = false`), no solo deshabilitar botones — y además cada método de
-  escritura (`Guardar`/`Borrar`/`RowCommand`) chequea `EsSoloLectura` y corta al principio, por si
-  alguien fuerza el request aunque el control esté escondido.
+  Insumos y Servicios): esconder el botón "Nuevo …" de la barra, el `Panel` del formulario entero
+  (`pnlFormulario.Visible = !EsSoloLectura`, que es el contenido del modal) y la columna
+  "Acciones" de la grilla (`gvX.Columns[n].Visible = false`), no solo deshabilitar botones — y
+  además cada método de escritura (`Guardar`/`Borrar`/`Reactivar`/`RowCommand`) chequea
+  `EsSoloLectura` y corta al principio, por si alguien fuerza el request aunque el control esté
+  escondido.
+- **Formularios en modales y listas en el navegador (desde 2026-10-07).** Cada pantalla de gestión
+  es una lista a todo el ancho con una `barra-herramientas` arriba (filtro, opciones, botón
+  "Nuevo …"); alta, edición y detalle van en un modal de Bootstrap. Reglas del patrón:
+  - El modal se abre desde el servidor después del postback que lo necesita (Nuevo, Editar, error
+    al guardar) con `Utilidades/Interfaz.AbrirModal(this, "idModal")`. Los errores del DAL se
+    muestran **adentro** del modal (`pnlErrorFormulario`, o `pnlMensajeFormulario` donde también
+    hay avisos de éxito sin cerrar el modal); `pnlMensaje` de la página queda para el resultado
+    final, con el modal cerrado. Cada `Page_Load` oculta los dos al principio: el Literal guarda
+    su texto en el ViewState y si no repetiría el último aviso en cada postback.
+  - Si el formulario tiene idas y vueltas sin cerrarse (elegir un titular que carga datos,
+    agregar/quitar líneas), su cuerpo va en un `UpdatePanel`; los botones del pie quedan afuera
+    y hacen postback completo para refrescar la lista.
+  - Orden, filtro y paginado de las tablas los hace `Scripts/Lubricentro.js` sobre toda
+    `table.tabla-abm`: el servidor trae la lista completa (sin `Buscar` en el DAL ni
+    `AllowPaging` en el GridView). Atributos: `data-filtro="idInput"` en el GridView para usar el
+    filtro de la barra, `data-sin-filtro` para grillas chicas, `data-filas-por-pagina="N"`,
+    `data-buscar` en la fila (desde `RowDataBound`) para lo que se busca pero no es columna, y
+    `HeaderStyle-CssClass="sin-orden"` en la columna de Acciones. El estado sobrevive a los
+    postbacks en `hdnEstadoTablas` (Site.Master).
+  - Para elegir cliente, dueño o proveedor: `.selector-busqueda` (TextBox `selector-texto` +
+    botón + HiddenField con el id), con las opciones en `data-opciones="<%: OpcionesClientes %>"`
+    (`Utilidades/Selectores.cs`). Con `data-postback="true"` elegir dispara el `OnValueChanged`
+    del HiddenField (va adentro de un `UpdatePanel`).
 - La sesión se toca solo a través de `Seguridad/SesionUsuario.cs`, nunca `Session["..."]` directo.
 - El menú se arma en `Site.Master.cs` desde `MenuDAL.ObtenerArbol(idNivel)` (que a su vez arma el
   árbol con `ItemMenu.ArmarArbol`, en `Modelo/`, a partir de la lista plana de
@@ -202,6 +227,13 @@ Estas no se ven leyendo un solo archivo:
   (cliente que llega sin turno, se da de alta en el momento).
 - Clientes **y** proveedores pueden quedar con saldo pendiente; la cuenta corriente funciona en
   ambos sentidos (a favor o en contra).
+- **La cuenta corriente del cliente es opcional (`Cliente.cuentaCorriente`, desde 2026-10-07).**
+  Sin ella, cerrar su orden en `OrdenesDeTrabajo.aspx` redirige a `~/Pagos?idVenta=N`, que abre
+  el cobro con el cliente y el saldo de esa venta cargados (el monto se lee de la base, no del
+  query string). La venta y su movimiento de cuenta corriente se generan igual para todos: el
+  flag no cambia el circuito de `BIZ`, solo adónde va la pantalla. El interruptor lo cambia quien
+  escribe en `~/CuentaCorrienteClientes` (Admin/Encargado), con la guarda en el servidor
+  (`Clientes.aspx.cs`, `CuentaCorrienteElegida`).
 - **Una orden `Cerrada` o `Cancelada` no admite tocar su detalle.** Agregar o quitar una línea de
   servicio/insumo sólo vale mientras `orden.Estado` esté en `OrdenDeTrabajo.EstadosEditables`
   (`Abierta`/`En proceso`) — `DetalleOrdenServicioDAL.Agregar`/`Quitar` y
@@ -231,6 +263,9 @@ Fase 4 sumó dos columnas que tampoco estaban en el diagrama original (ver Reque
 `ComprobanteCompra.medioPago` (nullable, atada a `condicionPago = Contado` por
 `CK_Compra_medioPago_condicion`, mismo criterio que `CK_Pago_titular`/`CK_MovStock_origen`) y
 `CuentaCorrienteCliente`/`Proveedor.idUsuario` (nullable, poblado solo en movimientos `Ajuste`).
+
+`Cliente.cuentaCorriente` (`BIT NOT NULL`, default 0) se agregó el 2026-10-07: una base creada
+antes no la tiene y `ClienteDAL` falla hasta recrearla con `01` a `04`.
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`). Para pasar al
 SQL Server del lubricentro por VPN Radmin alcanza con cambiar la cadena `LubricentroDB` en
@@ -300,15 +335,18 @@ La aplicación **no debe mencionar fases de desarrollo, el roadmap ni el estado 
 la interfaz. Las pantallas sin implementar dicen solo «Pendiente». El seguimiento del avance vive
 en `Docs/EstadoActual.md`, no en la UI.
 
-**Estilo de las pantallas (desde 2026-10-06).** Todas las pantallas con menú ponen su contenido dentro
-de `<div class="pantalla-abm">` y usan las clases de `Content\Site.css` (bloque "Pantallas de gestión
-(ABM)"): `barra-busqueda`, `tabla-abm` (+ `tabla-compacta` si tiene muchas columnas), `panel-gris`,
-`boton-rojo`/`boton-gris`/`boton-borde-rojo` (+ `boton-chico` en línea con un campo). Sin bordes
-`border border-1`, sin las clases `table table-striped...` de Bootstrap en las grillas. El fondo gris de
-toda la página sale de `html:has(.pantalla-abm)`, así que una pantalla nueva solo necesita el
-contenedor. Las pantallas de ingreso (Login, Registro, Recuperar/Restablecer clave) mantienen su
-tarjeta oscura propia. Las filas que el código resalta con un fondo en línea (stock bajo, saldo
-pendiente) conservan ese fondo.
+**Estilo de las pantallas (desde 2026-10-06, ampliado el 2026-10-07).** Todas las pantallas con menú
+ponen su contenido dentro de `<div class="pantalla-abm">` y usan las clases de `Content\Site.css`
+(bloque "Pantallas de gestión (ABM)"): `barra-herramientas` (+ `filtro-tabla-texto`, `opcion-barra`,
+`acciones-barra`), `tabla-abm` (+ `tabla-compacta` si tiene muchas columnas), el modal (`modal-content`
+con `modal-header`/`modal-body`/`modal-footer` y `acciones-secundarias` a la izquierda del pie),
+`campos-formulario` + `campo` para la grilla de campos, `selector-busqueda`, `panel-gris`,
+`boton-rojo`/`boton-gris`/`boton-borde-rojo`. Sin bordes `border border-1`, sin las clases
+`table table-striped...` de Bootstrap en las grillas. El fondo gris de toda la página sale de
+`html:has(.pantalla-abm)`, así que una pantalla nueva solo necesita el contenedor. Las pantallas de
+ingreso (Login, Registro, Recuperar/Restablecer clave) tienen su tarjeta propia (`.login-card`, clara
+desde 2026-10-07). Las filas que el código resalta con un fondo en línea (stock bajo, saldo pendiente)
+conservan ese fondo.
 
 ### Formato de DNI, CUIT y patente (Fase 2)
 
@@ -324,6 +362,13 @@ validadores de Cliente, Proveedor y Vehiculo:
 El CUIT es el único de los tres que necesita una función de formateo para mostrar (insertar los
 guiones en las posiciones 2 y 10 sobre los 11 dígitos guardados); DNI y patente se muestran igual
 que se guardan.
+
+Desde 2026-10-07, además:
+
+| Campo | Regla | Dónde vive |
+|---|---|---|
+| `Cliente.telefono`, `Proveedor.telefono` | opcional; números, espacios, guiones, puntos, paréntesis y "+" inicial, 6 a 15 dígitos | `Modelo/FormatoTelefono.cs` (clase aparte: la propiedad `Telefono` de las entidades taparía el nombre) |
+| `Vehiculo.anio` | opcional; de 1900 al año que viene | `Vehiculo.AnioMinimo`/`AnioMaximo`; la pantalla usa un `RangeValidator` con esos límites puestos desde el código |
 
 ### Patrón de validación de formularios (Fase 2)
 
@@ -629,3 +674,29 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   pantallas con banda "solo consulta" **cada** método de escritura chequea `EsSoloLectura` — no
   sólo la UI. **17/17 OK, 0 gaps reales** (a diferencia del hallazgo de ayer, que era sobre estado
   de orden, no sobre rol). Detalle completo en `Docs/EstadoActual.md`, sesión 2026-09-28.
+
+- **Pulido de interfaz (sesión 2026-10-07): modales, listas en el navegador, selectores con
+  búsqueda y cuenta corriente opcional.** Pedido del usuario en 12 puntos; el patrón quedó descrito
+  en «Formularios en modales y listas en el navegador» (arriba) y el detalle, en
+  `Docs/EstadoActual.md`. Decisiones que dejan precedente:
+
+  **El filtro de las listas corre en el navegador sobre la lista completa, no en el servidor.** Se
+  reemplazó el cuadro "Buscar" + botón de cada ABM por un filtro instantáneo, y los 10
+  `XxxDAL.Buscar` quedaron sin uso y se borraron (mismo criterio que con los wrappers de
+  `MovimientoStockDAL`: no se deja código sin llamador). Por la misma razón, el paginado de Insumos
+  y de los reportes pasó al navegador: con paginado de servidor, ordenar y filtrar solo habrían
+  visto la página actual. Si algún día una lista crece demasiado para traerla entera, hay que
+  volver a filtrar en el servidor; hoy los volúmenes de un lubricentro no lo justifican.
+
+  **El modal lo reabre el servidor, no se mantiene abierto solo.** Web Forms recarga la página en
+  cada postback completo, así que cada handler que deja el formulario a la vista llama a
+  `Interfaz.AbrirModal` (y los errores van adentro del modal). Donde eso haría parpadear el modal
+  en cada paso (líneas de una orden o de una compra, elegir un titular), el cuerpo va en un
+  `UpdatePanel`.
+
+  **Cuenta corriente opcional: el flag no toca `BIZ`.** Se evaluó obligar a cobrar dentro del
+  cierre de la orden (venta + pago en un solo paso). El usuario eligió que cerrar la orden de un
+  cliente sin cuenta corriente lleve a Pagos con la venta cargada: la venta y su movimiento de
+  cuenta corriente se siguen generando igual para todos, y el cobro es el `PagoDAL.Registrar` de
+  siempre. Que el interruptor lo maneje solo quien escribe en Cuenta corriente de clientes es
+  criterio nuestro (aplica la matriz de §5), pendiente de confirmar con el usuario.

@@ -74,6 +74,7 @@
     <Compile Include="Modelo\DetalleComprobanteVenta.cs" />
     <Compile Include="Modelo\DetalleOrdenInsumo.cs" />
     <Compile Include="Modelo\DetalleOrdenServicio.cs" />
+    <Compile Include="Modelo\FormatoTelefono.cs" />
     <Compile Include="Modelo\Insumo.cs" />
     <Compile Include="Modelo\ItemMenu.cs" />
     <Compile Include="Modelo\MovimientoStock.cs" />

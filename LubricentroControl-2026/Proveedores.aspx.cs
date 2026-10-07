@@ -3,24 +3,32 @@ using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
     // ABM de proveedores. Admin y Encargado, acceso completo; Empleado, solo consulta
-    // (Requerimientos §5): se le esconde todo el formulario, la grilla de Acciones, y
-    // los métodos de escritura del DAL igual rechazan la operación por las dudas.
+    // (Requerimientos §5): se le esconde el botón de alta, el modal del formulario y la columna
+    // de Acciones, y los métodos de escritura igual cortan al principio por las dudas.
     public partial class Proveedores : PaginaSegura
     {
         // Índice de la columna "Acciones" en gvProveedores.Columns — no tiene sentido
         // para el Empleado si no hay formulario donde cargar la selección.
         private const int ColumnaAcciones = 5;
 
+        private const string IdModal = "modalProveedor";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+            pnlErrorFormulario.Visible = false;
+
             if (IsPostBack) return;
 
             if (EsSoloLectura)
             {
+                btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
                 gvProveedores.Columns[ColumnaAcciones].Visible = false;
             }
@@ -28,20 +36,11 @@ namespace LubricentroControl_2026
             CargarGrilla();
         }
 
+        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            var incluirInactivos = chkIncluirInactivos.Checked;
-            var texto = txtBuscar.Text;
-
-            gvProveedores.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? ProveedorDAL.Listar(incluirInactivos)
-                : ProveedorDAL.Buscar(texto, incluirInactivos);
+            gvProveedores.DataSource = ProveedorDAL.Listar(chkIncluirInactivos.Checked);
             gvProveedores.DataBind();
-        }
-
-        protected void btnBuscar_Click(object sender, EventArgs e)
-        {
-            CargarGrilla();
         }
 
         protected void chkIncluirInactivos_CheckedChanged(object sender, EventArgs e)
@@ -54,11 +53,17 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
 
             LimpiarFormulario();
+            MostrarFormulario();
         }
 
         protected void valCuit_ServerValidate(object source, ServerValidateEventArgs args)
         {
             args.IsValid = Proveedor.EsCuitValido(args.Value);
+        }
+
+        protected void valTelefono_ServerValidate(object source, ServerValidateEventArgs args)
+        {
+            args.IsValid = FormatoTelefono.EsValido(args.Value);
         }
 
         protected void valEmail_ServerValidate(object source, ServerValidateEventArgs args)
@@ -69,7 +74,11 @@ namespace LubricentroControl_2026
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
-            if (!Page.IsValid) return;
+            if (!Page.IsValid)
+            {
+                MostrarFormulario();
+                return;
+            }
 
             var proveedor = new Proveedor
             {
@@ -88,7 +97,7 @@ namespace LubricentroControl_2026
 
             if (!resultado.Exito)
             {
-                MostrarMensaje(resultado.Mensaje, false);
+                MostrarErrorFormulario(resultado.Mensaje);
                 return;
             }
 
@@ -102,8 +111,29 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
 
             var baja = ProveedorDAL.Desactivar(LeerIdOculto(hdnIdProveedor.Value));
+            if (!baja.Exito)
+            {
+                MostrarErrorFormulario(baja.Mensaje);
+                return;
+            }
 
-            MostrarMensaje(baja.Mensaje, baja.Exito);
+            MostrarMensaje(baja.Mensaje, true);
+            LimpiarFormulario();
+            CargarGrilla();
+        }
+
+        protected void btnReactivar_Click(object sender, EventArgs e)
+        {
+            if (EsSoloLectura) return;
+
+            var alta = ProveedorDAL.Reactivar(LeerIdOculto(hdnIdProveedor.Value));
+            if (!alta.Exito)
+            {
+                MostrarErrorFormulario(alta.Mensaje);
+                return;
+            }
+
+            MostrarMensaje(alta.Mensaje, true);
             LimpiarFormulario();
             CargarGrilla();
         }
@@ -111,7 +141,7 @@ namespace LubricentroControl_2026
         protected void gvProveedores_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (EsSoloLectura) return;
-            if (e.CommandName != "Seleccionar") return;
+            if (e.CommandName != "Editar") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
@@ -134,8 +164,10 @@ namespace LubricentroControl_2026
             txtEmail.Text = proveedor.Email;
             txtDireccion.Text = proveedor.Direccion;
             btnBorrar.Visible = proveedor.Activo;
+            btnReactivar.Visible = !proveedor.Activo;
 
-            litTituloFormulario.Text = "Editar proveedor";
+            litTituloFormulario.Text = proveedor.Activo ? "Editar proveedor" : "Editar proveedor (inactivo)";
+            MostrarFormulario();
         }
 
         // Por defecto activo si el campo oculto llegara vacío o manipulado
@@ -164,7 +196,21 @@ namespace LubricentroControl_2026
             txtEmail.Text = string.Empty;
             txtDireccion.Text = string.Empty;
             btnBorrar.Visible = false;
+            btnReactivar.Visible = false;
             litTituloFormulario.Text = "Nuevo proveedor";
+        }
+
+        private void MostrarFormulario()
+        {
+            Interfaz.AbrirModal(this, IdModal);
+        }
+
+        // Un error al guardar se muestra adentro del modal, que vuelve a abrirse con lo cargado.
+        private void MostrarErrorFormulario(string mensajeHtml)
+        {
+            litErrorFormulario.Text = mensajeHtml;
+            pnlErrorFormulario.Visible = true;
+            MostrarFormulario();
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

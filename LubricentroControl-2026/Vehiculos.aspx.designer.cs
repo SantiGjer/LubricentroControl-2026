@@ -26,23 +26,11 @@ namespace LubricentroControl_2026
         /// <summary>Control hdnOrIdTurno.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnOrIdTurno;
 
-        /// <summary>Control pnlVieneDeOrden.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlVieneDeOrden;
-
-        /// <summary>Control btnVolverAOrdenes.</summary>
-        protected global::System.Web.UI.WebControls.Button btnVolverAOrdenes;
-
-        /// <summary>Control txtBuscar.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscar;
-
-        /// <summary>Control btnBuscar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscar;
-
-        /// <summary>Control btnNuevoCliente.</summary>
-        protected global::System.Web.UI.WebControls.Button btnNuevoCliente;
-
         /// <summary>Control chkIncluirInactivos.</summary>
         protected global::System.Web.UI.WebControls.CheckBox chkIncluirInactivos;
+
+        /// <summary>Control btnNuevo.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevo;
 
         /// <summary>Control gvVehiculos.</summary>
         protected global::System.Web.UI.WebControls.GridView gvVehiculos;
@@ -53,35 +41,41 @@ namespace LubricentroControl_2026
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;
 
+        /// <summary>Control pnlErrorFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlErrorFormulario;
+
+        /// <summary>Control litErrorFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litErrorFormulario;
+
+        /// <summary>Control pnlVieneDeOrden.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlVieneDeOrden;
+
+        /// <summary>Control btnVolverAOrdenes.</summary>
+        protected global::System.Web.UI.WebControls.Button btnVolverAOrdenes;
+
         /// <summary>Control hdnIdVehiculo.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdVehiculo;
 
         /// <summary>Control hdnActivo.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnActivo;
 
-        /// <summary>Control upnlCliente.</summary>
-        protected global::System.Web.UI.UpdatePanel upnlCliente;
+        /// <summary>Control txtCliente.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtCliente;
 
         /// <summary>Control hdnIdCliente.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdCliente;
 
-        /// <summary>Control litClienteSeleccionado.</summary>
-        protected global::System.Web.UI.WebControls.Label litClienteSeleccionado;
-
-        /// <summary>Control txtBuscarCliente.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscarCliente;
-
-        /// <summary>Control btnBuscarCliente.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscarCliente;
-
-        /// <summary>Control pnlResultadosCliente.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlResultadosCliente;
-
-        /// <summary>Control rptResultadosCliente.</summary>
-        protected global::System.Web.UI.WebControls.Repeater rptResultadosCliente;
+        /// <summary>Control btnNuevoCliente.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevoCliente;
 
         /// <summary>Control txtPatente.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtPatente;
+
+        /// <summary>Control txtAnio.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtAnio;
+
+        /// <summary>Control valAnio.</summary>
+        protected global::System.Web.UI.WebControls.RangeValidator valAnio;
 
         /// <summary>Control txtMarca.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtMarca;
@@ -89,19 +83,16 @@ namespace LubricentroControl_2026
         /// <summary>Control txtModelo.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtModelo;
 
-        /// <summary>Control txtAnio.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtAnio;
-
         /// <summary>Control ddlTipoCombustible.</summary>
         protected global::System.Web.UI.WebControls.DropDownList ddlTipoCombustible;
 
-        /// <summary>Control btnGuardar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnGuardar;
-
-        /// <summary>Control btnNuevo.</summary>
-        protected global::System.Web.UI.WebControls.Button btnNuevo;
-
         /// <summary>Control btnBorrar.</summary>
         protected global::System.Web.UI.WebControls.Button btnBorrar;
+
+        /// <summary>Control btnReactivar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnReactivar;
+
+        /// <summary>Control btnGuardar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnGuardar;
     }
 }

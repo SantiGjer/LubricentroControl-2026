@@ -9,7 +9,7 @@ namespace BIZ.Data
     public static class ComprobanteCompraDAL
     {
         private const string SelectBase = @"
-            SELECT c.idCompra, c.idProveedor, p.razonSocial, c.numeroComprobante, c.fecha,
+            SELECT c.idCompra, c.idProveedor, p.razonSocial, p.cuit, c.numeroComprobante, c.fecha,
                    c.condicionPago, c.medioPago, c.subtotal, c.impuestos, c.total, c.saldoPendiente
             FROM ComprobanteCompra c
             INNER JOIN Proveedor p ON p.idProveedor = c.idProveedor";
@@ -21,6 +21,7 @@ namespace BIZ.Data
                 IdCompra = AccesoDatos.LeerInt(fila, "idCompra"),
                 IdProveedor = AccesoDatos.LeerInt(fila, "idProveedor"),
                 RazonSocial = AccesoDatos.LeerString(fila, "razonSocial"),
+                Cuit = AccesoDatos.LeerString(fila, "cuit"),
                 NumeroComprobante = AccesoDatos.LeerString(fila, "numeroComprobante"),
                 Fecha = AccesoDatos.LeerFecha(fila, "fecha"),
                 CondicionPago = AccesoDatos.LeerString(fila, "condicionPago"),
@@ -61,26 +62,6 @@ namespace BIZ.Data
             foreach (DataRow fila in AccesoDatos.Consultar(
                 SelectBase + " WHERE c.idProveedor = @idProveedor AND c.saldoPendiente > 0 ORDER BY c.fecha, c.idCompra",
                 AccesoDatos.Param("@idProveedor", idProveedor)).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
-        // Razón social, CUIT (sin importar guiones) o número de comprobante.
-        public static List<ComprobanteCompra> Buscar(string texto)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar();
-
-            const string sql = SelectBase + @"
-                WHERE p.razonSocial LIKE @texto OR p.cuit LIKE @textoCuit OR c.numeroComprobante LIKE @texto
-                ORDER BY c.fecha DESC";
-
-            var lista = new List<ComprobanteCompra>();
-            var comodin = "%" + texto.Trim() + "%";
-            var comodinCuit = "%" + texto.Trim().Replace("-", "") + "%";
-            foreach (DataRow fila in AccesoDatos.Consultar(sql,
-                AccesoDatos.Param("@texto", comodin),
-                AccesoDatos.Param("@textoCuit", comodinCuit)).Rows)
                 lista.Add(Mapear(fila));
             return lista;
         }

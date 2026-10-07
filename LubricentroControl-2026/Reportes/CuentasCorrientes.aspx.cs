@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
@@ -12,7 +11,7 @@ namespace LubricentroControl_2026.Reportes
     // con saldo actual. Decidido con el usuario: entran clientes y proveedores con saldo
     // distinto de cero, cualquier signo (deuda o a favor) — no es un listado completo ni sólo
     // deudores. Dos secciones independientes en la misma pantalla, cada una con su propio
-    // resumen + grilla paginada, mismo formato que StockBajo y VentasPorPeriodo.
+    // resumen + grilla (paginada en el navegador), mismo formato que StockBajo y VentasPorPeriodo.
     public partial class CuentasCorrientes : PaginaSegura
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -87,18 +86,6 @@ namespace LubricentroControl_2026.Reportes
             }
 
             return texto + ".";
-        }
-
-        protected void gvClientes_PageIndexChanging(object sender, GridViewPageEventArgs e)
-        {
-            gvClientes.PageIndex = e.NewPageIndex;
-            CargarClientes();
-        }
-
-        protected void gvProveedores_PageIndexChanging(object sender, GridViewPageEventArgs e)
-        {
-            gvProveedores.PageIndex = e.NewPageIndex;
-            CargarProveedores();
         }
     }
 }

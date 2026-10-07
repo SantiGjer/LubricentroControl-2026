@@ -53,22 +53,6 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Nombre/apellido del cliente o razón social del proveedor.
-        public static List<Pago> Buscar(string texto)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar();
-
-            const string sql = SelectBase + @"
-                WHERE cl.nombre LIKE @texto OR cl.apellido LIKE @texto OR pr.razonSocial LIKE @texto
-                ORDER BY p.fecha DESC";
-
-            var lista = new List<Pago>();
-            foreach (DataRow fila in AccesoDatos.Consultar(sql, AccesoDatos.Param("@texto", "%" + texto.Trim() + "%")).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         public static List<Pago> ListarPorVenta(int idVenta)
         {
             var lista = new List<Pago>();

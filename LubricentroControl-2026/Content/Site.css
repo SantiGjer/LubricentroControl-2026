@@ -20,10 +20,10 @@ textarea {
     }
 }
 
-/* ===== Login ===== */
+/* ===== Pantallas de ingreso: Login, Registro, Recuperar y Restablecer clave =====
+   Tarjeta clara sobre el mismo gris que el resto de las pantallas, con la paleta de las
+   pantallas de gestión: rojo para la acción principal y los enlaces, negro para los títulos. */
 
-/* Mismo gris de fondo que el resto de las pantallas (ver "Pantallas de gestión"), para las
-   cuatro pantallas de ingreso: Login, Registro, Recuperar y Restablecer clave. */
 html:has(.login-page),
 body:has(.login-page) {
     background: #cdd0d4;
@@ -43,12 +43,12 @@ body:has(.login-page) {
 .login-card {
     position: relative;
     width: 100%;
-    max-width: 380px;
-    background: #1c2128;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 2.5rem 2rem 2rem;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+    max-width: 400px;
+    background: #f8f9fa;
+    border: 1px solid #d5d8db;
+    border-radius: 14px;
+    padding: 2.75rem 2.25rem 2.1rem;
+    box-shadow: 0 22px 48px rgba(13, 15, 17, 0.22), 0 2px 6px rgba(13, 15, 17, 0.08);
     overflow: hidden;
 }
 
@@ -57,72 +57,94 @@ body:has(.login-page) {
     top: 0;
     left: 0;
     right: 0;
-    height: 5px;
-    background: linear-gradient(90deg, #c0272d 0%, #7a3f6b 50%, #1f5fa8 100%);
+    height: 6px;
+    background: linear-gradient(90deg, #c0272d 0%, #c0272d 55%, #212529 100%);
+}
+
+/* Isotipo: gota de aceite roja sobre un círculo negro. */
+.login-marca {
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 1rem;
+    border-radius: 50%;
+    background: #212529;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 14px rgba(13, 15, 17, 0.25);
+}
+
+.login-marca svg {
+    width: 28px;
+    height: 28px;
 }
 
 .login-title {
-    color: #f1f1f1;
-    font-weight: 700;
+    color: #0d0f11;
+    font-weight: 800;
+    font-size: 1.8rem;
     text-align: center;
-    margin-bottom: 0.15rem;
-    letter-spacing: 0.03em;
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.01em;
 }
 
 .login-subtitle {
-    color: #8b949e;
+    color: #6c757d;
     text-align: center;
     text-transform: uppercase;
-    font-size: 0.78rem;
-    letter-spacing: 0.15em;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
     margin-bottom: 1.75rem;
 }
 
 .login-mensaje {
-    background: rgba(192, 39, 45, 0.15);
-    border: 1px solid #c0272d;
-    color: #ff9a9d;
-    border-radius: 6px;
-    padding: 0.6rem 0.9rem;
+    background: #f8d7da;
+    border: 1px solid #f1aeb5;
+    color: #842029;
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
     font-size: 0.9rem;
     margin-bottom: 1.25rem;
 }
 
 .login-texto {
-    color: #8b949e;
-    font-size: 0.9rem;
+    color: #495057;
+    font-size: 0.92rem;
     margin-bottom: 1.5rem;
 }
 
 /* RecuperarClave/RestablecerClave arman pnlMensaje con las clases genéricas
-   alert-success/alert-danger desde el code-behind; se restylean acá para que
-   no rompan el contraste con la tarjeta oscura. */
+   alert-success/alert-danger desde el code-behind. */
 .login-card .alert {
-    border-radius: 6px;
-    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
     font-size: 0.9rem;
     margin-bottom: 1.25rem;
 }
 
 .login-card .alert-success {
-    background: rgba(46, 160, 67, 0.15);
-    border: 1px solid #2ea043;
-    color: #7ee2a8;
+    background: #d1e7dd;
+    border: 1px solid #a3cfbb;
+    color: #0a3622;
 }
 
 .login-card .alert-danger {
-    background: rgba(192, 39, 45, 0.15);
-    border: 1px solid #c0272d;
-    color: #ff9a9d;
+    background: #f8d7da;
+    border: 1px solid #f1aeb5;
+    color: #842029;
+}
+
+.login-card .text-danger {
+    color: #b02a37 !important;
 }
 
 .login-campo {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.15rem;
 }
 
 .login-label {
     display: block;
-    color: #c9d1d9;
+    color: #495057;
     font-size: 0.85rem;
     font-weight: 600;
     margin-bottom: 0.35rem;
@@ -131,66 +153,79 @@ body:has(.login-page) {
 .login-input {
     width: 100% !important;
     max-width: 100% !important;
-    background: #0d1117;
-    border: 1px solid #30363d;
-    border-radius: 6px;
-    padding: 0.55rem 0.75rem;
-    color: #f1f1f1;
+    background: #fff;
+    border: 1px solid #c4c8cc;
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    color: #212529;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .login-input:focus {
     outline: none;
-    border-color: #1f5fa8;
-    box-shadow: 0 0 0 3px rgba(31, 95, 168, 0.35);
+    border-color: #c0272d;
+    box-shadow: 0 0 0 3px rgba(192, 39, 45, 0.2);
 }
 
 .login-btn {
     width: 100%;
-    background: #1f5fa8;
-    border: 1px solid #1f5fa8;
+    background: #c0272d;
+    border: 1px solid #c0272d;
     color: #fff;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    padding: 0.65rem 0.75rem;
-    border-radius: 6px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.7rem 0.75rem;
+    border-radius: 8px;
     margin-top: 0.5rem;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+    box-shadow: 0 6px 14px rgba(192, 39, 45, 0.25);
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .login-btn:hover {
-    background: #184e8a;
-    border-color: #184e8a;
+    background: #a11f24;
+    border-color: #a11f24;
 }
 
 .login-btn:active {
-    background: #123c6b;
+    background: #861a1e;
+}
+
+.login-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(192, 39, 45, 0.35);
+}
+
+/* Línea que separa el formulario de los enlaces de abajo. */
+.login-separador {
+    height: 1px;
+    background: #dee2e6;
+    margin: 1.6rem 0 1rem;
 }
 
 .login-link {
     text-align: center;
-    margin: 1.25rem 0 0;
+    margin: 0.55rem 0 0;
 }
 
 .login-link a {
     color: #c0272d;
     text-decoration: none;
     font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .login-link a:hover {
-    color: #e13a41;
+    color: #a11f24;
     text-decoration: underline;
 }
 
-/* ===== Pantallas de gestión (ABM): estilo básico =====
-   Empezó en Clientes y se extendió a los demás ABM y a Inicio. Cada pantalla pone su contenido
-   dentro de un contenedor con la clase pantalla-abm.
+/* ===== Pantallas de gestión (ABM) =====
+   Cada pantalla pone su contenido dentro de un contenedor con la clase pantalla-abm.
    Todo está acotado a .pantalla-abm para no afectar a las demás pantallas.
    Sin bordes entre filas/campos, relleno general, tabla con aire para leer y
-   paleta rojo / negro / gris. Respaldo del estado anterior en Respaldos\. */
+   paleta rojo / negro / gris. */
 
-/* Fondo gris de toda la página, solo cuando está la pantalla de Clientes. */
+/* Fondo gris de toda la página cuando está una pantalla de gestión. */
 html:has(.pantalla-abm),
 body:has(.pantalla-abm) {
     background: #cdd0d4;
@@ -218,6 +253,13 @@ body:has(.pantalla-abm) {
     margin-bottom: 0.5rem;
 }
 
+.pantalla-abm h3 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0d0f11;
+    margin: 0 0 0.75rem;
+}
+
 .pantalla-abm > .row {
     --bs-gutter-x: 2rem;
 }
@@ -228,33 +270,65 @@ body:has(.pantalla-abm) {
     padding: 0.9rem 1.1rem;
 }
 
-/* --- Buscador --- */
-.pantalla-abm .barra-busqueda {
-    --bs-gutter-x: 0;
+/* --- Barra de herramientas arriba de cada lista ---
+   Filtro de la tabla a la izquierda, opciones en el medio y el botón "Nuevo ..." a la derecha. */
+.pantalla-abm .barra-herramientas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
     background: #e6e8ea;
     border-radius: 10px;
-    padding: 1rem;
+    padding: 0.9rem 1rem;
     margin: 0 0 1.25rem;
-    align-items: flex-end;
 }
 
-.pantalla-abm .barra-busqueda > [class*="col-"] {
-    padding: 0.25rem 0.5rem;
+.pantalla-abm .barra-herramientas .filtro-tabla-texto {
+    flex: 1 1 260px;
+    max-width: 440px;
 }
 
-.pantalla-abm .barra-busqueda label {
-    display: block;
-    font-size: 0.85rem;
+.pantalla-abm .barra-herramientas .opcion-barra {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.9rem;
+    color: #343a40;
+}
+
+.pantalla-abm .barra-herramientas .opcion-barra label {
+    margin: 0;
     font-weight: 600;
     color: #495057;
-    margin-bottom: 0.35rem;
 }
 
-/* El "Incluir inactivos" va en línea con su casilla. */
-.pantalla-abm .barra-busqueda [class*="col-"] + [class*="col-"] label {
-    display: inline;
-    font-weight: 400;
-    margin-left: 0.25rem;
+.pantalla-abm .barra-herramientas .opcion-barra select {
+    width: auto;
+}
+
+/* El botón principal se va a la derecha, separado del filtro y de las opciones. */
+.pantalla-abm .barra-herramientas .acciones-barra {
+    margin-left: auto;
+}
+
+.pantalla-abm .barra-herramientas .boton-rojo,
+.pantalla-abm .barra-herramientas .boton-gris {
+    margin: 0;
+}
+
+/* --- Filtro de tabla (con lupa) --- */
+.pantalla-abm input.filtro-tabla-texto {
+    padding-left: 2.2rem;
+    background: #f2f3f4 url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3e%3c/svg%3e") no-repeat 0.75rem center / 0.95rem;
+}
+
+/* Filtro que Lubricentro.js agrega arriba de las tablas que no tienen barra propia. */
+.pantalla-abm .filtro-tabla {
+    margin: 0 0 0.75rem;
+}
+
+.pantalla-abm .filtro-tabla input {
+    max-width: 380px;
 }
 
 /* --- Campos de texto --- */
@@ -262,11 +336,14 @@ body:has(.pantalla-abm) {
 .pantalla-abm input[type="email"],
 .pantalla-abm input[type="password"],
 .pantalla-abm input[type="date"],
-.pantalla-abm input[type="time"] {
+.pantalla-abm input[type="time"],
+.pantalla-abm input[type="number"],
+.pantalla-abm input[type="tel"],
+.pantalla-abm input[type="search"] {
     width: 100%;
     max-width: 100%;
     padding: 0.5rem 0.7rem;
-    background: #f2f3f4;
+    background-color: #f2f3f4;
     border: 1px solid #c4c8cc;
     border-radius: 6px;
     color: #212529;
@@ -276,89 +353,22 @@ body:has(.pantalla-abm) {
 .pantalla-abm input[type="email"]:focus,
 .pantalla-abm input[type="password"]:focus,
 .pantalla-abm input[type="date"]:focus,
-.pantalla-abm input[type="time"]:focus {
+.pantalla-abm input[type="time"]:focus,
+.pantalla-abm input[type="number"]:focus,
+.pantalla-abm input[type="tel"]:focus,
+.pantalla-abm input[type="search"]:focus,
+.pantalla-abm select:focus,
+.pantalla-abm textarea:focus {
     outline: none;
     border-color: #c0272d;
     box-shadow: 0 0 0 3px rgba(192, 39, 45, 0.2);
 }
 
-/* --- Formulario ---
-   Panel gris: la columna derecha de los ABM (col-5) o cualquier bloque con .panel-gris. */
-.pantalla-abm .col-5 > div,
-.pantalla-abm .panel-gris {
-    background: #e6e8ea;
-    border-radius: 10px;
-    padding: 1.5rem;
-}
-
-.pantalla-abm .panel-gris {
-    max-width: 560px;
-    margin-bottom: 1.5rem;
-}
-
-/* Paneles de detalle a media pantalla (Órdenes: servicios e insumos) o a todo el ancho
-   (tablero del Inicio): sin tope de ancho. */
-.pantalla-abm .col-6 > .panel-gris,
-.pantalla-abm .col-12 > .panel-gris {
-    max-width: none;
-}
-
-/* Resúmenes de los reportes y notas de página. */
-.pantalla-abm .alert-secondary {
-    background: #e6e8ea;
-    color: #212529;
-}
-
-.pantalla-abm .texto-nota {
-    padding-left: 1.5rem;
-    color: #343a40;
-    margin-bottom: 1rem;
-}
-
-.pantalla-abm .titulo-accesos,
-.pantalla-abm .titulo-seccion {
-    padding-left: 1.5rem;
-}
-
-.pantalla-abm .barra-busqueda br {
-    display: none;
-}
-
-/* Filtros por fecha (Reporte de ventas): todas las etiquetas arriba de su campo. */
-.pantalla-abm .barra-fechas [class*="col-"] label {
-    display: block !important;
-    font-weight: 600 !important;
-    margin-left: 0 !important;
-}
-
-/* Enlace con aspecto de botón (Acceso denegado). */
-.pantalla-abm a.enlace-boton {
-    display: inline-block;
-    text-decoration: none;
-    margin-top: 0;
-    color: #fff;
-}
-
-.pantalla-abm .col-5 .row,
-.pantalla-abm .panel-gris .row {
-    --bs-gutter-x: 0;
-    margin: 0;
-}
-
-.pantalla-abm .col-5 .row > [class*="col-"] label,
-.pantalla-abm .panel-gris .row > [class*="col-"] label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
+.pantalla-abm input:disabled,
+.pantalla-abm select:disabled {
+    background-color: #e2e5e8;
     color: #495057;
-    margin: 0.9rem 0 0.3rem;
-}
-
-/* Etiqueta que va en línea con su casilla (p. ej. "Activo"). */
-.pantalla-abm .etiqueta-inline {
-    display: inline !important;
-    font-weight: 400 !important;
-    margin: 0 0 0 0.25rem !important;
+    cursor: default;
 }
 
 .pantalla-abm select {
@@ -384,11 +394,290 @@ body:has(.pantalla-abm) {
     display: none;
 }
 
-/* Lista desplegable de resultados del buscador de dueño: pisa los estilos en línea. */
-.pantalla-abm div[id$="pnlResultadosCliente"] {
-    background: #f2f3f4 !important;
-    border: 1px solid #c4c8cc !important;
+/* --- Formularios (dentro de los modales y de los paneles grises) --- */
+.pantalla-abm .panel-gris {
+    background: #e6e8ea;
+    border-radius: 10px;
+    padding: 1.5rem;
+    max-width: 560px;
+    margin-bottom: 1.5rem;
+}
+
+/* Paneles a media pantalla o a todo el ancho (tablero del Inicio, detalle de una orden):
+   sin tope de ancho. */
+.pantalla-abm .col-6 > .panel-gris,
+.pantalla-abm .col-12 > .panel-gris,
+.pantalla-abm .col-lg-6 > .panel-gris {
+    max-width: none;
+}
+
+.pantalla-abm .panel-gris .row {
+    --bs-gutter-x: 0;
+    margin: 0;
+}
+
+.pantalla-abm .panel-gris .row > [class*="col-"] label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin: 0.9rem 0 0.3rem;
+}
+
+/* Grilla de campos de un formulario: cada .campo lleva su etiqueta, el control y los
+   validadores. Con col-md-6 quedan dos campos por fila. */
+.pantalla-abm .campos-formulario {
+    --bs-gutter-x: 1.25rem;
+    --bs-gutter-y: 1rem;
+}
+
+.pantalla-abm .campo label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin: 0 0 0.3rem;
+}
+
+.pantalla-abm .campo .text-danger {
+    display: block;
+    margin-top: 0.25rem;
+}
+
+/* Los desplegables de un formulario, del mismo ancho que los campos de texto. */
+.pantalla-abm .campo > select {
+    width: 100%;
+}
+
+/* Texto fijo en lugar de un campo (lo que ya no se puede cambiar al editar). */
+.pantalla-abm .valor-fijo {
+    padding: 0.5rem 0;
+    font-weight: 600;
+}
+
+.pantalla-abm .texto-ayuda {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin: 0.35rem 0 0;
+}
+
+/* Etiqueta que va en línea con su casilla (p. ej. "Activo"). */
+.pantalla-abm .etiqueta-inline {
+    display: inline !important;
+    font-weight: 400 !important;
+    margin: 0 0 0 0.25rem !important;
+}
+
+/* Interruptor (form-switch de Bootstrap) con el rojo de la paleta. */
+.pantalla-abm .form-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding-left: 0;
+    margin: 0.25rem 0 0;
+}
+
+.pantalla-abm .form-switch .form-check-input {
+    width: 2.6em;
+    height: 1.35em;
+    margin: 0;
+    float: none;
+    cursor: pointer;
+}
+
+.pantalla-abm .form-switch .form-check-input:checked {
+    background-color: #c0272d;
+    border-color: #c0272d;
+}
+
+.pantalla-abm .form-switch .form-check-input:focus {
+    border-color: #c0272d;
+    box-shadow: 0 0 0 3px rgba(192, 39, 45, 0.2);
+}
+
+.pantalla-abm .form-switch .form-check-input:focus:not(:checked) {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23e3a2a5'/%3e%3c/svg%3e");
+}
+
+.pantalla-abm .form-switch .form-check-input:disabled {
+    cursor: default;
+}
+
+.pantalla-abm .form-switch .form-check-label {
+    margin: 0;
+    font-weight: 600;
+    color: #343a40;
+}
+
+/* Datos de solo lectura en dos columnas (detalle de una compra o de una venta). */
+.pantalla-abm .datos-resumen {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.35rem 1.5rem;
+    margin: 0 0 1.25rem;
+}
+
+.pantalla-abm .datos-resumen dt {
+    font-weight: 600;
+    color: #495057;
+}
+
+.pantalla-abm .datos-resumen dd {
+    margin: 0;
+}
+
+/* --- Modales (formularios de alta y edición, detalles) --- */
+.pantalla-abm .modal-content {
+    background: #e6e8ea;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(13, 15, 17, 0.35);
+}
+
+.pantalla-abm .modal-header {
+    background: #212529;
+    border-bottom: 3px solid #c0272d;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.5rem;
+}
+
+.pantalla-abm .modal-header .modal-title {
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.pantalla-abm .modal-body {
+    padding: 1.35rem 1.5rem 1.5rem;
+}
+
+.pantalla-abm .modal-body > .alert {
+    margin-bottom: 1.25rem;
+}
+
+.pantalla-abm .modal-footer {
+    background: #dcdfe2;
+    border-top: 1px solid #c4c8cc;
+    border-radius: 0 0 12px 12px;
+    padding: 0.85rem 1.5rem;
+    gap: 0.5rem;
+}
+
+.pantalla-abm .modal-footer > * {
+    margin: 0;
+}
+
+/* Las acciones que no son "guardar" (borrar, reactivar, cerrar/cancelar orden) van a la izquierda. */
+.pantalla-abm .modal-footer .acciones-secundarias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-right: auto;
+}
+
+.pantalla-abm .modal-footer .boton-rojo,
+.pantalla-abm .modal-footer .boton-gris,
+.pantalla-abm .modal-footer .boton-borde-rojo {
+    margin: 0;
+}
+
+/* Secciones dentro de un modal grande (historial, ajuste, detalle de una orden). */
+.pantalla-abm .seccion-modal {
+    background: #dcdfe2;
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    height: 100%;
+}
+
+.pantalla-abm .separador-modal {
+    border-top: 1px solid #c4c8cc;
+    margin: 1.5rem 0 1.25rem;
+}
+
+/* --- Selector con búsqueda (dueño, cliente, proveedor) ---
+   Campo de texto con el botón de búsqueda adentro; la lista desplegable la arma Lubricentro.js. */
+.pantalla-abm .selector-busqueda {
+    position: relative;
+}
+
+.pantalla-abm .selector-busqueda .selector-texto {
+    padding-right: 2.8rem;
+}
+
+.pantalla-abm .selector-boton {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    height: calc(100% - 2px);
+    width: 2.5rem;
+    border: 0;
+    border-left: 1px solid #c4c8cc;
+    border-radius: 0 5px 5px 0;
+    background: #e2e5e8 url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23495057'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3e%3c/svg%3e") no-repeat center / 0.95rem;
+    cursor: pointer;
+}
+
+.pantalla-abm .selector-boton:hover {
+    background-color: #d3d7db;
+}
+
+.pantalla-abm .selector-boton:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.pantalla-abm .selector-lista {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    max-height: 260px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.3rem 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #c4c8cc;
     border-radius: 6px;
+    box-shadow: 0 12px 28px rgba(13, 15, 17, 0.2);
+}
+
+.pantalla-abm .selector-opcion {
+    padding: 0.45rem 0.8rem;
+    cursor: pointer;
+}
+
+.pantalla-abm .selector-opcion.activa {
+    background: #efc9cb;
+}
+
+.pantalla-abm .selector-opcion.elegida {
+    font-weight: 700;
+}
+
+.pantalla-abm .selector-vacio {
+    padding: 0.45rem 0.8rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Selector con un botón al lado (p. ej. "Nuevo cliente" junto al dueño de un vehículo). */
+.pantalla-abm .selector-con-boton {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.pantalla-abm .selector-con-boton .selector-busqueda {
+    flex: 1 1 auto;
+}
+
+.pantalla-abm .selector-con-boton .boton-gris,
+.pantalla-abm .selector-con-boton .boton-rojo {
+    margin: 0;
+    white-space: nowrap;
 }
 
 /* --- Botones --- */
@@ -436,7 +725,7 @@ body:has(.pantalla-abm) {
     color: #fff;
 }
 
-/* Los botones del buscador y de los avisos no necesitan el margen superior grande. */
+/* Los botones de los avisos no necesitan el margen superior grande. */
 .pantalla-abm .barra-busqueda .boton-rojo,
 .pantalla-abm .alert .boton-gris {
     margin-top: 0;
@@ -446,10 +735,18 @@ body:has(.pantalla-abm) {
     margin-left: 0.75rem;
 }
 
-/* Botones chicos en línea con un campo (p. ej. buscar/crear dueño en Vehículos). */
+/* Botones chicos en línea con un campo (p. ej. "Nuevo cliente" junto al selector de dueño). */
 .pantalla-abm .boton-chico {
     margin: 0.5rem 0.4rem 0 0;
     padding: 0.35rem 0.9rem;
+}
+
+/* Enlace con aspecto de botón (Acceso denegado, tarjetas del Inicio). */
+.pantalla-abm a.enlace-boton {
+    display: inline-block;
+    text-decoration: none;
+    margin-top: 0;
+    color: #fff;
 }
 
 /* --- Tabla --- */
@@ -478,7 +775,9 @@ body:has(.pantalla-abm) {
     vertical-align: middle;
 }
 
-.pantalla-abm .tabla-abm tr:nth-child(odd) td {
+/* Filas alternadas: la clase la pone Lubricentro.js, contando solo las filas que quedan a la
+   vista después de filtrar (con :nth-child las ocultas romperían la alternancia). */
+.pantalla-abm .tabla-abm tr.fila-alterna td {
     background: #dcdfe2;
 }
 
@@ -496,12 +795,12 @@ body:has(.pantalla-abm) {
     text-decoration: underline;
 }
 
-/* Acciones con varios enlaces (Usuarios): separados entre sí. */
+/* Acciones con varios enlaces (Usuarios, Cuenta corriente): separados entre sí. */
 .pantalla-abm .tabla-abm a + a {
     margin-left: 0.75rem;
 }
 
-/* Filas con fondo propio puesto desde el código (Insumos: stock bajo) conservan ese fondo. */
+/* Filas con fondo propio puesto desde el código (stock bajo, saldo pendiente) conservan ese fondo. */
 .pantalla-abm .tabla-abm tr[style*="background-color"] td {
     background: transparent;
 }
@@ -513,7 +812,129 @@ body:has(.pantalla-abm) {
     font-size: 0.85rem;
 }
 
-/* --- Inicio (tablero) --- */
+/* Encabezados ordenables (Lubricentro.js): flecha doble apagada, o la del sentido elegido. */
+.pantalla-abm .tabla-abm th.ordenable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.pantalla-abm .tabla-abm th.ordenable::after {
+    content: "\2195";
+    margin-left: 0.4rem;
+    opacity: 0.35;
+    font-size: 0.85em;
+}
+
+.pantalla-abm .tabla-abm th.orden-asc::after {
+    content: "\25B2";
+    opacity: 0.95;
+    font-size: 0.7em;
+}
+
+.pantalla-abm .tabla-abm th.orden-desc::after {
+    content: "\25BC";
+    opacity: 0.95;
+    font-size: 0.7em;
+}
+
+.pantalla-abm .tabla-abm th.ordenable:hover,
+.pantalla-abm .tabla-abm th.ordenable:focus-visible {
+    background: #343a40;
+    outline: none;
+}
+
+.pantalla-abm .tabla-abm tr.fila-sin-resultados td {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    background: #e6e8ea;
+}
+
+/* Paginado de las tablas largas (Insumos, reportes). */
+.pantalla-abm .paginador-tabla {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.85rem;
+}
+
+.pantalla-abm .paginador-boton {
+    background: transparent;
+    border: 1px solid #c0272d;
+    border-radius: 6px;
+    color: #c0272d;
+    font-weight: 600;
+    padding: 0.3rem 0.85rem;
+}
+
+.pantalla-abm .paginador-boton:hover:not(:disabled) {
+    background: #c0272d;
+    color: #fff;
+}
+
+.pantalla-abm .paginador-boton:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pantalla-abm .paginador-texto {
+    font-weight: 600;
+    color: #343a40;
+}
+
+/* --- Filtros de los reportes --- */
+.pantalla-abm .barra-busqueda {
+    --bs-gutter-x: 0;
+    background: #e6e8ea;
+    border-radius: 10px;
+    padding: 1rem;
+    margin: 0 0 1.25rem;
+    align-items: flex-end;
+}
+
+.pantalla-abm .barra-busqueda > [class*="col-"] {
+    padding: 0.25rem 0.5rem;
+}
+
+.pantalla-abm .barra-busqueda label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.35rem;
+}
+
+.pantalla-abm .barra-busqueda br {
+    display: none;
+}
+
+/* Resúmenes de los reportes y notas de página. */
+.pantalla-abm .alert-secondary {
+    background: #e6e8ea;
+    color: #212529;
+}
+
+.pantalla-abm .texto-nota {
+    padding-left: 1.5rem;
+    color: #343a40;
+    margin-bottom: 1rem;
+}
+
+.pantalla-abm .titulo-seccion {
+    padding-left: 1.5rem;
+}
+
+/* --- Inicio (tablero) ---
+   Cada tarjeta ocupa todo el alto de su fila y deja el botón abajo, separado de la tabla por
+   una línea, para que no quede pegado al recuadro. */
+.pantalla-abm .tarjeta-tablero {
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 1.5rem);
+}
+
 .pantalla-abm .resumen-tablero {
     color: #495057;
     margin: 0 0 1rem;
@@ -525,8 +946,25 @@ body:has(.pantalla-abm) {
     font-style: italic;
 }
 
-.pantalla-abm .enlace-tablero {
-    margin-top: 1.25rem;
+.pantalla-abm .pie-tarjeta {
+    margin-top: auto;
+    padding-top: 1.75rem;
+}
+
+/* Si el rol no tiene acceso a la pantalla, el botón no se dibuja: tampoco la línea. */
+.pantalla-abm .pie-tarjeta:not(:has(a)) {
+    display: none;
+}
+
+.pantalla-abm .pie-tarjeta-linea {
+    border-top: 1px solid #c4c8cc;
+    padding-top: 1.1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.pantalla-abm .pie-tarjeta .boton-rojo {
+    margin: 0;
 }
 
 .pantalla-abm .texto-inicio {
@@ -535,4 +973,3 @@ body:has(.pantalla-abm) {
     padding-left: 1.5rem;
     margin-bottom: 1.5rem;
 }
-

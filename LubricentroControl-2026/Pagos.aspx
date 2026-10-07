@@ -10,163 +10,132 @@
         <asp:Literal ID="litMensaje" runat="server" />
     </asp:Panel>
 
-    <div class="row">
-        <div class="col-7">
-            <div class="row barra-busqueda">
-                <div class="col-6">
-                    <asp:Label runat="server" AssociatedControlID="txtBuscar">Buscar por cliente o proveedor</asp:Label>
-                    <asp:TextBox ID="txtBuscar" runat="server" /></div>
-                <div class="col-6">
-                    <asp:Button ID="btnBuscar" runat="server" CssClass="boton-rojo" Text="Buscar"
-                        OnClick="btnBuscar_Click" CausesValidation="false" /></div>
-            </div>
+    <div class="barra-herramientas">
+        <input type="search" id="filtroPagos" class="filtro-tabla-texto"
+            placeholder="Filtrar por cliente, proveedor, fecha o medio de pago" aria-label="Filtrar pagos" />
+        <span class="acciones-barra">
+            <asp:Button ID="btnNuevo" runat="server" CssClass="boton-rojo" Text="Registrar pago"
+                OnClick="btnNuevo_Click" CausesValidation="false" />
+        </span>
+    </div>
 
-            <asp:GridView ID="gvPagos" runat="server" CssClass="tabla-abm"
-                AutoGenerateColumns="false" DataKeyNames="IdPago" GridLines="None"
-                EmptyDataText="No hay pagos que coincidan con la búsqueda.">
-                <Columns>
-                    <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy}" />
-                    <asp:TemplateField HeaderText="Tipo">
-                        <ItemTemplate>
-                            <%# Eval("Tipo").ToString() == "C" ? "Cliente" : "Proveedor" %>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                    <asp:TemplateField HeaderText="Titular">
-                        <ItemTemplate>
-                            <%# Eval("Tipo").ToString() == "C" ? Eval("NombreCliente") : Eval("RazonSocial") %>
-                        </ItemTemplate>
-                    </asp:TemplateField>
-                    <asp:BoundField DataField="MedioPago" HeaderText="Medio de pago" />
-                    <asp:BoundField DataField="Monto" HeaderText="Monto" DataFormatString="{0:N2}" />
-                </Columns>
-            </asp:GridView>
-        </div>
+    <asp:GridView ID="gvPagos" runat="server" CssClass="tabla-abm" data-filtro="filtroPagos"
+        AutoGenerateColumns="false" DataKeyNames="IdPago" GridLines="None"
+        EmptyDataText="Todavía no hay pagos registrados.">
+        <Columns>
+            <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy}" />
+            <asp:TemplateField HeaderText="Tipo">
+                <ItemTemplate>
+                    <%# Eval("Tipo").ToString() == "C" ? "Cliente" : "Proveedor" %>
+                </ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Titular">
+                <ItemTemplate>
+                    <%# Eval("Tipo").ToString() == "C" ? Eval("NombreCliente") : Eval("RazonSocial") %>
+                </ItemTemplate>
+            </asp:TemplateField>
+            <asp:BoundField DataField="MedioPago" HeaderText="Medio de pago" />
+            <asp:BoundField DataField="Monto" HeaderText="Monto" DataFormatString="{0:N2}" />
+        </Columns>
+    </asp:GridView>
 
-        <div class="col-5">
-        <asp:Panel ID="pnlFormulario" runat="server">
-            <h2>Registrar pago</h2>
+    <div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="tituloModalPago"
+        aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <asp:Panel ID="pnlFormulario" runat="server" CssClass="modal-content" DefaultButton="btnRegistrar">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="tituloModalPago">Registrar pago</h2>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
 
-            <div class="row">
-                <div class="col-12">
-                    <asp:Label runat="server" AssociatedControlID="ddlTipo">Tipo</asp:Label>
-                    <br />
-                    <asp:DropDownList ID="ddlTipo" runat="server" AutoPostBack="true"
-                        OnSelectedIndexChanged="ddlTipo_SelectedIndexChanged" /></div>
-            </div>
-
-            <asp:UpdatePanel ID="upnlTitular" runat="server">
-                <ContentTemplate>
-                    <asp:Panel ID="pnlCliente" runat="server">
-                        <div class="row">
-                            <div class="col-12">
-                                <asp:Label runat="server" AssociatedControlID="txtBuscarCliente">Cliente</asp:Label></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12">
-                                <asp:HiddenField ID="hdnIdCliente" runat="server" />
-                                <asp:Label ID="litClienteSeleccionado" runat="server" Text="(sin seleccionar)" />
-                                <br />
-                                <asp:TextBox ID="txtBuscarCliente" runat="server" placeholder="Buscar por nombre, apellido o DNI" />
-                                <asp:Button ID="btnBuscarCliente" runat="server" CssClass="boton-rojo boton-chico" Text="Buscar"
-                                    OnClick="btnBuscarCliente_Click" CausesValidation="false" />
-
-                                <asp:Panel ID="pnlResultadosCliente" runat="server" Visible="false"
-                                    style="position:relative; border:1px solid #999; max-height:200px; overflow-y:auto; background:#fff; margin-top:2px;">
-                                    <asp:Repeater ID="rptResultadosCliente" runat="server" OnItemCommand="rptResultadosCliente_ItemCommand">
-                                        <ItemTemplate>
-                                            <div style="padding:4px; border-bottom:1px solid #ddd;">
-                                                <asp:LinkButton runat="server"
-                                                    CommandName="Seleccionar" CommandArgument='<%# Eval("IdCliente") %>'
-                                                    CausesValidation="false">
-                                                    <%# Eval("NombreCompleto") %> — DNI <%# Eval("Dni") %>
-                                                </asp:LinkButton>
-                                            </div>
-                                        </ItemTemplate>
-                                    </asp:Repeater>
-                                </asp:Panel>
-
-                                <asp:CustomValidator runat="server" OnServerValidate="valCliente_ServerValidate"
-                                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
-                                    ErrorMessage="Seleccioná el cliente del pago." /></div>
-                        </div>
+                <div class="modal-body">
+                    <asp:Panel ID="pnlErrorFormulario" runat="server" Visible="false" CssClass="alert alert-danger" role="alert">
+                        <asp:Literal ID="litErrorFormulario" runat="server" />
                     </asp:Panel>
 
-                    <asp:Panel ID="pnlProveedor" runat="server" Visible="false">
-                        <div class="row">
-                            <div class="col-12">
-                                <asp:Label runat="server" AssociatedControlID="txtBuscarProveedor">Proveedor</asp:Label></div>
-                        </div>
-                        <div class="row">
-                            <div class="col-12">
-                                <asp:HiddenField ID="hdnIdProveedor" runat="server" />
-                                <asp:Label ID="litProveedorSeleccionado" runat="server" Text="(sin seleccionar)" />
-                                <br />
-                                <asp:TextBox ID="txtBuscarProveedor" runat="server" placeholder="Buscar por razón social o CUIT" />
-                                <asp:Button ID="btnBuscarProveedor" runat="server" CssClass="boton-rojo boton-chico" Text="Buscar"
-                                    OnClick="btnBuscarProveedor_Click" CausesValidation="false" />
-
-                                <asp:Panel ID="pnlResultadosProveedor" runat="server" Visible="false"
-                                    style="position:relative; border:1px solid #999; max-height:200px; overflow-y:auto; background:#fff; margin-top:2px;">
-                                    <asp:Repeater ID="rptResultadosProveedor" runat="server" OnItemCommand="rptResultadosProveedor_ItemCommand">
-                                        <ItemTemplate>
-                                            <div style="padding:4px; border-bottom:1px solid #ddd;">
-                                                <asp:LinkButton runat="server"
-                                                    CommandName="Seleccionar" CommandArgument='<%# Eval("IdProveedor") %>'
-                                                    CausesValidation="false">
-                                                    <%# Eval("RazonSocial") %>
-                                                </asp:LinkButton>
-                                            </div>
-                                        </ItemTemplate>
-                                    </asp:Repeater>
-                                </asp:Panel>
-
-                                <asp:CustomValidator runat="server" OnServerValidate="valProveedor_ServerValidate"
-                                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
-                                    ErrorMessage="Seleccioná el proveedor del pago." /></div>
-                        </div>
+                    <%-- Se llegó cerrando la orden de un cliente sin cuenta corriente: la venta se cobra ya. --%>
+                    <asp:Panel ID="pnlVieneDeOrden" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
+                        <asp:Literal ID="litVieneDeOrden" runat="server" />
                     </asp:Panel>
 
-                    <div class="row">
-                        <div class="col-12">
-                            <asp:Label ID="lblSaldoTitular" runat="server" Visible="false" Font-Bold="true" />
-                            <div class="small text-muted">El pago se aplica primero a las deudas más antiguas;
-                                lo que sobre queda a favor.</div></div>
+                    <%-- Elegir el tipo o el titular es un postback parcial (muestra el saldo del
+                         titular elegido) que no cierra el modal. --%>
+                    <asp:UpdatePanel ID="upnlTitular" runat="server">
+                        <ContentTemplate>
+                            <div class="row campos-formulario">
+                                <div class="col-md-4 campo">
+                                    <asp:Label runat="server" AssociatedControlID="ddlTipo">Tipo</asp:Label>
+                                    <asp:DropDownList ID="ddlTipo" runat="server" AutoPostBack="true"
+                                        OnSelectedIndexChanged="ddlTipo_SelectedIndexChanged" />
+                                </div>
+
+                                <asp:Panel ID="pnlCliente" runat="server" CssClass="col-md-8 campo">
+                                    <asp:Label runat="server" AssociatedControlID="txtCliente">Cliente</asp:Label>
+                                    <div class="selector-busqueda" data-postback="true" data-opciones="<%: OpcionesClientes %>">
+                                        <asp:TextBox ID="txtCliente" runat="server" CssClass="selector-texto" autocomplete="off"
+                                            placeholder="Elegí el cliente o buscalo por nombre o DNI" />
+                                        <button type="button" class="selector-boton" tabindex="-1" aria-label="Ver los clientes"></button>
+                                        <asp:HiddenField ID="hdnIdCliente" runat="server" OnValueChanged="hdnIdCliente_ValueChanged" />
+                                    </div>
+                                    <asp:CustomValidator runat="server" OnServerValidate="valCliente_ServerValidate"
+                                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
+                                        ErrorMessage="Seleccioná el cliente del pago." />
+                                </asp:Panel>
+
+                                <asp:Panel ID="pnlProveedor" runat="server" CssClass="col-md-8 campo" Visible="false">
+                                    <asp:Label runat="server" AssociatedControlID="txtProveedor">Proveedor</asp:Label>
+                                    <div class="selector-busqueda" data-postback="true" data-opciones="<%: OpcionesProveedores %>">
+                                        <asp:TextBox ID="txtProveedor" runat="server" CssClass="selector-texto" autocomplete="off"
+                                            placeholder="Elegí el proveedor o buscalo por razón social o CUIT" />
+                                        <button type="button" class="selector-boton" tabindex="-1" aria-label="Ver los proveedores"></button>
+                                        <asp:HiddenField ID="hdnIdProveedor" runat="server" OnValueChanged="hdnIdProveedor_ValueChanged" />
+                                    </div>
+                                    <asp:CustomValidator runat="server" OnServerValidate="valProveedor_ServerValidate"
+                                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
+                                        ErrorMessage="Seleccioná el proveedor del pago." />
+                                </asp:Panel>
+
+                                <div class="col-12 campo">
+                                    <asp:Label ID="lblSaldoTitular" runat="server" Visible="false" CssClass="valor-fijo d-block" />
+                                    <p class="texto-ayuda">El pago se aplica primero a las deudas más antiguas; lo que sobre queda a favor.</p>
+                                </div>
+                            </div>
+                        </ContentTemplate>
+                    </asp:UpdatePanel>
+
+                    <div class="row campos-formulario mt-0">
+                        <div class="col-md-6 campo">
+                            <asp:Label runat="server" AssociatedControlID="ddlMedioPago">Medio de pago</asp:Label>
+                            <asp:DropDownList ID="ddlMedioPago" runat="server" />
+                        </div>
+
+                        <div class="col-md-6 campo">
+                            <asp:Label runat="server" AssociatedControlID="txtMonto">Monto</asp:Label>
+                            <asp:TextBox ID="txtMonto" runat="server" MaxLength="12" />
+                            <asp:RequiredFieldValidator runat="server" ControlToValidate="txtMonto"
+                                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
+                                ErrorMessage="El monto es obligatorio." />
+                            <asp:CompareValidator runat="server" ControlToValidate="txtMonto"
+                                Operator="GreaterThan" ValueToCompare="0" Type="Currency"
+                                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
+                                ErrorMessage="El monto debe ser mayor a cero." />
+                        </div>
+
+                        <div class="col-12 campo">
+                            <asp:Label runat="server" AssociatedControlID="txtObservaciones">Observaciones (opcional)</asp:Label>
+                            <asp:TextBox ID="txtObservaciones" runat="server" MaxLength="300" TextMode="MultiLine" Rows="2" />
+                        </div>
                     </div>
-                </ContentTemplate>
-            </asp:UpdatePanel>
+                </div>
 
-            <div class="row">
-                <div class="col-6">
-                    <asp:Label runat="server" AssociatedControlID="ddlMedioPago">Medio de pago</asp:Label>
-                    <br />
-                    <asp:DropDownList ID="ddlMedioPago" runat="server" /></div>
-                <div class="col-6">
-                    <asp:Label runat="server" AssociatedControlID="txtMonto">Monto</asp:Label>
-                    <br />
-                    <asp:TextBox ID="txtMonto" runat="server" MaxLength="12" />
-                    <asp:RequiredFieldValidator runat="server" ControlToValidate="txtMonto"
-                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
-                        ErrorMessage="El monto es obligatorio." />
-                    <asp:CompareValidator runat="server" ControlToValidate="txtMonto"
-                        Operator="GreaterThan" ValueToCompare="0" Type="Currency"
-                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="Pago"
-                        ErrorMessage="El monto debe ser mayor a cero." /></div>
-            </div>
-
-            <div class="row">
-                <div class="col-12">
-                    <asp:Label runat="server" AssociatedControlID="txtObservaciones">Observaciones (opcional)</asp:Label></div>
-            </div>
-
-            <div class="row">
-                <div class="col-12">
-                    <asp:TextBox ID="txtObservaciones" runat="server" MaxLength="300" TextMode="MultiLine" Rows="2" /></div>
-            </div>
-
-            <asp:Button ID="btnRegistrar" runat="server" CssClass="boton-rojo" Text="Registrar pago"
-                OnClick="btnRegistrar_Click" ValidationGroup="Pago" />
-        </asp:Panel>
+                <div class="modal-footer">
+                    <button type="button" class="boton-gris" data-bs-dismiss="modal">Cancelar</button>
+                    <asp:Button ID="btnRegistrar" runat="server" CssClass="boton-rojo" Text="Registrar pago"
+                        OnClick="btnRegistrar_Click" ValidationGroup="Pago" />
+                </div>
+            </asp:Panel>
         </div>
     </div>
+
     </div>
 </asp:Content>

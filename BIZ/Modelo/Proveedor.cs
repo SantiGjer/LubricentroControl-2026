@@ -60,6 +60,9 @@ namespace BIZ.Modelo
             if (!EsCuitValido(Cuit))
                 return ResultadoOperacion.Error("El CUIT debe tener 11 números, con o sin guiones.");
 
+            if (!FormatoTelefono.EsValido(Telefono))
+                return ResultadoOperacion.Error(FormatoTelefono.MensajeError);
+
             if (!EsEmailValido(Email))
                 return ResultadoOperacion.Error("El mail no tiene un formato válido.");
 

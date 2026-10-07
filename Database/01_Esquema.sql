@@ -136,6 +136,9 @@ CREATE TABLE Cliente (
     telefono  NVARCHAR(30)      NULL,
     email     NVARCHAR(150)     NULL,
     direccion NVARCHAR(200)     NULL,
+    /* 1 = puede quedar debiendo (fiado). 0 = paga al cerrar la orden: la pantalla de Órdenes
+       lo lleva directo a Pagos. Agregada el 2026-10-07, no estaba en el diagrama original. */
+    cuentaCorriente BIT         NOT NULL CONSTRAINT DF_Cliente_cuentaCorriente DEFAULT (0),
     activo    BIT               NOT NULL CONSTRAINT DF_Cliente_activo DEFAULT (1),
     fechaAlta DATETIME          NOT NULL CONSTRAINT DF_Cliente_fechaAlta DEFAULT (GETDATE()),
     CONSTRAINT PK_Cliente PRIMARY KEY (idCliente),

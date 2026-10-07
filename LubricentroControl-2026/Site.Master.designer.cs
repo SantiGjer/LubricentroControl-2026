@@ -12,6 +12,11 @@ namespace LubricentroControl_2026
     public partial class SiteMaster
     {
         /// <summary>
+        /// Control hdnEstadoTablas.
+        /// </summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnEstadoTablas;
+
+        /// <summary>
         /// Control phNavegacion.
         /// </summary>
         protected global::System.Web.UI.WebControls.PlaceHolder phNavegacion;

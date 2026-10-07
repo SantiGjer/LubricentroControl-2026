@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
-using System.Linq;
 using BIZ.Modelo;
 
 namespace BIZ.Data
@@ -45,34 +43,6 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idProveedor", idProveedor));
 
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
-        }
-
-        // Buscador rápido por razón social o CUIT. El CUIT se busca solo por sus dígitos,
-        // así "20-12345678-6" y "20123456786" encuentran lo mismo.
-        public static List<Proveedor> Buscar(string texto, bool incluirInactivos = false)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar(incluirInactivos);
-
-            var soloDigitos = new string(texto.Where(char.IsDigit).ToArray());
-
-            var condiciones = "razonSocial LIKE @texto";
-            if (soloDigitos.Length > 0)
-                condiciones += " OR cuit LIKE @textoCuit";
-
-            var sql = SelectBase +
-                      " WHERE (" + condiciones + ")" +
-                      (incluirInactivos ? "" : " AND activo = 1") +
-                      " ORDER BY razonSocial";
-
-            var parametros = new List<SqlParameter> { AccesoDatos.Param("@texto", "%" + texto.Trim() + "%") };
-            if (soloDigitos.Length > 0)
-                parametros.Add(AccesoDatos.Param("@textoCuit", "%" + soloDigitos + "%"));
-
-            var lista = new List<Proveedor>();
-            foreach (DataRow fila in AccesoDatos.Consultar(sql, parametros.ToArray()).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
         }
 
         public static bool ExisteCuit(string cuit, int idProveedorExcluido = 0)
@@ -161,6 +131,23 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idProveedor", idProveedor));
 
             return ResultadoOperacion.Ok("Proveedor desactivado.");
+        }
+
+        // Deshace la baja lógica: el proveedor vuelve con sus compras y su cuenta corriente intactas.
+        public static ResultadoOperacion Reactivar(int idProveedor)
+        {
+            var proveedor = ObtenerPorId(idProveedor);
+            if (proveedor == null)
+                return ResultadoOperacion.Error("El proveedor no existe.");
+
+            if (proveedor.Activo)
+                return ResultadoOperacion.Ok("El proveedor ya estaba activo.");
+
+            AccesoDatos.Ejecutar(
+                "UPDATE Proveedor SET activo = 1 WHERE idProveedor = @idProveedor",
+                AccesoDatos.Param("@idProveedor", idProveedor));
+
+            return ResultadoOperacion.Ok("Proveedor reactivado.");
         }
     }
 }

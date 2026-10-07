@@ -14,17 +14,17 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control txtBuscar.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscar;
-
         /// <summary>Control ddlFiltroEstado.</summary>
         protected global::System.Web.UI.WebControls.DropDownList ddlFiltroEstado;
 
-        /// <summary>Control btnBuscar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscar;
+        /// <summary>Control btnNuevo.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevo;
 
         /// <summary>Control gvOrdenes.</summary>
         protected global::System.Web.UI.WebControls.GridView gvOrdenes;
+
+        /// <summary>Control pnlDialogo.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlDialogo;
 
         /// <summary>Control pnlFormulario.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlFormulario;
@@ -32,41 +32,35 @@ namespace LubricentroControl_2026
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;
 
+        /// <summary>Control upnlOrden.</summary>
+        protected global::System.Web.UI.UpdatePanel upnlOrden;
+
+        /// <summary>Control pnlMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlMensajeFormulario;
+
+        /// <summary>Control litMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litMensajeFormulario;
+
         /// <summary>Control hdnIdOrden.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdOrden;
-
-        /// <summary>Control upnlCliente.</summary>
-        protected global::System.Web.UI.UpdatePanel upnlCliente;
-
-        /// <summary>Control hdnIdCliente.</summary>
-        protected global::System.Web.UI.WebControls.HiddenField hdnIdCliente;
-
-        /// <summary>Control litClienteSeleccionado.</summary>
-        protected global::System.Web.UI.WebControls.Label litClienteSeleccionado;
 
         /// <summary>Control pnlSeleccionNueva.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlSeleccionNueva;
 
-        /// <summary>Control txtBuscarCliente.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscarCliente;
+        /// <summary>Control txtCliente.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtCliente;
 
-        /// <summary>Control btnBuscarCliente.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscarCliente;
+        /// <summary>Control hdnIdCliente.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdCliente;
 
         /// <summary>Control btnNuevoCliente.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevoCliente;
 
-        /// <summary>Control pnlResultadosCliente.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlResultadosCliente;
-
-        /// <summary>Control rptResultadosCliente.</summary>
-        protected global::System.Web.UI.WebControls.Repeater rptResultadosCliente;
+        /// <summary>Control ddlVehiculo.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlVehiculo;
 
         /// <summary>Control btnNuevoVehiculo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevoVehiculo;
-
-        /// <summary>Control ddlVehiculo.</summary>
-        protected global::System.Web.UI.WebControls.DropDownList ddlVehiculo;
 
         /// <summary>Control ddlTurno.</summary>
         protected global::System.Web.UI.WebControls.DropDownList ddlTurno;
@@ -74,17 +68,17 @@ namespace LubricentroControl_2026
         /// <summary>Control pnlSeleccionFija.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlSeleccionFija;
 
+        /// <summary>Control litClienteInfo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litClienteInfo;
+
         /// <summary>Control litVehiculoInfo.</summary>
-        protected global::System.Web.UI.WebControls.Label litVehiculoInfo;
+        protected global::System.Web.UI.WebControls.Literal litVehiculoInfo;
 
         /// <summary>Control litTurnoInfo.</summary>
-        protected global::System.Web.UI.WebControls.Label litTurnoInfo;
+        protected global::System.Web.UI.WebControls.Literal litTurnoInfo;
 
         /// <summary>Control txtKilometraje.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtKilometraje;
-
-        /// <summary>Control txtObservaciones.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtObservaciones;
 
         /// <summary>Control pnlEstado.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlEstado;
@@ -95,17 +89,8 @@ namespace LubricentroControl_2026
         /// <summary>Control litEstadoActual.</summary>
         protected global::System.Web.UI.WebControls.Label litEstadoActual;
 
-        /// <summary>Control btnGuardar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnGuardar;
-
-        /// <summary>Control btnNuevo.</summary>
-        protected global::System.Web.UI.WebControls.Button btnNuevo;
-
-        /// <summary>Control btnCancelarOrden.</summary>
-        protected global::System.Web.UI.WebControls.Button btnCancelarOrden;
-
-        /// <summary>Control btnCerrarOrden.</summary>
-        protected global::System.Web.UI.WebControls.Button btnCerrarOrden;
+        /// <summary>Control txtObservaciones.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtObservaciones;
 
         /// <summary>Control pnlDetalle.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlDetalle;
@@ -139,5 +124,14 @@ namespace LubricentroControl_2026
 
         /// <summary>Control gvInsumosOrden.</summary>
         protected global::System.Web.UI.WebControls.GridView gvInsumosOrden;
+
+        /// <summary>Control btnCancelarOrden.</summary>
+        protected global::System.Web.UI.WebControls.Button btnCancelarOrden;
+
+        /// <summary>Control btnCerrarOrden.</summary>
+        protected global::System.Web.UI.WebControls.Button btnCerrarOrden;
+
+        /// <summary>Control btnGuardar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnGuardar;
     }
 }

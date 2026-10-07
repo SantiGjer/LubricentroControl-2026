@@ -43,24 +43,6 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Buscador rápido por nombre.
-        public static List<Servicio> Buscar(string texto, bool incluirInactivos = false)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar(incluirInactivos);
-
-            var sql = SelectBase +
-                      " WHERE nombre LIKE @texto" +
-                      (incluirInactivos ? "" : " AND activo = 1") +
-                      " ORDER BY nombre";
-
-            var lista = new List<Servicio>();
-            foreach (DataRow fila in AccesoDatos.Consultar(
-                sql, AccesoDatos.Param("@texto", "%" + texto.Trim() + "%")).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         private static int Insertar(Servicio servicio)
         {
             const string sql = @"
@@ -126,6 +108,23 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idServicio", idServicio));
 
             return ResultadoOperacion.Ok("Servicio desactivado.");
+        }
+
+        // Deshace la baja lógica: el servicio vuelve a ofrecerse en las órdenes de trabajo.
+        public static ResultadoOperacion Reactivar(int idServicio)
+        {
+            var servicio = ObtenerPorId(idServicio);
+            if (servicio == null)
+                return ResultadoOperacion.Error("El servicio no existe.");
+
+            if (servicio.Activo)
+                return ResultadoOperacion.Ok("El servicio ya estaba activo.");
+
+            AccesoDatos.Ejecutar(
+                "UPDATE Servicio SET activo = 1 WHERE idServicio = @idServicio",
+                AccesoDatos.Param("@idServicio", idServicio));
+
+            return ResultadoOperacion.Ok("Servicio reactivado.");
         }
     }
 }

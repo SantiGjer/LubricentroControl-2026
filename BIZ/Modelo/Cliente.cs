@@ -17,6 +17,11 @@ namespace BIZ.Modelo
         public string Telefono { get; set; }
         public string Email { get; set; }
         public string Direccion { get; set; }
+
+        // True si el cliente puede quedar debiendo (fiado). Sin cuenta corriente, al cerrar su
+        // orden la pantalla de Órdenes lo lleva directo a cobrar la venta en Pagos.
+        public bool CuentaCorriente { get; set; }
+
         public bool Activo { get; set; }
         public DateTime FechaAlta { get; set; }
 
@@ -45,6 +50,9 @@ namespace BIZ.Modelo
 
             if (!EsDniValido(Dni.Trim()))
                 return ResultadoOperacion.Error("El DNI debe tener 7 u 8 números, sin puntos.");
+
+            if (!FormatoTelefono.EsValido(Telefono))
+                return ResultadoOperacion.Error(FormatoTelefono.MensajeError);
 
             if (!string.IsNullOrWhiteSpace(Email) && !FormatoEmail.IsMatch(Email.Trim()))
                 return ResultadoOperacion.Error("El mail no tiene un formato válido.");

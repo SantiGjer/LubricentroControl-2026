@@ -14,17 +14,17 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control txtBuscar.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscar;
-
-        /// <summary>Control btnBuscar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscar;
-
         /// <summary>Control chkIncluirInactivos.</summary>
         protected global::System.Web.UI.WebControls.CheckBox chkIncluirInactivos;
 
+        /// <summary>Control btnNuevo.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevo;
+
         /// <summary>Control gvInsumos.</summary>
         protected global::System.Web.UI.WebControls.GridView gvInsumos;
+
+        /// <summary>Control pnlDialogo.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlDialogo;
 
         /// <summary>Control pnlFormulario.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlFormulario;
@@ -32,11 +32,20 @@ namespace LubricentroControl_2026
         /// <summary>Control litTituloFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFormulario;
 
+        /// <summary>Control pnlMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlMensajeFormulario;
+
+        /// <summary>Control litMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litMensajeFormulario;
+
         /// <summary>Control hdnIdInsumo.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnIdInsumo;
 
         /// <summary>Control hdnActivo.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnActivo;
+
+        /// <summary>Control pnlDatos.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlDatos;
 
         /// <summary>Control txtNombre.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtNombre;
@@ -53,23 +62,20 @@ namespace LubricentroControl_2026
         /// <summary>Control txtPrecioVenta.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtPrecioVenta;
 
+        /// <summary>Control pnlStockInicial.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlStockInicial;
+
         /// <summary>Control txtStockInicial.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtStockInicial;
 
+        /// <summary>Control pnlStockActual.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlStockActual;
+
         /// <summary>Control litStockActual.</summary>
-        protected global::System.Web.UI.WebControls.Label litStockActual;
+        protected global::System.Web.UI.WebControls.Literal litStockActual;
 
-        /// <summary>Control btnGuardar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnGuardar;
-
-        /// <summary>Control btnNuevo.</summary>
-        protected global::System.Web.UI.WebControls.Button btnNuevo;
-
-        /// <summary>Control btnBorrar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBorrar;
-
-        /// <summary>Control pnlAjusteHistorial.</summary>
-        protected global::System.Web.UI.WebControls.Panel pnlAjusteHistorial;
+        /// <summary>Control pnlAjuste.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlAjuste;
 
         /// <summary>Control txtCantidadAjuste.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtCantidadAjuste;
@@ -80,7 +86,19 @@ namespace LubricentroControl_2026
         /// <summary>Control btnRegistrarAjuste.</summary>
         protected global::System.Web.UI.WebControls.Button btnRegistrarAjuste;
 
+        /// <summary>Control pnlHistorial.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlHistorial;
+
         /// <summary>Control gvHistorial.</summary>
         protected global::System.Web.UI.WebControls.GridView gvHistorial;
+
+        /// <summary>Control btnBorrar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnBorrar;
+
+        /// <summary>Control btnReactivar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnReactivar;
+
+        /// <summary>Control btnGuardar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnGuardar;
     }
 }

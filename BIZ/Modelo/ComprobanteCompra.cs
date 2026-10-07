@@ -27,8 +27,9 @@ namespace BIZ.Modelo
         public decimal Total { get; set; }
         public decimal SaldoPendiente { get; set; }
 
-        // Del JOIN con Proveedor; solo para mostrar, no se guarda.
+        // Del JOIN con Proveedor; solo para mostrar (y para el filtro de la grilla), no se guardan.
         public string RazonSocial { get; set; }
+        public string Cuit { get; set; }
 
         // Valida los campos de cabecera. No valida existencia/estado del proveedor ni las
         // líneas: eso necesita ir a la base, queda en ComprobanteCompraDAL.

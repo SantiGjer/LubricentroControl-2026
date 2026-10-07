@@ -88,24 +88,6 @@ namespace BIZ.Data
             return lista;
         }
 
-        // Cliente, patente o número de comprobante.
-        public static List<ComprobanteVenta> Buscar(string texto)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar();
-
-            const string sql = SelectBase + @"
-                WHERE c.nombre LIKE @texto OR c.apellido LIKE @texto
-                   OR ve.patente LIKE @texto OR v.numeroComprobante LIKE @texto
-                ORDER BY v.fecha DESC";
-
-            var lista = new List<ComprobanteVenta>();
-            var comodin = "%" + texto.Trim() + "%";
-            foreach (DataRow fila in AccesoDatos.Consultar(sql, AccesoDatos.Param("@texto", comodin)).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         // Se llama desde OrdenDeTrabajoDAL.Cerrar, nunca directo desde la pantalla de Ventas —
         // el comprobante no se carga a mano (Requerimientos §6.6). Copia las líneas ya cargadas
         // en la orden (servicios e insumos, con el precio que ya tenían aplicado, sin volver a

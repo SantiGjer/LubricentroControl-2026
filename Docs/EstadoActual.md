@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 6 de octubre de 2026
+**Última actualización:** 7 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -58,12 +58,18 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
 - Las 21 tablas del diagrama E/R creadas, con los datos semilla de seguridad, más
   `MovimientoStock` (kardex de stock, agregada en Fase 2 — 22 tablas en total hoy).
 - Capa `BIZ/Data` funcionando de punta a punta contra SQL Server.
-- **ABM de Clientes**: alta/baja lógica/edición, búsqueda por nombre/apellido/DNI, validación de
-  formato de DNI. Layout de dos columnas (buscador+grilla a la izquierda, formulario siempre
-  visible a la derecha).
-- **ABM de Vehículos**: alta/baja lógica/edición, búsqueda por patente/marca/modelo, selector de
-  dueño con buscador desplegable (reutiliza el buscador de Clientes, no un `DropDownList` con
-  todos los clientes), validación de formato de patente, dropdown fijo de tipo de combustible.
+- **Interfaz común de las pantallas de gestión (desde 2026-10-07):** lista a todo el ancho con una
+  barra de herramientas (filtro instantáneo, opciones y botón "Nuevo …"); columnas ordenables con
+  un clic y paginado en el navegador donde hace falta (`Scripts/Lubricentro.js`). Alta, edición y
+  detalle se abren en un modal. Para elegir cliente, dueño o proveedor hay selectores con búsqueda,
+  y la edición de un registro dado de baja ofrece "Reactivar".
+- **ABM de Clientes**: alta, baja lógica, edición y reactivación; filtro por nombre, apellido, DNI,
+  teléfono o mail; validación de formato de DNI y de teléfono. **Cuenta corriente opcional** por
+  cliente, con un interruptor en el formulario: sin ella, cerrar una orden lleva directo a cobrarla.
+- **ABM de Vehículos**: alta, baja lógica, edición y reactivación; filtro por patente, marca, modelo
+  o dueño. Selector de dueño con búsqueda (lista desplegable de los clientes activos que se filtra
+  al escribir), validación de formato de patente y del año (desde 1900), y dropdown fijo de tipo de
+  combustible.
 - **"Nuevo cliente" desde Vehículos**: si al cargar un vehículo el dueño todavía no existe como
   cliente, se puede crear sin perder los datos del vehículo ya tipeados; al crearlo se vuelve
   automáticamente con ese cliente ya seleccionado como dueño.
@@ -73,20 +79,18 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   acciones de la grilla, no solo los botones — solo ve el buscador y los resultados.
 - **ABM de Insumos + kardex de stock**: alta con stock inicial (registra un ajuste automático),
   búsqueda por nombre/marca, ajuste manual de stock (un solo campo con signo — positivo suma,
-  negativo resta, sin radio Entrada/Salida) e historial de movimientos, ambos en una franja
-  debajo del ABM (historial a la izquierda, ajuste a la derecha, ratio 60/40 igual que el
-  buscador/formulario de arriba) que solo aparece al editar un insumo existente. Grilla principal
-  con estilo de tabla de Bootstrap (rayada, con bordes, hover) y resaltado en rojo de las filas
-  con stock por debajo del mínimo; paginada a 30 filas con pie "Página X de Y" +
-  Anterior/Siguiente centrado. Modo solo-consulta para Empleado igual que Proveedores.
+  negativo resta, sin radio Entrada/Salida) e historial de movimientos, los dos dentro del modal
+  de edición de un insumo existente. Resaltado en rojo de las filas con stock por debajo del
+  mínimo; grilla paginada a 30 filas en el navegador, con "Página X de Y" + Anterior/Siguiente.
+  Modo solo-consulta para Empleado igual que Proveedores.
 - **ABM de Servicios**: alta/baja lógica/edición, búsqueda por nombre. El más simple de los cinco
   (nombre, descripción, precio base) — mismo patrón que Proveedores. Modo solo-consulta para
   Empleado.
 - **Turnos** (primera pantalla de Fase 3): alta/edición, sin baja lógica (no aplica — `Turno` no
   tiene columna `activo`; "cancelar" es simplemente llevar el campo `estado` a `Cancelado` desde
   el mismo formulario; en el alta el estado se muestra como texto fijo "Solicitado" y el
-  desplegable de estado aparece recién al editar). Selector de cliente con el mismo buscador desplegable de
-  Clientes/Vehículos, **sin** el atajo "Nuevo cliente" (decisión de alcance: no está en el
+  desplegable de estado aparece recién al editar). Selector de cliente con búsqueda (el mismo que el
+  dueño en Vehículos), fijo al editar, **sin** el atajo "Nuevo cliente" (decisión de alcance: no está en el
   requerimiento de Turnos, sí lo está en el walk-in de Órdenes). Selector de vehículo opcional,
   poblado con los vehículos activos del cliente elegido. Búsqueda por nombre/apellido/DNI del
   cliente más filtro por estado. Acceso completo para los 3 roles (Admin/Encargado/Empleado),
@@ -104,8 +108,10 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   sin efecto colateral. El walk-in con cliente **y vehículo** nuevos
   funciona de punta a punta: "Nuevo cliente"/"Nuevo vehículo" desde Órdenes reutilizan y extienden
   el mecanismo de `Response.Redirect` + query string que ya conectaba Vehículos↔Clientes (un
-  tercer origen `"orden"` agregado en paralelo al `"vehiculo"` existente, sin tocarlo). Acceso
-  completo para los 3 roles, sin modo solo-consulta.
+  tercer origen `"orden"` agregado en paralelo al `"vehiculo"` existente, sin tocarlo). La lista
+  arranca filtrada en "Abierta", de la más nueva a la más vieja. Cerrar la orden de un cliente sin
+  cuenta corriente lleva directo a Pagos, con el saldo de la venta ya cargado. Acceso completo
+  para los 3 roles, sin modo solo-consulta.
 - **Compras** (primera pantalla de Fase 4): sin franja de alta progresiva como Órdenes — una
   compra es la transcripción de una factura que ya llega completa, así que las líneas se arman
   **en memoria** (`ViewState`, primer uso de este patrón en el proyecto) y "Guardar compra" las
@@ -117,9 +123,9 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   correlativa automática (`C-000001`, ...) derivada del propio `IDENTITY`. Una compra ya guardada
   no se edita — se ve de solo lectura. Modo solo-consulta para Empleado, igual que Proveedores/
   Insumos.
-- **Cuenta corriente de Proveedores** (segunda pantalla de Fase 4): buscador+grilla de
-  proveedores a la izquierda ("Ver cuenta"), a la derecha saldo actual + historial (fecha, tipo,
-  debe, haber, saldo, descripción, usuario) del proveedor elegido. A diferencia de Proveedores/
+- **Cuenta corriente de Proveedores** (segunda pantalla de Fase 4): lista de proveedores con "Ver
+  cuenta", que abre en un modal el saldo actual + historial (fecha, tipo, debe, haber, saldo,
+  descripción, usuario) del proveedor elegido. A diferencia de Proveedores/
   Insumos, el modo solo-consulta de Empleado **no esconde toda la pantalla**: puede buscar y ver
   el historial/saldo de cualquier proveedor, solo se le esconde la franja "Registrar ajuste"
   (motivo + monto con signo, mismo patrón que el ajuste de stock de Insumos). El usuario que hizo
@@ -127,25 +133,28 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   los movimientos automáticos de compra no llevan usuario (se muestran con la celda vacía).
 - **Ventas** (tercera pantalla de Fase 4): **de solo lectura, sin alta** — el comprobante se
   genera automáticamente al cerrar una orden de trabajo (`OrdenDeTrabajoDAL.Cerrar` →
-  `ComprobanteVentaDAL.GenerarDesdeOrden`), nunca se carga a mano. Buscador+grilla de ventas a la
-  izquierda, a la derecha cabecera (cliente, vehículo, fecha, subtotal/impuestos/total/saldo
-  pendiente) + detalle línea por línea (copiado 1 a 1 de los servicios/insumos que ya tenía la
+  `ComprobanteVentaDAL.GenerarDesdeOrden`), nunca se carga a mano. Lista de ventas; "Ver" abre en
+  un modal la cabecera (cliente, vehículo, fecha, subtotal/impuestos/total/saldo pendiente) +
+  detalle línea por línea (copiado 1 a 1 de los servicios/insumos que ya tenía la
   orden, con el precio que ya tenían aplicado). Numeración correlativa (`V-000001`, ...), mismo
   esquema que Compras. Acceso completo para los 3 roles, sin modo solo-consulta. **Órdenes de
   trabajo ganó un botón "Cerrar orden"** (separado de "Guardar", con confirmación, mismo criterio
   que "Cancelar orden") porque cerrar pasó a tener el efecto colateral de generar la venta —
   `Cerrada` salió de `OrdenDeTrabajo.EstadosEditables`.
 - **Cuenta corriente de Clientes** (cuarta pantalla de Fase 4): calco exacto de Cuenta corriente
-  de Proveedores — buscador+grilla de clientes, historial+saldo+ajuste manual del elegido, mismo
-  matiz de permisos (solo consulta esconde nada más la franja de ajuste, no toda la pantalla). Sin
-  DAL nuevo: `CuentaCorrienteClienteDAL` ya había quedado escrito en la sesión de Ventas.
+  de Proveedores — lista de clientes, historial+saldo+ajuste manual del elegido en un modal, mismo
+  matiz de permisos (solo consulta esconde nada más el ajuste, no toda la pantalla). Sin DAL
+  nuevo: `CuentaCorrienteClienteDAL` ya había quedado escrito en la sesión de Ventas. Desde
+  2026-10-07 lista por defecto solo los clientes con cuenta corriente habilitada (con una casilla
+  para ver al resto) y suma "Editar cliente" para cambiarla.
 - **Pagos** (quinta y última pantalla de Fase 4, **cierra la fase**): alta de pago de cliente o
   de proveedor. **Sin elegir comprobante** (cambio del 2026-10-05): el monto se reparte solo,
   primero cancela las deudas más viejas (`saldoPendiente > 0`) y lo que sobre queda "a cuenta
   general", o sea a favor en la cuenta corriente — sin tope de monto. La pantalla muestra la
-  deuda o el saldo a favor del titular elegido. Reutiliza los dos buscadores desplegables ya
-  existentes (cliente, de Turnos/Órdenes; proveedor, de Compras) alternados con un `ddlTipo`. Un
-  pago no se edita ni se borra. **Acceso completo para los 3 roles** (a diferencia de Compras/
+  deuda o el saldo a favor del titular elegido. Selectores con búsqueda de cliente y de proveedor,
+  alternados con un `ddlTipo`. El formulario se abre solo, con el cliente y el monto cargados,
+  cuando Órdenes manda a cobrar la venta de un cliente sin cuenta corriente. Un pago no se edita
+  ni se borra. **Acceso completo para los 3 roles** (a diferencia de Compras/
   Cuentas corrientes, acá Empleado también puede cobrar — Requerimientos §5).
 - **Reporte de Stock bajo** (primero de los 3 reportes de Fase 5): grilla de solo lectura sobre
   `InsumoDAL.ListarStockBajo()` (ya escrita desde Fase 2, sin usar hasta ahora), insumos activos
@@ -194,6 +203,73 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-07 — Pulido de interfaz: modales, listas ordenables y filtrables, selectores con búsqueda y cuenta corriente opcional
+
+Pedido del usuario en 12 puntos. Acá va lo que no se ve leyendo el código.
+
+- **Formularios en modales (Bootstrap).** Todas las pantallas con alta o edición pasaron de dos
+  columnas (lista y formulario siempre visible) a lista a todo el ancho más un modal. "Nuevo …" va en
+  una barra de herramientas arriba de la lista y "Editar" (antes "Seleccionar") en la fila. El
+  servidor vuelve a abrir el modal después de cada postback que lo necesita
+  (`Utilidades/Interfaz.AbrirModal`, un startup script): Nuevo, Editar, o un error de validación o
+  del DAL, que ahora se muestra *adentro* del modal. Donde hay varias idas y vueltas sin salir del
+  formulario (Órdenes: elegir cliente, agregar o quitar líneas; Compras: condición de pago y líneas;
+  Pagos: tipo y titular; Turnos: cliente y sus vehículos), el cuerpo del modal va en un
+  `UpdatePanel` para que no se cierre. Los botones del pie hacen postback completo para refrescar
+  la lista. Compras, Ventas y las dos cuentas corrientes usan el mismo modal para el detalle
+  ("Ver"). Con `EsSoloLectura` también se esconde el botón "Nuevo".
+- **Orden y filtro en todas las listas, en el navegador** (`Scripts/Lubricentro.js`). Clic en el
+  encabezado ordena: detecta fechas `dd/MM/yyyy`, números con el formato regional del servidor (el
+  master publica los separadores en el `<body>`) y texto sin acentos. El filtro exige todas las
+  palabras en cualquier columna, sin acentos, y "1143215678" encuentra "11-4321-5678". El cuadro
+  "Buscar" con botón de cada ABM se reemplazó por ese filtro instantáneo, así que los 10
+  `XxxDAL.Buscar` quedaron sin uso y **se borraron**. Lo que se buscaba pero no es columna (el DNI en
+  Turnos y Órdenes, el CUIT en Compras) va en `data-buscar` de la fila. El paginado de Insumos y de
+  los reportes pasó al navegador (`data-filas-por-pagina`), para que ordenar y filtrar abarquen
+  todas las filas y no solo la página. El estado de cada tabla sobrevive a los postbacks en
+  `hdnEstadoTablas` (master), codificado con `encodeURIComponent`: un "<" en el filtro dispararía la
+  request validation de ASP.NET.
+- **Selectores con búsqueda** (`.selector-busqueda`) para el dueño (Vehículos), el cliente (Turnos,
+  Órdenes, Pagos) y el proveedor (Compras, Pagos): un campo con el botón de búsqueda adentro y la
+  lista desplegable de todos los activos, que se filtra al escribir. Reemplazan el TextBox + "Buscar"
+  + Repeater. Cuando el servidor tiene que reaccionar (cargar vehículos y turnos, mostrar el saldo),
+  `data-postback` dispara el `ValueChanged` del HiddenField en un postback parcial. Opciones y
+  textos en `Utilidades/Selectores.cs`. En Turnos el cliente queda deshabilitado al editar: ya era
+  fijo en `TurnoDAL.Actualizar`, pero la pantalla dejaba cambiarlo, y eso permitía guardar un
+  vehículo de otro cliente.
+- **Cuenta corriente opcional por cliente** (`Cliente.cuentaCorriente`, columna nueva, default 0),
+  con un interruptor en el alta y la edición. Decisión del usuario: **sin cuenta corriente, cerrar
+  la orden lleva directo a Pagos** con el cliente y el saldo de esa venta ya cargados
+  (`~/Pagos?idVenta=`). Con cuenta corriente, la deuda queda en la cuenta como antes. No se bloquea
+  nada más (se puede cobrar parcial). Criterio nuestro, a confirmar: el interruptor lo cambia solo
+  quien escribe en Cuenta corriente de clientes (Admin y Encargado); para Empleado se ve
+  deshabilitado y el servidor conserva lo guardado, aplicando la matriz de §5. Cuenta corriente de
+  clientes lista por defecto solo a los que la tienen (con una casilla para ver al resto) y suma
+  "Editar cliente" (`~/Clientes?editar=N&volver=ctacte`, que al guardar vuelve). `04_DatosDemo.sql`
+  la habilita para Juan, Carlos y Valentina, los que la usan en los datos de ejemplo.
+- **Validaciones nuevas.** Teléfono de Cliente y Proveedor (`Modelo/FormatoTelefono`, CustomValidator
+  + `Validar()`): números, espacios, guiones, puntos, paréntesis y un "+" inicial, entre 6 y 15
+  dígitos. Año del vehículo entre 1900 y el año que viene (`Vehiculo.AnioMinimo`/`AnioMaximo`;
+  RangeValidator con los límites puestos desde el modelo, más `Validar()`).
+- **Reactivar** en la edición de un registro dado de baja (Clientes, Vehículos, Proveedores,
+  Insumos, Servicios, Usuarios): `XxxDAL.Reactivar`, espejo de `Desactivar`.
+- **Órdenes de trabajo** arranca filtrada en "Abierta", de la más nueva a la más vieja (el usuario
+  eligió entre tres opciones).
+- **Login, Registro, Recuperar y Restablecer clave:** tarjeta clara (antes oscura) con la paleta del
+  resto de las pantallas, isotipo de gota y botón rojo.
+- **Inicio:** el botón de cada tarjeta quedaba pegado a la tabla por especificidad de CSS
+  (`a.enlace-boton { margin-top: 0 }` le ganaba a `.enlace-tablero`). Ahora va en un pie separado
+  por una línea, y las tarjetas de una misma fila tienen el mismo alto.
+- **Los avisos ya no se repiten:** cada pantalla oculta `pnlMensaje` al principio de cada request.
+  Antes, el Literal (que guarda su texto en el ViewState) repetía el último aviso en cada postback,
+  incluida la contraseña temporal de Usuarios.
+- **Verificación:** rebuild limpio y `aspnet_compiler` sin errores. 61 pruebas del JS con jsdom
+  (orden, formatos, filtro, paginado, estado entre postbacks, selector, modal), no commiteadas. Con
+  IIS Express sobre el sitio precompilado, Login, Registro y Recuperar responden 200 y las
+  pantallas del menú redirigen al login. **No se probó ninguna pantalla con datos ni se vio en el
+  navegador:** en esta máquina no arrancan ni LocalDB ni el servicio SQL Server (ver la sección 4).
+  Falta recrear la base (`01` a `04`; el `01` agrega la columna) y recorrer las pantallas con F5.
 
 ### 2026-10-06 (cont. 2) — Inicio como tablero: turnos de hoy y stock bajo
 
@@ -1654,6 +1730,14 @@ falta es decidir si se unifica el criterio.
 ## 4. Pendientes conocidos, sin fecha
 
 Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
+
+- **LocalDB no arranca en la máquina de Federico (2026-10-07).** El `error.log` de la instancia
+  muestra "misaligned log IOs" y enseguida un stack overflow: es el problema conocido de Windows 11
+  con discos NVMe que informan sectores de más de 4 KB. El servicio `MSSQLSERVER` de esa máquina
+  también está detenido, probablemente por lo mismo. Microsoft documenta como solución, con permisos
+  de administrador y reiniciando después:
+  `reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v ForcedPhysicalSectorSizeInBytes /t REG_MULTI_SZ /d "* 4095" /f`.
+  Sin eso no se puede recrear la base ni probar nada con datos en esa máquina.
 
 - ~~**BUG: cerrar una orden sin ninguna línea genera una venta en $0.**~~ **Resuelto el
   2026-10-05**: `GenerarDesdeOrden` rechaza el cierre si no hay servicios ni insumos (ver la

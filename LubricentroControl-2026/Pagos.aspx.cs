@@ -1,27 +1,76 @@
 using System;
+using System.Web;
 using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
     // Alta de pagos de cliente o de proveedor (Fase 4, última pantalla). Acceso completo para
-    // los 3 roles (Requerimientos §5) — a diferencia de Compras/Cuentas corrientes, acá Empleado
-    // también puede cobrar. Un pago no se edita ni se borra una vez cargado. No se elige
-    // comprobante: PagoDAL.Registrar cancela primero las deudas más viejas y deja el sobrante a favor.
+    // Admin, Encargado y Empleado (Requerimientos §5) — a diferencia de Compras/Cuentas
+    // corrientes, acá Empleado también puede cobrar —; Lectura, solo consulta. Un pago no se edita
+    // ni se borra una vez cargado. No se elige comprobante: PagoDAL.Registrar cancela primero las
+    // deudas más viejas y deja el sobrante a favor. El formulario se abre en un modal sobre la
+    // lista, y se abre solo cuando Órdenes de trabajo manda a cobrar la venta de un cliente sin
+    // cuenta corriente (?idVenta=).
     public partial class Pagos : PaginaSegura
     {
+        private const string IdModal = "modalPago";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+            pnlErrorFormulario.Visible = false;
+
             if (IsPostBack) return;
 
             if (EsSoloLectura)
+            {
+                btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
+            }
 
             CargarTipo();
             CargarMedioPago();
             CargarGrilla();
+
+            if (!EsSoloLectura && Request.QueryString["idVenta"] != null)
+                PrepararCobroDeVenta(LeerIdOculto(Request.QueryString["idVenta"]));
+        }
+
+        // Opciones de los selectores de titular (activos). Se evalúan al dibujar el modal.
+        protected string OpcionesClientes
+        {
+            get { return Selectores.OpcionesClientes(); }
+        }
+
+        protected string OpcionesProveedores
+        {
+            get { return Selectores.OpcionesProveedores(); }
+        }
+
+        // Llegada desde Órdenes de trabajo al cerrar la orden de un cliente sin cuenta corriente:
+        // el formulario se abre con el cliente y el saldo de esa venta ya cargados. El monto se
+        // lee de la base, no del query string.
+        private void PrepararCobroDeVenta(int idVenta)
+        {
+            var venta = ComprobanteVentaDAL.ObtenerPorId(idVenta);
+            if (venta == null || venta.SaldoPendiente <= 0) return;
+
+            LimpiarFormulario();
+            SeleccionarCliente(venta.IdCliente);
+            txtMonto.Text = venta.SaldoPendiente.ToString("0.00");
+            txtObservaciones.Text = "Cobro de la venta " + venta.NumeroComprobante;
+
+            litVieneDeOrden.Text = "La orden se cerró y generó la venta <b>" + HttpUtility.HtmlEncode(venta.NumeroComprobante)
+                + "</b> por <b>$" + venta.Total.ToString("N2") + "</b>. Como el cliente no tiene cuenta corriente, "
+                + "registrá ahora el cobro de los <b>$" + venta.SaldoPendiente.ToString("N2") + "</b> pendientes.";
+            pnlVieneDeOrden.Visible = true;
+
+            MostrarFormulario();
         }
 
         private void CargarTipo()
@@ -56,44 +105,33 @@ namespace LubricentroControl_2026
             pnlProveedor.Visible = !esCliente;
 
             hdnIdCliente.Value = string.Empty;
-            litClienteSeleccionado.Text = "(sin seleccionar)";
+            txtCliente.Text = string.Empty;
             hdnIdProveedor.Value = string.Empty;
-            litProveedorSeleccionado.Text = "(sin seleccionar)";
+            txtProveedor.Text = string.Empty;
             lblSaldoTitular.Visible = false;
         }
 
+        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            var texto = txtBuscar.Text;
-
-            gvPagos.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? PagoDAL.Listar()
-                : PagoDAL.Buscar(texto);
+            gvPagos.DataSource = PagoDAL.Listar();
             gvPagos.DataBind();
         }
 
-        protected void btnBuscar_Click(object sender, EventArgs e)
+        protected void btnNuevo_Click(object sender, EventArgs e)
         {
-            CargarGrilla();
+            if (EsSoloLectura) return;
+
+            LimpiarFormulario();
+            MostrarFormulario();
         }
 
         // --- Selector de cliente ----------------------------------------------------------
 
-        protected void btnBuscarCliente_Click(object sender, EventArgs e)
+        // Lo dispara el selector con búsqueda al elegir (postback parcial): muestra el saldo.
+        protected void hdnIdCliente_ValueChanged(object sender, EventArgs e)
         {
-            rptResultadosCliente.DataSource = ClienteDAL.Buscar(txtBuscarCliente.Text, incluirInactivos: false);
-            rptResultadosCliente.DataBind();
-            pnlResultadosCliente.Visible = true;
-        }
-
-        protected void rptResultadosCliente_ItemCommand(object source, RepeaterCommandEventArgs e)
-        {
-            if (e.CommandName != "Seleccionar") return;
-
-            SeleccionarCliente(LeerIdOculto(Convert.ToString(e.CommandArgument)));
-
-            pnlResultadosCliente.Visible = false;
-            txtBuscarCliente.Text = string.Empty;
+            SeleccionarCliente(LeerIdOculto(hdnIdCliente.Value));
         }
 
         private void SeleccionarCliente(int idCliente)
@@ -102,7 +140,7 @@ namespace LubricentroControl_2026
             if (cliente == null) return;
 
             hdnIdCliente.Value = cliente.IdCliente.ToString();
-            litClienteSeleccionado.Text = cliente.NombreCompleto + " — DNI " + cliente.Dni;
+            txtCliente.Text = Selectores.TextoCliente(cliente);
 
             MostrarSaldo(CuentaCorrienteClienteDAL.ObtenerSaldoActual(idCliente));
         }
@@ -114,21 +152,9 @@ namespace LubricentroControl_2026
 
         // --- Selector de proveedor ----------------------------------------------------------
 
-        protected void btnBuscarProveedor_Click(object sender, EventArgs e)
+        protected void hdnIdProveedor_ValueChanged(object sender, EventArgs e)
         {
-            rptResultadosProveedor.DataSource = ProveedorDAL.Buscar(txtBuscarProveedor.Text, incluirInactivos: false);
-            rptResultadosProveedor.DataBind();
-            pnlResultadosProveedor.Visible = true;
-        }
-
-        protected void rptResultadosProveedor_ItemCommand(object source, RepeaterCommandEventArgs e)
-        {
-            if (e.CommandName != "Seleccionar") return;
-
-            SeleccionarProveedor(LeerIdOculto(Convert.ToString(e.CommandArgument)));
-
-            pnlResultadosProveedor.Visible = false;
-            txtBuscarProveedor.Text = string.Empty;
+            SeleccionarProveedor(LeerIdOculto(hdnIdProveedor.Value));
         }
 
         private void SeleccionarProveedor(int idProveedor)
@@ -137,7 +163,7 @@ namespace LubricentroControl_2026
             if (proveedor == null) return;
 
             hdnIdProveedor.Value = proveedor.IdProveedor.ToString();
-            litProveedorSeleccionado.Text = proveedor.RazonSocial;
+            txtProveedor.Text = Selectores.TextoProveedor(proveedor);
 
             MostrarSaldo(CuentaCorrienteProveedorDAL.ObtenerSaldoActual(idProveedor));
         }
@@ -152,7 +178,11 @@ namespace LubricentroControl_2026
         protected void btnRegistrar_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
-            if (!Page.IsValid) return;
+            if (!Page.IsValid)
+            {
+                MostrarFormulario();
+                return;
+            }
 
             var esCliente = ddlTipo.SelectedValue == Pago.TipoCliente;
 
@@ -172,13 +202,17 @@ namespace LubricentroControl_2026
 
             var resultado = PagoDAL.Registrar(pago);
 
-            MostrarMensaje(resultado.Mensaje, resultado.Exito);
-
-            if (resultado.Exito)
+            if (!resultado.Exito)
             {
-                LimpiarFormulario();
-                CargarGrilla();
+                litErrorFormulario.Text = resultado.Mensaje;
+                pnlErrorFormulario.Visible = true;
+                MostrarFormulario();
+                return;
             }
+
+            MostrarMensaje(resultado.Mensaje, true);
+            LimpiarFormulario();
+            CargarGrilla();
         }
 
         // 0 (ID inexistente, cae en "no existe"/valida en falso) si el campo llegara vacío o
@@ -195,17 +229,19 @@ namespace LubricentroControl_2026
             pnlCliente.Visible = true;
             pnlProveedor.Visible = false;
             hdnIdCliente.Value = string.Empty;
-            litClienteSeleccionado.Text = "(sin seleccionar)";
-            txtBuscarCliente.Text = string.Empty;
-            pnlResultadosCliente.Visible = false;
+            txtCliente.Text = string.Empty;
             hdnIdProveedor.Value = string.Empty;
-            litProveedorSeleccionado.Text = "(sin seleccionar)";
-            txtBuscarProveedor.Text = string.Empty;
-            pnlResultadosProveedor.Visible = false;
+            txtProveedor.Text = string.Empty;
             lblSaldoTitular.Visible = false;
             ddlMedioPago.SelectedIndex = 0;
             txtMonto.Text = string.Empty;
             txtObservaciones.Text = string.Empty;
+            pnlVieneDeOrden.Visible = false;
+        }
+
+        private void MostrarFormulario()
+        {
+            Interfaz.AbrirModal(this, IdModal);
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

@@ -30,7 +30,6 @@ namespace LubricentroControl_2026.Reportes
         {
             if (!Page.IsValid) return;
 
-            gvVentas.PageIndex = 0;
             CargarReporte();
         }
 
@@ -75,12 +74,6 @@ namespace LubricentroControl_2026.Reportes
                 texto += ", de las cuales <b>$" + pendiente.ToString("N2") + "</b> siguen pendientes de cobro";
 
             return texto + ".";
-        }
-
-        protected void gvVentas_PageIndexChanging(object sender, GridViewPageEventArgs e)
-        {
-            gvVentas.PageIndex = e.NewPageIndex;
-            CargarReporte();
         }
 
         // Igual que StockBajo: se resalta sólo el caso que necesita atención, no toda la fila.

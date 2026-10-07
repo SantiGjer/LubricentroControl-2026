@@ -4,34 +4,46 @@ using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
-    // ABM de turnos (Fase 3). Acceso completo para los 3 roles (Requerimientos §5), no hay
-    // modo solo-consulta que manejar acá. Mismo layout de dos columnas y mismo buscador
-    // desplegable de cliente que Vehiculos.aspx — sin el atajo "Nuevo cliente" (ver plan).
+    // ABM de turnos (Fase 3). Acceso completo para Admin, Encargado y Empleado (Requerimientos
+    // §5); Lectura, solo consulta. El formulario se abre en un modal sobre la lista. El cliente se
+    // elige con el selector con búsqueda (mismo que el dueño en Vehículos) — sin el atajo "Nuevo
+    // cliente" — y queda fijo una vez creado el turno.
     public partial class Turnos : PaginaSegura
     {
         // Índice de la columna "Acciones" en gvTurnos.Columns.
         private const int ColumnaAcciones = 4;
 
+        private const string IdModal = "modalTurno";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+            pnlErrorFormulario.Visible = false;
+
             if (IsPostBack) return;
 
             if (EsSoloLectura)
             {
+                btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
                 gvTurnos.Columns[ColumnaAcciones].Visible = false;
             }
 
             CargarFiltroEstado();
             CargarEstados();
-            ddlEstado.SelectedValue = Turno.EstadoSolicitado;
-            ddlEstado.Visible = false;
-            litEstadoNuevo.Visible = true;
-            LimpiarVehiculos();
+            LimpiarFormulario();
             CargarGrilla();
+        }
+
+        // Opciones del selector de cliente (los clientes activos). Se evalúa al dibujar el modal.
+        protected string OpcionesClientes
+        {
+            get { return Selectores.OpcionesClientes(); }
         }
 
         private void CargarFiltroEstado()
@@ -49,20 +61,19 @@ namespace LubricentroControl_2026
                 ddlEstado.Items.Add(new ListItem(estado, estado));
         }
 
+        // El estado filtra en el servidor; el texto, la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            var texto = txtBuscar.Text;
-            var estado = ddlFiltroEstado.SelectedValue;
-
-            gvTurnos.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? TurnoDAL.Listar(estado)
-                : TurnoDAL.Buscar(texto, estado);
+            gvTurnos.DataSource = TurnoDAL.Listar(ddlFiltroEstado.SelectedValue);
             gvTurnos.DataBind();
         }
 
-        protected void btnBuscar_Click(object sender, EventArgs e)
+        // El filtro de la tabla busca también por DNI, que no es una columna: va en data-buscar.
+        protected void gvTurnos_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            CargarGrilla();
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            e.Row.Attributes["data-buscar"] = ((Turno)e.Row.DataItem).Dni;
         }
 
         protected void ddlFiltroEstado_SelectedIndexChanged(object sender, EventArgs e)
@@ -70,32 +81,28 @@ namespace LubricentroControl_2026
             CargarGrilla();
         }
 
-        // --- Selector de cliente: buscador desplegable dentro del UpdatePanel -----------
+        // --- Selector de cliente -----------------------------------------------------------
 
-        protected void btnBuscarCliente_Click(object sender, EventArgs e)
+        // Lo dispara el selector con búsqueda al elegir un cliente (postback parcial del
+        // UpdatePanel): carga los vehículos de ese cliente.
+        protected void hdnIdCliente_ValueChanged(object sender, EventArgs e)
         {
-            rptResultadosCliente.DataSource = ClienteDAL.Buscar(txtBuscarCliente.Text, incluirInactivos: false);
-            rptResultadosCliente.DataBind();
-            pnlResultadosCliente.Visible = true;
-        }
-
-        protected void rptResultadosCliente_ItemCommand(object source, RepeaterCommandEventArgs e)
-        {
-            if (e.CommandName != "Seleccionar") return;
-
-            SeleccionarCliente(LeerIdOculto(Convert.ToString(e.CommandArgument)));
-
-            pnlResultadosCliente.Visible = false;
-            txtBuscarCliente.Text = string.Empty;
+            SeleccionarCliente(LeerIdOculto(hdnIdCliente.Value));
         }
 
         private void SeleccionarCliente(int idCliente)
         {
             var cliente = ClienteDAL.ObtenerPorId(idCliente);
-            if (cliente == null) return;
+            if (cliente == null)
+            {
+                hdnIdCliente.Value = string.Empty;
+                txtCliente.Text = string.Empty;
+                LimpiarVehiculos();
+                return;
+            }
 
             hdnIdCliente.Value = cliente.IdCliente.ToString();
-            litClienteSeleccionado.Text = cliente.NombreCompleto + " — DNI " + cliente.Dni;
+            txtCliente.Text = Selectores.TextoCliente(cliente);
 
             CargarVehiculosDelCliente(idCliente, null);
         }
@@ -137,12 +144,17 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
 
             LimpiarFormulario();
+            MostrarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
-            if (!Page.IsValid) return;
+            if (!Page.IsValid)
+            {
+                MostrarFormulario();
+                return;
+            }
 
             // Los inputs HTML5 type="date"/"time" siempre postean en yyyy-MM-dd / HH:mm,
             // sin importar la configuración regional del navegador ni la cultura del hilo
@@ -155,7 +167,7 @@ namespace LubricentroControl_2026
 
             if (!fechaValida || !horaValida)
             {
-                MostrarMensaje("La fecha o la hora no tienen un formato válido.", false);
+                MostrarErrorFormulario("La fecha o la hora no tienen un formato válido.");
                 return;
             }
 
@@ -175,7 +187,7 @@ namespace LubricentroControl_2026
 
             if (!resultado.Exito)
             {
-                MostrarMensaje(resultado.Mensaje, false);
+                MostrarErrorFormulario(resultado.Mensaje);
                 return;
             }
 
@@ -187,7 +199,7 @@ namespace LubricentroControl_2026
         protected void gvTurnos_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (EsSoloLectura) return;
-            if (e.CommandName != "Seleccionar") return;
+            if (e.CommandName != "Editar") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
@@ -205,6 +217,11 @@ namespace LubricentroControl_2026
             hdnIdTurno.Value = turno.IdTurno.ToString();
             SeleccionarCliente(turno.IdCliente);
             CargarVehiculosDelCliente(turno.IdCliente, turno.IdVehiculo);
+
+            // El cliente queda fijo una vez creado el turno (TurnoDAL.Actualizar no lo cambia):
+            // el selector se muestra deshabilitado. El vehículo sí se puede cambiar.
+            txtCliente.Enabled = false;
+
             txtFecha.Text = turno.FechaHoraAsignada.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             txtHora.Text = turno.FechaHoraAsignada.ToString("HH:mm", CultureInfo.InvariantCulture);
             ddlEstado.SelectedValue = turno.Estado;
@@ -213,6 +230,7 @@ namespace LubricentroControl_2026
             txtObservaciones.Text = turno.Observaciones;
 
             litTituloFormulario.Text = "Editar turno";
+            MostrarFormulario();
         }
 
         // 0 (ID inexistente, cae en "no existe"/valida en falso) si el campo oculto
@@ -227,9 +245,8 @@ namespace LubricentroControl_2026
         {
             hdnIdTurno.Value = string.Empty;
             hdnIdCliente.Value = string.Empty;
-            litClienteSeleccionado.Text = "(sin seleccionar)";
-            txtBuscarCliente.Text = string.Empty;
-            pnlResultadosCliente.Visible = false;
+            txtCliente.Text = string.Empty;
+            txtCliente.Enabled = true;
             LimpiarVehiculos();
             txtFecha.Text = string.Empty;
             txtHora.Text = string.Empty;
@@ -241,6 +258,19 @@ namespace LubricentroControl_2026
             litEstadoNuevo.Visible = true;
             txtObservaciones.Text = string.Empty;
             litTituloFormulario.Text = "Nuevo turno";
+        }
+
+        private void MostrarFormulario()
+        {
+            Interfaz.AbrirModal(this, IdModal);
+        }
+
+        // Un error al guardar se muestra adentro del modal, que vuelve a abrirse con lo cargado.
+        private void MostrarErrorFormulario(string mensajeHtml)
+        {
+            litErrorFormulario.Text = mensajeHtml;
+            pnlErrorFormulario.Visible = true;
+            MostrarFormulario();
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

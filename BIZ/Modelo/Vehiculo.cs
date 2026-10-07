@@ -13,6 +13,15 @@ namespace BIZ.Modelo
         private static readonly Regex FormatoPatente =
             new Regex(@"^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$", RegexOptions.Compiled);
 
+        // Rango del año del modelo: desde 1900 hasta el año que viene (un 0 km puede salir ya
+        // con el modelo del año siguiente).
+        public const int AnioMinimo = 1900;
+
+        public static int AnioMaximo
+        {
+            get { return DateTime.Today.Year + 1; }
+        }
+
         public int IdVehiculo { get; set; }
         public int IdCliente { get; set; }
 
@@ -32,6 +41,12 @@ namespace BIZ.Modelo
             return patente != null && FormatoPatente.IsMatch(patente.Trim().ToUpperInvariant());
         }
 
+        // El año es opcional: sin año también es válido.
+        public static bool EsAnioValido(int? anio)
+        {
+            return !anio.HasValue || (anio.Value >= AnioMinimo && anio.Value <= AnioMaximo);
+        }
+
         // Valida los campos obligatorios, normaliza la patente a mayúsculas y le saca
         // los espacios de los bordes a marca/modelo.
         public ResultadoOperacion Validar()
@@ -46,6 +61,9 @@ namespace BIZ.Modelo
                 return ResultadoOperacion.Error("La patente no tiene un formato válido (ej. ABC123 o AB123CD).");
 
             Patente = Patente.Trim().ToUpperInvariant();
+
+            if (!EsAnioValido(Anio))
+                return ResultadoOperacion.Error("El año tiene que estar entre " + AnioMinimo + " y " + AnioMaximo + ".");
 
             if (!string.IsNullOrWhiteSpace(TipoCombustible) && Array.IndexOf(TiposCombustible, TipoCombustible) < 0)
                 return ResultadoOperacion.Error("El tipo de combustible no es válido.");

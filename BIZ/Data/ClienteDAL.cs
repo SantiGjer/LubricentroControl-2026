@@ -7,7 +7,8 @@ namespace BIZ.Data
     public static class ClienteDAL
     {
         private const string SelectBase = @"
-            SELECT idCliente, nombre, apellido, dni, telefono, email, direccion, activo, fechaAlta
+            SELECT idCliente, nombre, apellido, dni, telefono, email, direccion, cuentaCorriente,
+                   activo, fechaAlta
             FROM Cliente";
 
         private static Cliente Mapear(DataRow fila)
@@ -21,6 +22,7 @@ namespace BIZ.Data
                 Telefono = AccesoDatos.LeerString(fila, "telefono"),
                 Email = AccesoDatos.LeerString(fila, "email"),
                 Direccion = AccesoDatos.LeerString(fila, "direccion"),
+                CuentaCorriente = AccesoDatos.LeerBool(fila, "cuentaCorriente"),
                 Activo = AccesoDatos.LeerBool(fila, "activo"),
                 FechaAlta = AccesoDatos.LeerFecha(fila, "fechaAlta")
             };
@@ -47,25 +49,6 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Buscador rápido por nombre, apellido o DNI (Requerimientos §6.2/§9.2). Lo usa tanto
-        // la grilla de Clientes como el selector de dueño al dar de alta un Vehículo.
-        public static List<Cliente> Buscar(string texto, bool incluirInactivos = false)
-        {
-            if (string.IsNullOrWhiteSpace(texto))
-                return Listar(incluirInactivos);
-
-            var sql = SelectBase +
-                      " WHERE (nombre LIKE @texto OR apellido LIKE @texto OR dni LIKE @texto)" +
-                      (incluirInactivos ? "" : " AND activo = 1") +
-                      " ORDER BY apellido, nombre";
-
-            var lista = new List<Cliente>();
-            foreach (DataRow fila in AccesoDatos.Consultar(
-                sql, AccesoDatos.Param("@texto", "%" + texto.Trim() + "%")).Rows)
-                lista.Add(Mapear(fila));
-            return lista;
-        }
-
         public static bool ExisteDni(string dni, int idClienteExcluido = 0)
         {
             var cantidad = AccesoDatos.Escalar(
@@ -79,8 +62,8 @@ namespace BIZ.Data
         private static int Insertar(Cliente cliente)
         {
             const string sql = @"
-                INSERT INTO Cliente (nombre, apellido, dni, telefono, email, direccion, activo)
-                VALUES (@nombre, @apellido, @dni, @telefono, @email, @direccion, @activo);
+                INSERT INTO Cliente (nombre, apellido, dni, telefono, email, direccion, cuentaCorriente, activo)
+                VALUES (@nombre, @apellido, @dni, @telefono, @email, @direccion, @cuentaCorriente, @activo);
                 SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
             var id = AccesoDatos.Escalar(sql,
@@ -90,6 +73,7 @@ namespace BIZ.Data
                 AccesoDatos.Param("@telefono", cliente.Telefono),
                 AccesoDatos.Param("@email", cliente.Email),
                 AccesoDatos.Param("@direccion", cliente.Direccion),
+                AccesoDatos.Param("@cuentaCorriente", cliente.CuentaCorriente),
                 AccesoDatos.Param("@activo", cliente.Activo));
 
             return System.Convert.ToInt32(id);
@@ -122,7 +106,8 @@ namespace BIZ.Data
             const string sql = @"
                 UPDATE Cliente
                 SET nombre = @nombre, apellido = @apellido, dni = @dni, telefono = @telefono,
-                    email = @email, direccion = @direccion, activo = @activo
+                    email = @email, direccion = @direccion, cuentaCorriente = @cuentaCorriente,
+                    activo = @activo
                 WHERE idCliente = @idCliente";
 
             AccesoDatos.Ejecutar(sql,
@@ -132,6 +117,7 @@ namespace BIZ.Data
                 AccesoDatos.Param("@telefono", cliente.Telefono),
                 AccesoDatos.Param("@email", cliente.Email),
                 AccesoDatos.Param("@direccion", cliente.Direccion),
+                AccesoDatos.Param("@cuentaCorriente", cliente.CuentaCorriente),
                 AccesoDatos.Param("@activo", cliente.Activo),
                 AccesoDatos.Param("@idCliente", cliente.IdCliente));
 
@@ -154,6 +140,23 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idCliente", idCliente));
 
             return ResultadoOperacion.Ok("Cliente desactivado.");
+        }
+
+        // Deshace la baja lógica: el cliente vuelve tal cual estaba, con su historial intacto.
+        public static ResultadoOperacion Reactivar(int idCliente)
+        {
+            var cliente = ObtenerPorId(idCliente);
+            if (cliente == null)
+                return ResultadoOperacion.Error("El cliente no existe.");
+
+            if (cliente.Activo)
+                return ResultadoOperacion.Ok("El cliente ya estaba activo.");
+
+            AccesoDatos.Ejecutar(
+                "UPDATE Cliente SET activo = 1 WHERE idCliente = @idCliente",
+                AccesoDatos.Param("@idCliente", idCliente));
+
+            return ResultadoOperacion.Ok("Cliente reactivado.");
         }
     }
 }

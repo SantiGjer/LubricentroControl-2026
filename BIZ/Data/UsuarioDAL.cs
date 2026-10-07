@@ -217,6 +217,23 @@ namespace BIZ.Data
             return ResultadoOperacion.Ok("Usuario desactivado.");
         }
 
+        // Deshace la baja lógica: el usuario vuelve a poder ingresar con su misma contraseña.
+        public static ResultadoOperacion Reactivar(int idUsuario)
+        {
+            var usuario = ObtenerPorId(idUsuario);
+            if (usuario == null)
+                return ResultadoOperacion.Error("El usuario no existe.");
+
+            if (usuario.Activo)
+                return ResultadoOperacion.Ok("El usuario ya estaba activo.");
+
+            AccesoDatos.Ejecutar(
+                "UPDATE Usuario SET activo = 1 WHERE idUsuario = @idUsuario",
+                AccesoDatos.Param("@idUsuario", idUsuario));
+
+            return ResultadoOperacion.Ok("Usuario reactivado.");
+        }
+
         // Blanquea la contraseña y manda la nueva por mail.
         public static ResultadoOperacion BlanquearPassword(int idUsuario, out string passwordTemporal)
         {

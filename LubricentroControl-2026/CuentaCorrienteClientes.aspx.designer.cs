@@ -14,11 +14,8 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control txtBuscar.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtBuscar;
-
-        /// <summary>Control btnBuscar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBuscar;
+        /// <summary>Control chkIncluirSinCuenta.</summary>
+        protected global::System.Web.UI.WebControls.CheckBox chkIncluirSinCuenta;
 
         /// <summary>Control gvClientes.</summary>
         protected global::System.Web.UI.WebControls.GridView gvClientes;
@@ -29,8 +26,20 @@ namespace LubricentroControl_2026
         /// <summary>Control litClienteSeleccionado.</summary>
         protected global::System.Web.UI.WebControls.Literal litClienteSeleccionado;
 
+        /// <summary>Control pnlMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlMensajeFormulario;
+
+        /// <summary>Control litMensajeFormulario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litMensajeFormulario;
+
+        /// <summary>Control pnlSinCuenta.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlSinCuenta;
+
         /// <summary>Control litSaldoActual.</summary>
         protected global::System.Web.UI.WebControls.Literal litSaldoActual;
+
+        /// <summary>Control pnlHistorial.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlHistorial;
 
         /// <summary>Control gvHistorial.</summary>
         protected global::System.Web.UI.WebControls.GridView gvHistorial;
@@ -46,5 +55,8 @@ namespace LubricentroControl_2026
 
         /// <summary>Control btnRegistrarAjuste.</summary>
         protected global::System.Web.UI.WebControls.Button btnRegistrarAjuste;
+
+        /// <summary>Control lnkEditarCliente.</summary>
+        protected global::System.Web.UI.WebControls.HyperLink lnkEditarCliente;
     }
 }

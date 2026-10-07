@@ -4,18 +4,22 @@ using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
     // ABM de compras a proveedores (Fase 4). Admin y Encargado, acceso completo; Empleado, solo
     // consulta (Requerimientos §5), mismo patrón que Proveedores/Insumos. A diferencia de
-    // Órdenes de trabajo, una compra no tiene franja de alta progresiva ni se edita después de
-    // creada: las líneas se arman en memoria (ViewState) mientras se transcribe la factura del
-    // proveedor, y "Guardar compra" persiste todo junto (ComprobanteCompraDAL.Crear).
+    // Órdenes de trabajo, una compra no tiene alta progresiva ni se edita después de creada: las
+    // líneas se arman en memoria (ViewState) mientras se transcribe la factura del proveedor, y
+    // "Guardar compra" persiste todo junto (ComprobanteCompraDAL.Crear). El alta y la vista de una
+    // compra ya registrada comparten el mismo modal.
     public partial class Compras : PaginaSegura
     {
         // Índice de la columna "Acciones" en gvCompras.Columns.
         private const int ColumnaAcciones = 6;
+
+        private const string IdModal = "modalCompra";
 
         // Líneas todavía no guardadas de la compra en curso.
         private List<DetalleCompra> LineasPendientes
@@ -34,10 +38,15 @@ namespace LubricentroControl_2026
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+            pnlMensajeFormulario.Visible = false;
+
             if (IsPostBack) return;
 
             if (EsSoloLectura)
             {
+                btnNuevaCompra.Visible = false;
                 pnlFormulario.Visible = false;
                 gvCompras.Columns[ColumnaAcciones].Visible = false;
             }
@@ -45,7 +54,14 @@ namespace LubricentroControl_2026
             CargarCondicionPago();
             CargarMedioPago();
             CargarInsumos();
+            LimpiarFormulario();
             CargarGrilla();
+        }
+
+        // Opciones del selector de proveedor (los activos). Se evalúa al dibujar el modal.
+        protected string OpcionesProveedores
+        {
+            get { return Selectores.OpcionesProveedores(); }
         }
 
         private void CargarCondicionPago()
@@ -82,52 +98,25 @@ namespace LubricentroControl_2026
             pnlMedioPago.Visible = ddlCondicionPago.SelectedValue == ComprobanteCompra.CondicionContado;
         }
 
+        // "Solo con saldo pendiente" filtra en el servidor; el texto, la tabla en el navegador.
         private void CargarGrilla()
         {
-            var texto = txtBuscar.Text;
-
-            gvCompras.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? ComprobanteCompraDAL.Listar(chkSoloConSaldo.Checked)
-                : ComprobanteCompraDAL.Buscar(texto);
+            gvCompras.DataSource = ComprobanteCompraDAL.Listar(chkSoloConSaldo.Checked);
             gvCompras.DataBind();
         }
 
-        protected void btnBuscar_Click(object sender, EventArgs e)
+        // El filtro de la tabla busca también por CUIT, que no es una columna: va en data-buscar.
+        protected void gvCompras_RowDataBound(object sender, GridViewRowEventArgs e)
         {
-            CargarGrilla();
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            var cuit = ((ComprobanteCompra)e.Row.DataItem).Cuit;
+            e.Row.Attributes["data-buscar"] = cuit + " " + Proveedor.FormatearCuit(cuit);
         }
 
         protected void chkSoloConSaldo_CheckedChanged(object sender, EventArgs e)
         {
             CargarGrilla();
-        }
-
-        // --- Selector de proveedor: buscador desplegable dentro del UpdatePanel ---------
-
-        protected void btnBuscarProveedor_Click(object sender, EventArgs e)
-        {
-            rptResultadosProveedor.DataSource = ProveedorDAL.Buscar(txtBuscarProveedor.Text, incluirInactivos: false);
-            rptResultadosProveedor.DataBind();
-            pnlResultadosProveedor.Visible = true;
-        }
-
-        protected void rptResultadosProveedor_ItemCommand(object source, RepeaterCommandEventArgs e)
-        {
-            if (e.CommandName != "Seleccionar") return;
-
-            SeleccionarProveedor(LeerIdOculto(Convert.ToString(e.CommandArgument)));
-
-            pnlResultadosProveedor.Visible = false;
-            txtBuscarProveedor.Text = string.Empty;
-        }
-
-        private void SeleccionarProveedor(int idProveedor)
-        {
-            var proveedor = ProveedorDAL.ObtenerPorId(idProveedor);
-            if (proveedor == null) return;
-
-            hdnIdProveedor.Value = proveedor.IdProveedor.ToString();
-            litProveedorSeleccionado.Text = proveedor.RazonSocial;
         }
 
         protected void valProveedor_ServerValidate(object source, ServerValidateEventArgs args)
@@ -141,7 +130,7 @@ namespace LubricentroControl_2026
                 || !string.IsNullOrEmpty(ddlMedioPago.SelectedValue);
         }
 
-        // --- Líneas en memoria (todavía no persistidas) ----------------------------------
+        // --- Líneas en memoria (todavía no persistidas; postbacks parciales del UpdatePanel) ---
 
         protected void btnAgregarLinea_Click(object sender, EventArgs e)
         {
@@ -150,12 +139,12 @@ namespace LubricentroControl_2026
             decimal cantidad, precio;
             if (!decimal.TryParse(txtCantidadLinea.Text, out cantidad) || cantidad <= 0)
             {
-                MostrarMensaje("La cantidad de la línea debe ser un número mayor a cero.", false);
+                MostrarMensajeFormulario("La cantidad de la línea debe ser un número mayor a cero.", false);
                 return;
             }
             if (!decimal.TryParse(txtPrecioLinea.Text, out precio) || precio < 0)
             {
-                MostrarMensaje("El precio unitario debe ser un número mayor o igual a cero.", false);
+                MostrarMensajeFormulario("El precio unitario debe ser un número mayor o igual a cero.", false);
                 return;
             }
 
@@ -163,7 +152,7 @@ namespace LubricentroControl_2026
             var insumo = InsumoDAL.ObtenerPorId(idInsumo);
             if (insumo == null)
             {
-                MostrarMensaje("El insumo seleccionado no existe.", false);
+                MostrarMensajeFormulario("El insumo seleccionado no existe.", false);
                 return;
             }
 
@@ -205,12 +194,17 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
 
             LimpiarFormulario();
+            MostrarFormulario();
         }
 
         protected void btnGuardarCompra_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
-            if (!Page.IsValid) return;
+            if (!Page.IsValid)
+            {
+                MostrarFormulario();
+                return;
+            }
 
             decimal impuestos;
             decimal.TryParse(txtImpuestos.Text, out impuestos);
@@ -228,20 +222,21 @@ namespace LubricentroControl_2026
 
             if (!resultado.Exito)
             {
-                MostrarMensaje(resultado.Mensaje, false);
+                MostrarMensajeFormulario(resultado.Mensaje, false);
                 return;
             }
 
-            MostrarMensaje(resultado.Mensaje, true);
+            // El modal pasa a mostrar la compra recién registrada (con su número ya asignado).
             ViewState["LineasPendientes"] = new List<DetalleCompra>();
             CargarGrilla();
             Seleccionar(compra.IdCompra);
+            MostrarMensajeFormulario(resultado.Mensaje, true);
         }
 
         protected void gvCompras_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (EsSoloLectura) return;
-            if (e.CommandName != "Seleccionar") return;
+            if (e.CommandName != "Ver") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
@@ -259,8 +254,10 @@ namespace LubricentroControl_2026
             hdnIdCompra.Value = compra.IdCompra.ToString();
             pnlAltaCompra.Visible = false;
             pnlCompraExistente.Visible = true;
+            btnGuardarCompra.Visible = false;
+            litBotonCerrar.Text = "Cerrar";
 
-            litProveedorInfo.Text = compra.RazonSocial;
+            litProveedorInfo.Text = Server.HtmlEncode(compra.RazonSocial);
             litFechaInfo.Text = compra.Fecha.ToString("dd/MM/yyyy HH:mm");
             litCondicionInfo.Text = compra.CondicionPago;
             litMedioPagoInfo.Text = compra.MedioPago ?? "—";
@@ -272,7 +269,8 @@ namespace LubricentroControl_2026
             gvDetalleCompra.DataSource = DetalleCompraDAL.ListarPorCompra(idCompra);
             gvDetalleCompra.DataBind();
 
-            litTituloFormulario.Text = compra.NumeroComprobante;
+            litTituloFormulario.Text = "Compra " + compra.NumeroComprobante;
+            MostrarFormulario();
         }
 
         // 0 (ID inexistente, cae en "no existe"/valida en falso) si el campo oculto llegara
@@ -288,11 +286,11 @@ namespace LubricentroControl_2026
             hdnIdCompra.Value = string.Empty;
             pnlAltaCompra.Visible = true;
             pnlCompraExistente.Visible = false;
+            btnGuardarCompra.Visible = true;
+            litBotonCerrar.Text = "Cancelar";
 
             hdnIdProveedor.Value = string.Empty;
-            litProveedorSeleccionado.Text = "(sin seleccionar)";
-            txtBuscarProveedor.Text = string.Empty;
-            pnlResultadosProveedor.Visible = false;
+            txtProveedor.Text = string.Empty;
             ddlCondicionPago.SelectedIndex = 0;
             ActualizarVisibilidadMedioPago();
             ddlMedioPago.SelectedIndex = 0;
@@ -303,6 +301,20 @@ namespace LubricentroControl_2026
             CargarLineasPendientes();
 
             litTituloFormulario.Text = "Nueva compra";
+        }
+
+        private void MostrarFormulario()
+        {
+            Interfaz.AbrirModal(this, IdModal);
+        }
+
+        // Aviso adentro del modal (error al guardar o al agregar una línea, compra registrada).
+        private void MostrarMensajeFormulario(string mensajeHtml, bool exito)
+        {
+            pnlMensajeFormulario.CssClass = "alert " + (exito ? "alert-success" : "alert-danger");
+            litMensajeFormulario.Text = mensajeHtml;
+            pnlMensajeFormulario.Visible = true;
+            MostrarFormulario();
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

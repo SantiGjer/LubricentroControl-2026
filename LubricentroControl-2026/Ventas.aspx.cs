@@ -1,40 +1,38 @@
 using System;
 using BIZ.Data;
 using LubricentroControl_2026.Seguridad;
+using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
     // Comprobantes de venta (Fase 4). Solo lectura: no se carga a mano, se genera
     // automáticamente al cerrar una orden de trabajo (OrdenDeTrabajoDAL.Cerrar →
-    // ComprobanteVentaDAL.GenerarDesdeOrden, Requerimientos §6.6). Acceso completo para los
-    // 3 roles (Requerimientos §5) — no hay nada que escribir acá de todas formas.
+    // ComprobanteVentaDAL.GenerarDesdeOrden, Requerimientos §6.6). Acceso completo para todos los
+    // roles — no hay nada que escribir acá de todas formas. El detalle se abre en un modal.
     public partial class Ventas : PaginaSegura
     {
+        private const string IdModal = "modalVenta";
+
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
+            pnlMensaje.Visible = false;
+
             if (IsPostBack) return;
 
             CargarGrilla();
         }
 
+        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            var texto = txtBuscar.Text;
-
-            gvVentas.DataSource = string.IsNullOrWhiteSpace(texto)
-                ? ComprobanteVentaDAL.Listar()
-                : ComprobanteVentaDAL.Buscar(texto);
+            gvVentas.DataSource = ComprobanteVentaDAL.Listar();
             gvVentas.DataBind();
-        }
-
-        protected void btnBuscar_Click(object sender, EventArgs e)
-        {
-            CargarGrilla();
         }
 
         protected void gvVentas_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
         {
-            if (e.CommandName != "Seleccionar") return;
+            if (e.CommandName != "Ver") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
@@ -49,10 +47,9 @@ namespace LubricentroControl_2026
                 return;
             }
 
-            pnlDetalle.Visible = true;
-            litTituloDetalle.Text = venta.NumeroComprobante;
-            litClienteInfo.Text = venta.NombreCliente;
-            litVehiculoInfo.Text = venta.Patente;
+            litTituloDetalle.Text = "Venta " + Server.HtmlEncode(venta.NumeroComprobante);
+            litClienteInfo.Text = Server.HtmlEncode(venta.NombreCliente);
+            litVehiculoInfo.Text = Server.HtmlEncode(venta.Patente);
             litFechaInfo.Text = venta.Fecha.ToString("dd/MM/yyyy HH:mm");
             litSubtotalInfo.Text = venta.Subtotal.ToString("N2");
             litImpuestosInfo.Text = venta.Impuestos.ToString("N2");
@@ -61,6 +58,8 @@ namespace LubricentroControl_2026
 
             gvDetalleVenta.DataSource = DetalleComprobanteVentaDAL.ListarPorVenta(idVenta);
             gvDetalleVenta.DataBind();
+
+            Interfaz.AbrirModal(this, IdModal);
         }
 
         // 0 (ID inexistente, cae en "no existe"/valida en falso) si el campo llegara vacío o
