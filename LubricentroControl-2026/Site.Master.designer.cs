@@ -27,9 +27,19 @@ namespace LubricentroControl_2026
         protected global::System.Web.UI.WebControls.Literal litMenu;
 
         /// <summary>
+        /// Control litIniciales.
+        /// </summary>
+        protected global::System.Web.UI.WebControls.Literal litIniciales;
+
+        /// <summary>
         /// Control litUsuario.
         /// </summary>
         protected global::System.Web.UI.WebControls.Literal litUsuario;
+
+        /// <summary>
+        /// Control litRol.
+        /// </summary>
+        protected global::System.Web.UI.WebControls.Literal litRol;
 
         /// <summary>
         /// Control lnkCerrarSesion.

@@ -7,10 +7,10 @@ namespace BIZ.Data
     public static class DetalleOrdenServicioDAL
     {
         private const string SelectBase = @"
-            SELECT d.idDetalle, d.idOrden, d.idServicio, s.nombre AS nombreServicio,
-                   d.cantidad, d.precioAplicado
+            SELECT d.idDetalle, d.idOrden, d.idServicio, p.nombre AS nombreServicio,
+                   d.cantidad, d.precioAplicado, p.tipoIva, p.alicuotaIva
             FROM DetalleOrdenServicio d
-            INNER JOIN Servicio s ON s.idServicio = d.idServicio";
+            INNER JOIN Producto p ON p.idProducto = d.idServicio";
 
         private static DetalleOrdenServicio Mapear(DataRow fila)
         {
@@ -21,7 +21,9 @@ namespace BIZ.Data
                 IdServicio = AccesoDatos.LeerInt(fila, "idServicio"),
                 NombreServicio = AccesoDatos.LeerString(fila, "nombreServicio"),
                 Cantidad = AccesoDatos.LeerDecimal(fila, "cantidad"),
-                PrecioAplicado = AccesoDatos.LeerDecimal(fila, "precioAplicado")
+                PrecioAplicado = AccesoDatos.LeerDecimal(fila, "precioAplicado"),
+                TipoIva = AccesoDatos.LeerString(fila, "tipoIva"),
+                AlicuotaIva = AccesoDatos.LeerDecimal(fila, "alicuotaIva")
             };
         }
 
@@ -50,7 +52,7 @@ namespace BIZ.Data
             return ResultadoOperacion.Ok();
         }
 
-        // precioAplicado es un snapshot del precioBase vigente del servicio al momento de
+        // precioAplicado es un snapshot del precio vigente del servicio al momento de
         // agregar la línea (no toca stock, así que no necesita transacción especial).
         public static ResultadoOperacion Agregar(int idOrden, int idServicio, decimal cantidad)
         {
@@ -60,8 +62,8 @@ namespace BIZ.Data
             if (cantidad <= 0)
                 return ResultadoOperacion.Error("La cantidad debe ser mayor a cero.");
 
-            var servicio = ServicioDAL.ObtenerPorId(idServicio);
-            if (servicio == null)
+            var servicio = ProductoDAL.ObtenerPorId(idServicio);
+            if (servicio == null || !servicio.EsServicio)
                 return ResultadoOperacion.Error("El servicio no existe.");
             if (!servicio.Activo)
                 return ResultadoOperacion.Error("El servicio está dado de baja.");
@@ -74,7 +76,7 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idOrden", idOrden),
                 AccesoDatos.Param("@idServicio", idServicio),
                 AccesoDatos.Param("@cantidad", cantidad),
-                AccesoDatos.Param("@precioAplicado", servicio.PrecioBase));
+                AccesoDatos.Param("@precioAplicado", servicio.Precio));
 
             return ResultadoOperacion.Ok("Servicio agregado.");
         }

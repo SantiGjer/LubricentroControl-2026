@@ -32,12 +32,6 @@ namespace BIZ.Modelo
             get { return (Nombre + " " + Apellido).Trim(); }
         }
 
-        // True si el usuario tiene al menos el nivel pedido (jerarquía menor o igual).
-        public bool TieneNivelMinimo(int idNivelRequerido)
-        {
-            return IdNivel <= idNivelRequerido;
-        }
-
         public bool EsAdmin
         {
             get { return IdNivel == Nivel.Admin; }

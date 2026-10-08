@@ -13,38 +13,41 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroProveedores" class="filtro-tabla-texto"
-            placeholder="Filtrar por razón social, CUIT, teléfono o mail" aria-label="Filtrar proveedores" />
-        <span class="opcion-barra">
-            <asp:CheckBox ID="chkIncluirInactivos" runat="server" AutoPostBack="true"
-                OnCheckedChanged="chkIncluirInactivos_CheckedChanged" />
-            <asp:Label runat="server" AssociatedControlID="chkIncluirInactivos">Incluir inactivos</asp:Label>
-        </span>
+            placeholder="Buscar por razón social, CUIT, teléfono o mail" aria-label="Buscar proveedores" />
         <span class="acciones-barra">
             <asp:Button ID="btnNuevo" runat="server" CssClass="boton-rojo" Text="Nuevo proveedor"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
         </span>
     </div>
 
+    <div class="opciones-tabla" id="opcionesProveedores">
+        <div class="grupo-opciones" data-columna="Estado" data-inicial="Activo">
+            <span class="titulo-opciones">Estado</span>
+            <button type="button" class="opcion" data-valor="Activo">Activos</button>
+            <button type="button" class="opcion" data-valor="Inactivo">Inactivos</button>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+        </div>
+    </div>
+
     <asp:GridView ID="gvProveedores" runat="server" CssClass="tabla-abm" data-filtro="filtroProveedores"
+        data-opciones-tabla="opcionesProveedores" data-titulo-detalle="Proveedor"
         AutoGenerateColumns="false" DataKeyNames="IdProveedor" GridLines="None"
         OnRowCommand="gvProveedores_RowCommand" EmptyDataText="No hay proveedores cargados.">
         <Columns>
-            <asp:BoundField DataField="RazonSocial" HeaderText="Razón social" />
+            <asp:BoundField DataField="RazonSocial" HeaderText="Razón social" ItemStyle-CssClass="celda-titulo" />
             <asp:TemplateField HeaderText="CUIT">
-                <ItemTemplate>
-                    <%# Proveedor.FormatearCuit(Eval("Cuit").ToString()) %>
-                </ItemTemplate>
+                <ItemTemplate><%# Proveedor.FormatearCuit(Eval("Cuit").ToString()) %></ItemTemplate>
             </asp:TemplateField>
             <asp:BoundField DataField="Telefono" HeaderText="Teléfono" />
             <asp:BoundField DataField="Email" HeaderText="Mail" />
+            <asp:BoundField DataField="Direccion" HeaderText="Dirección" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:TemplateField HeaderText="Estado">
-                <ItemTemplate>
-                    <%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %>
-                </ItemTemplate>
+                <ItemTemplate><%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <a href="#" class="accion-ver" data-ver-detalle>Ver</a>
+                    <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir %>'
                         CommandName="Editar" CommandArgument='<%# Eval("IdProveedor") %>'
                         CausesValidation="false">Editar</asp:LinkButton>
                 </ItemTemplate>

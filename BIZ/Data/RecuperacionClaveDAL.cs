@@ -87,7 +87,7 @@ namespace BIZ.Data
             var cuerpo = ServicioMail.ArmarCuerpoRecuperacion(
                 usuario.NombreCompleto, armarEnlace(token), RecuperacionClave.MinutosVigenciaToken);
 
-            ServicioMail.Enviar(usuario.Email, "Restablecer tu contraseña — LubricentroControl", cuerpo);
+            ServicioMail.Enviar(usuario.Email, "Restablecer tu contraseña — Lubricentro Control", cuerpo);
 
             return ResultadoOperacion.Ok(mensajeGenerico);
         }

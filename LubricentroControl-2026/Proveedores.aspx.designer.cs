@@ -14,9 +14,6 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control chkIncluirInactivos.</summary>
-        protected global::System.Web.UI.WebControls.CheckBox chkIncluirInactivos;
-
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
 

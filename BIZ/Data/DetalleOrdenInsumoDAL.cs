@@ -7,10 +7,10 @@ namespace BIZ.Data
     public static class DetalleOrdenInsumoDAL
     {
         private const string SelectBase = @"
-            SELECT d.idDetalle, d.idOrden, d.idInsumo, i.nombre AS nombreInsumo,
-                   d.cantidad, d.precioUnitario
+            SELECT d.idDetalle, d.idOrden, d.idInsumo, p.nombre AS nombreInsumo,
+                   d.cantidad, d.precioUnitario, p.tipoIva, p.alicuotaIva
             FROM DetalleOrdenInsumo d
-            INNER JOIN Insumo i ON i.idInsumo = d.idInsumo";
+            INNER JOIN Producto p ON p.idProducto = d.idInsumo";
 
         private static DetalleOrdenInsumo Mapear(DataRow fila)
         {
@@ -21,7 +21,9 @@ namespace BIZ.Data
                 IdInsumo = AccesoDatos.LeerInt(fila, "idInsumo"),
                 NombreInsumo = AccesoDatos.LeerString(fila, "nombreInsumo"),
                 Cantidad = AccesoDatos.LeerDecimal(fila, "cantidad"),
-                PrecioUnitario = AccesoDatos.LeerDecimal(fila, "precioUnitario")
+                PrecioUnitario = AccesoDatos.LeerDecimal(fila, "precioUnitario"),
+                TipoIva = AccesoDatos.LeerString(fila, "tipoIva"),
+                AlicuotaIva = AccesoDatos.LeerDecimal(fila, "alicuotaIva")
             };
         }
 
@@ -53,8 +55,8 @@ namespace BIZ.Data
             if (cantidad <= 0)
                 return ResultadoOperacion.Error("La cantidad debe ser mayor a cero.");
 
-            var insumo = InsumoDAL.ObtenerPorId(idInsumo);
-            if (insumo == null)
+            var insumo = ProductoDAL.ObtenerPorId(idInsumo);
+            if (insumo == null || !insumo.EsInsumo)
                 return ResultadoOperacion.Error("El insumo no existe.");
             if (!insumo.Activo)
                 return ResultadoOperacion.Error("El insumo está dado de baja.");
@@ -88,7 +90,7 @@ namespace BIZ.Data
                 AccesoDatos.Param("@cantidad", cantidad),
                 AccesoDatos.Param("@stockResultante", stockResultante),
                 AccesoDatos.Param("@descripcion", "Orden de trabajo #" + idOrden),
-                AccesoDatos.Param("@precioUnitario", insumo.PrecioVenta));
+                AccesoDatos.Param("@precioUnitario", insumo.Precio));
 
             return ResultadoOperacion.Ok("Insumo agregado. Stock actualizado.");
         }
@@ -119,8 +121,8 @@ namespace BIZ.Data
             if (orden.Estado == OrdenDeTrabajo.EstadoCerrada || orden.Estado == OrdenDeTrabajo.EstadoCancelada)
                 return ResultadoOperacion.Error("Una orden " + orden.Estado.ToLowerInvariant() + " no se puede modificar.");
 
-            var insumo = InsumoDAL.ObtenerPorId(detalle.IdInsumo);
-            if (insumo == null)
+            var insumo = ProductoDAL.ObtenerPorId(detalle.IdInsumo);
+            if (insumo == null || !insumo.EsInsumo)
                 return ResultadoOperacion.Error("El insumo no existe.");
 
             var stockResultante = insumo.StockActual + detalle.Cantidad;

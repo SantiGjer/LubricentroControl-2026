@@ -20,6 +20,9 @@ namespace LubricentroControl_2026
         /// <summary>Control litTituloDetalle.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloDetalle;
 
+        /// <summary>Control hdnIdVenta.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdVenta;
+
         /// <summary>Control litClienteInfo.</summary>
         protected global::System.Web.UI.WebControls.Literal litClienteInfo;
 
@@ -28,6 +31,9 @@ namespace LubricentroControl_2026
 
         /// <summary>Control litFechaInfo.</summary>
         protected global::System.Web.UI.WebControls.Literal litFechaInfo;
+
+        /// <summary>Control litOrdenInfo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litOrdenInfo;
 
         /// <summary>Control litSubtotalInfo.</summary>
         protected global::System.Web.UI.WebControls.Literal litSubtotalInfo;
@@ -41,7 +47,79 @@ namespace LubricentroControl_2026
         /// <summary>Control litSaldoInfo.</summary>
         protected global::System.Web.UI.WebControls.Literal litSaldoInfo;
 
+        /// <summary>Control litFacturaInfo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litFacturaInfo;
+
         /// <summary>Control gvDetalleVenta.</summary>
         protected global::System.Web.UI.WebControls.GridView gvDetalleVenta;
+
+        /// <summary>Control btnVerFactura.</summary>
+        protected global::System.Web.UI.WebControls.Button btnVerFactura;
+
+        /// <summary>Control btnFacturar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnFacturar;
+
+        /// <summary>Control litTituloFactura.</summary>
+        protected global::System.Web.UI.WebControls.Literal litTituloFactura;
+
+        /// <summary>Control litEmisorNombre.</summary>
+        protected global::System.Web.UI.WebControls.Literal litEmisorNombre;
+
+        /// <summary>Control litEmisorDomicilio.</summary>
+        protected global::System.Web.UI.WebControls.Literal litEmisorDomicilio;
+
+        /// <summary>Control litEmisorCondicion.</summary>
+        protected global::System.Web.UI.WebControls.Literal litEmisorCondicion;
+
+        /// <summary>Control litFacturaLetra.</summary>
+        protected global::System.Web.UI.WebControls.Literal litFacturaLetra;
+
+        /// <summary>Control litFacturaCodigo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litFacturaCodigo;
+
+        /// <summary>Control litFacturaNumero.</summary>
+        protected global::System.Web.UI.WebControls.Literal litFacturaNumero;
+
+        /// <summary>Control litFacturaFecha.</summary>
+        protected global::System.Web.UI.WebControls.Literal litFacturaFecha;
+
+        /// <summary>Control litEmisorCuit.</summary>
+        protected global::System.Web.UI.WebControls.Literal litEmisorCuit;
+
+        /// <summary>Control litEmisorIibb.</summary>
+        protected global::System.Web.UI.WebControls.Literal litEmisorIibb;
+
+        /// <summary>Control litEmisorInicio.</summary>
+        protected global::System.Web.UI.WebControls.Literal litEmisorInicio;
+
+        /// <summary>Control litReceptorNombre.</summary>
+        protected global::System.Web.UI.WebControls.Literal litReceptorNombre;
+
+        /// <summary>Control litReceptorDocumento.</summary>
+        protected global::System.Web.UI.WebControls.Literal litReceptorDocumento;
+
+        /// <summary>Control litReceptorCondicion.</summary>
+        protected global::System.Web.UI.WebControls.Literal litReceptorCondicion;
+
+        /// <summary>Control litReceptorDomicilio.</summary>
+        protected global::System.Web.UI.WebControls.Literal litReceptorDomicilio;
+
+        /// <summary>Control litCondicionVenta.</summary>
+        protected global::System.Web.UI.WebControls.Literal litCondicionVenta;
+
+        /// <summary>Control litReferencia.</summary>
+        protected global::System.Web.UI.WebControls.Literal litReferencia;
+
+        /// <summary>Control litFacturaLineas.</summary>
+        protected global::System.Web.UI.WebControls.Literal litFacturaLineas;
+
+        /// <summary>Control litFacturaTotales.</summary>
+        protected global::System.Web.UI.WebControls.Literal litFacturaTotales;
+
+        /// <summary>Control pnlTransparencia.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlTransparencia;
+
+        /// <summary>Control litIvaContenido.</summary>
+        protected global::System.Web.UI.WebControls.Literal litIvaContenido;
     }
 }

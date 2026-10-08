@@ -9,16 +9,13 @@ using LubricentroControl_2026.Utilidades;
 namespace LubricentroControl_2026
 {
     // ABM de compras a proveedores (Fase 4). Admin y Encargado, acceso completo; Empleado, solo
-    // consulta (Requerimientos §5), mismo patrón que Proveedores/Insumos. A diferencia de
+    // consulta (Requerimientos §5), mismo patrón que Proveedores/Productos. A diferencia de
     // Órdenes de trabajo, una compra no tiene alta progresiva ni se edita después de creada: las
     // líneas se arman en memoria (ViewState) mientras se transcribe la factura del proveedor, y
     // "Guardar compra" persiste todo junto (ComprobanteCompraDAL.Crear). El alta y la vista de una
-    // compra ya registrada comparten el mismo modal.
+    // compra ya registrada comparten el mismo modal; "Ver" queda para todos los roles.
     public partial class Compras : PaginaSegura
     {
-        // Índice de la columna "Acciones" en gvCompras.Columns.
-        private const int ColumnaAcciones = 6;
-
         private const string IdModal = "modalCompra";
 
         // Líneas todavía no guardadas de la compra en curso.
@@ -44,12 +41,9 @@ namespace LubricentroControl_2026
 
             if (IsPostBack) return;
 
+            // Solo consulta: sin alta, pero el modal queda para ver las compras ya registradas.
             if (EsSoloLectura)
-            {
                 btnNuevaCompra.Visible = false;
-                pnlFormulario.Visible = false;
-                gvCompras.Columns[ColumnaAcciones].Visible = false;
-            }
 
             CargarCondicionPago();
             CargarMedioPago();
@@ -82,10 +76,10 @@ namespace LubricentroControl_2026
         private void CargarInsumos()
         {
             ddlInsumo.Items.Clear();
-            foreach (var insumo in InsumoDAL.Listar(incluirInactivos: false))
+            foreach (var insumo in ProductoDAL.Listar(Producto.TipoInsumo, incluirInactivos: false))
                 ddlInsumo.Items.Add(new ListItem(
                     insumo.Nombre + " (stock: " + insumo.StockActual.ToString("N2") + ")",
-                    insumo.IdInsumo.ToString()));
+                    insumo.IdProducto.ToString()));
         }
 
         protected void ddlCondicionPago_SelectedIndexChanged(object sender, EventArgs e)
@@ -98,25 +92,23 @@ namespace LubricentroControl_2026
             pnlMedioPago.Visible = ddlCondicionPago.SelectedValue == ComprobanteCompra.CondicionContado;
         }
 
-        // "Solo con saldo pendiente" filtra en el servidor; el texto, la tabla en el navegador.
+        // Todas las compras: el texto y las opciones (condición, saldo) los filtra la tabla en el
+        // navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            gvCompras.DataSource = ComprobanteCompraDAL.Listar(chkSoloConSaldo.Checked);
+            gvCompras.DataSource = ComprobanteCompraDAL.Listar();
             gvCompras.DataBind();
         }
 
-        // El filtro de la tabla busca también por CUIT, que no es una columna: va en data-buscar.
+        // data-saldo para la opción "Saldo"; data-buscar con el CUIT sin guiones (la columna lo
+        // muestra con guiones y el filtro ya los ignora, pero así también lo encuentra entero).
         protected void gvCompras_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-            var cuit = ((ComprobanteCompra)e.Row.DataItem).Cuit;
-            e.Row.Attributes["data-buscar"] = cuit + " " + Proveedor.FormatearCuit(cuit);
-        }
-
-        protected void chkSoloConSaldo_CheckedChanged(object sender, EventArgs e)
-        {
-            CargarGrilla();
+            var compra = (ComprobanteCompra)e.Row.DataItem;
+            e.Row.Attributes["data-saldo"] = compra.SaldoPendiente > 0 ? "pendiente" : "pagada";
+            e.Row.Attributes["data-buscar"] = compra.Cuit;
         }
 
         protected void valProveedor_ServerValidate(object source, ServerValidateEventArgs args)
@@ -149,8 +141,8 @@ namespace LubricentroControl_2026
             }
 
             var idInsumo = LeerIdOculto(ddlInsumo.SelectedValue);
-            var insumo = InsumoDAL.ObtenerPorId(idInsumo);
-            if (insumo == null)
+            var insumo = ProductoDAL.ObtenerPorId(idInsumo);
+            if (insumo == null || !insumo.EsInsumo)
             {
                 MostrarMensajeFormulario("El insumo seleccionado no existe.", false);
                 return;
@@ -233,9 +225,9 @@ namespace LubricentroControl_2026
             MostrarMensajeFormulario(resultado.Mensaje, true);
         }
 
+        // "Ver" es de solo lectura: lo tienen todos los roles que entran a la pantalla.
         protected void gvCompras_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (EsSoloLectura) return;
             if (e.CommandName != "Ver") return;
 
             Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));

@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 7 de octubre de 2026
+**Última actualización:** 8 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -56,20 +56,27 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
 - Control de acceso por pantalla verificado del lado del servidor: esconder la opción del menú
   no alcanza, la guarda corre en cada request.
 - Las 21 tablas del diagrama E/R creadas, con los datos semilla de seguridad, más
-  `MovimientoStock` (kardex de stock, agregada en Fase 2 — 22 tablas en total hoy).
+  `MovimientoStock` (kardex de stock, agregada en Fase 2), `Producto` (supertipo de Servicio e
+  Insumo) y `Factura`, las dos del 2026-10-07 — 24 tablas en total hoy.
 - Capa `BIZ/Data` funcionando de punta a punta contra SQL Server.
-- **Interfaz común de las pantallas de gestión (desde 2026-10-07):** lista a todo el ancho con una
-  barra de herramientas (filtro instantáneo, opciones y botón "Nuevo …"); columnas ordenables con
-  un clic y paginado en el navegador donde hace falta (`Scripts/Lubricentro.js`). Alta, edición y
-  detalle se abren en un modal. Para elegir cliente, dueño o proveedor hay selectores con búsqueda,
-  y la edición de un registro dado de baja ofrece "Reactivar".
-- **ABM de Clientes**: alta, baja lógica, edición y reactivación; filtro por nombre, apellido, DNI,
-  teléfono o mail; validación de formato de DNI y de teléfono. **Cuenta corriente opcional** por
-  cliente, con un interruptor en el formulario: sin ella, cerrar una orden lleva directo a cobrarla.
+- **Interfaz común de las pantallas de gestión (desde 2026-10-07):** barra lateral fija a la
+  izquierda con el menú del rol (grupos desplegables que se recuerdan, el isotipo del ingreso y el
+  usuario abajo; en un celular se abre desde una barra superior). Cada lista va a todo el ancho con
+  una barra de herramientas (buscador, "Columnas" y "Nuevo …") y debajo una sección de opciones de
+  filtro en botones (estado, tipo, saldo…); columnas ordenables, elegibles y paginado en el
+  navegador (`Scripts/Lubricentro.js`). Cada fila tiene "Ver" (todos sus datos, también para quien
+  solo consulta; también con clic en el nombre). Alta, edición y detalle se abren en un modal. Para
+  elegir cliente, dueño o proveedor hay selectores con búsqueda, y la edición de un registro dado
+  de baja ofrece "Reactivar".
+- **ABM de Clientes**: alta, baja lógica, edición y reactivación. Persona física o empresa (razón
+  social), tipo de identificación (DNI, CUIT, CUIL, LE, LC, pasaporte), condición frente al IVA y
+  domicilio completo con provincia y código postal (desde 2026-10-07). El buscador encuentra también
+  por la patente de sus vehículos. **Cuenta corriente opcional** por cliente, con un interruptor en
+  el formulario.
 - **ABM de Vehículos**: alta, baja lógica, edición y reactivación; filtro por patente, marca, modelo
-  o dueño. Selector de dueño con búsqueda (lista desplegable de los clientes activos que se filtra
-  al escribir), validación de formato de patente y del año (desde 1900), y dropdown fijo de tipo de
-  combustible.
+  o dueño. Selector de dueño con búsqueda en el alta y **"Cambiar dueño"** después (no con una
+  orden o un turno en curso), validación de formato de patente y del año (desde 1900), y dropdown
+  fijo de tipo de combustible.
 - **"Nuevo cliente" desde Vehículos**: si al cargar un vehículo el dueño todavía no existe como
   cliente, se puede crear sin perder los datos del vehículo ya tipeados; al crearlo se vuelve
   automáticamente con ese cliente ya seleccionado como dueño.
@@ -77,15 +84,12 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   guiones en ambos sentidos), CUIT formateado en la grilla. Primera pantalla real en modo
   **solo consulta para el rol Empleado**: se le esconde el formulario entero y la columna de
   acciones de la grilla, no solo los botones — solo ve el buscador y los resultados.
-- **ABM de Insumos + kardex de stock**: alta con stock inicial (registra un ajuste automático),
-  búsqueda por nombre/marca, ajuste manual de stock (un solo campo con signo — positivo suma,
-  negativo resta, sin radio Entrada/Salida) e historial de movimientos, los dos dentro del modal
-  de edición de un insumo existente. Resaltado en rojo de las filas con stock por debajo del
-  mínimo; grilla paginada a 30 filas en el navegador, con "Página X de Y" + Anterior/Siguiente.
-  Modo solo-consulta para Empleado igual que Proveedores.
-- **ABM de Servicios**: alta/baja lógica/edición, búsqueda por nombre. El más simple de los cinco
-  (nombre, descripción, precio base) — mismo patrón que Proveedores. Modo solo-consulta para
-  Empleado.
+- **ABM de Productos + kardex de stock** (desde 2026-10-07 reemplaza a Insumos y Servicios):
+  servicios e insumos en una sola lista, con opciones para ver uno u otro. Cada producto con SKU,
+  código de barras, precio final y tipo de IVA/alícuota; un insumo suma marca, unidad, stock mínimo
+  y stock inicial (registra un ajuste automático), y editándolo, el ajuste manual de stock (un solo
+  campo con signo) y el historial de movimientos. Resaltado en rojo de los insumos con stock por
+  debajo del mínimo; grilla paginada a 30 filas en el navegador. Modo solo-consulta para Empleado.
 - **Turnos** (primera pantalla de Fase 3): alta/edición, sin baja lógica (no aplica — `Turno` no
   tiene columna `activo`; "cancelar" es simplemente llevar el campo `estado` a `Cancelado` desde
   el mismo formulario; en el alta el estado se muestra como texto fijo "Solicitado" y el
@@ -94,7 +98,8 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   requerimiento de Turnos, sí lo está en el walk-in de Órdenes). Selector de vehículo opcional,
   poblado con los vehículos activos del cliente elegido. Búsqueda por nombre/apellido/DNI del
   cliente más filtro por estado. Acceso completo para los 3 roles (Admin/Encargado/Empleado),
-  sin modo solo-consulta.
+  sin modo solo-consulta. Desde 2026-10-07 la lista arranca con los turnos de hoy (marcados),
+  después los próximos y al final los pasados, con opciones por "cuándo" y por estado.
 - **Órdenes de trabajo** (segunda y última pantalla de Fase 3, cierra la fase): alta walk-in o
   con turno previo, cliente/vehículo/turno fijos una vez creada la orden (se ven como texto de
   solo lectura al editar, no como desplegables). Franja de detalle (aparece solo editando una
@@ -110,8 +115,9 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   el mecanismo de `Response.Redirect` + query string que ya conectaba Vehículos↔Clientes (un
   tercer origen `"orden"` agregado en paralelo al `"vehiculo"` existente, sin tocarlo). La lista
   arranca filtrada en "Abierta", de la más nueva a la más vieja. Cerrar la orden de un cliente sin
-  cuenta corriente lleva directo a Pagos, con el saldo de la venta ya cargado. Acceso completo
-  para los 3 roles, sin modo solo-consulta.
+  cuenta corriente lleva directo a Pagos, con el saldo de la venta ya cargado; con cuenta corriente
+  (desde 2026-10-07) se elige si el saldo queda en la cuenta o se cobra ahora. "Ver" muestra la
+  orden completa a todos los roles. Acceso completo para los 3 roles, sin modo solo-consulta.
 - **Compras** (primera pantalla de Fase 4): sin franja de alta progresiva como Órdenes — una
   compra es la transcripción de una factura que ya llega completa, así que las líneas se arman
   **en memoria** (`ViewState`, primer uso de este patrón en el proyecto) y "Guardar compra" las
@@ -180,6 +186,13 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   lista, ya viene filtrada a lo que importa). Mismo acceso que el resto de Fase 5 (sin acceso
   para Empleado). **Cierra Fase 5 — falta sólo Fase 6** (integración, pruebas y pulido).
 
+- **Factura de una venta** (desde 2026-10-07): "Facturar" en Ventas emite la factura A, B o C según
+  la condición frente al IVA del comercio y del cliente, con numeración propia por letra y punto de
+  venta, y se ve e imprime en la misma pantalla. Sin validez fiscal (sin CAE). Los precios son
+  finales: la venta guarda el IVA que contiene cada línea.
+- **Roles y permisos** (desde 2026-10-07, en Administración): crear, renombrar y borrar roles y
+  elegir para cada pantalla sin acceso / consulta / completo. Admin queda fijo con todo; Lectura no
+  se borra.
 - **Alta pública de usuario (`~/Registro`)**: link "Crear cuenta nueva" desde `Login.aspx`, sin
   necesitar sesión previa. El visitante elige su propia contraseña (a diferencia del ABM de
   Usuarios, que siempre genera una temporal y la manda por mail); si el mail no existe, crea la
@@ -203,6 +216,89 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-08 — Qué hay que saber al levantar el proyecto en otra máquina
+
+A pedido del usuario, lo que hay que saber al clonar el repo en otra máquina quedó en `CLAUDE.md`
+(«Al levantar el proyecto en otra máquina»): es lo que Claude lee en cualquier máquina, mientras
+que su memoria es local de cada PC. Al relevarlo aparecieron dos cosas que no estaban anotadas:
+
+- **Mails sin credenciales:** `MailModoDesarrollo=false` está commiteado, pero
+  `Web.MailSettings.config` está gitignoreado (en esta PC tampoco existe). El envío falla sin
+  romper la pantalla porque `ServicioMail.Enviar` atrapa la excepción, pero los tres llamadores
+  (`UsuarioDAL.Crear`, `UsuarioDAL.BlanquearPassword`, `RecuperacionClaveDAL`) descartan el
+  resultado: la recuperación de clave no avisa que el mail no salió.
+- **Importes que se tipean en el otro formato:** verificado con `decimal.TryParse` y
+  `BaseCompareValidator.CanConvert` en en-GB (la configuración de esta PC) y en es-AR. El
+  `CompareValidator Type="Currency"` rechaza el formato de la otra configuración, pero las líneas
+  de Compras (cantidad y precio unitario) no tienen validador: en esta PC `1500,50` se guarda como
+  `150050`. Anotado en la sección 4, sin corregir.
+
+Corregido de paso: los cuerpos de los mails de alta y de recuperación de clave seguían diciendo
+"LubricentroControl" junto (punto 1 del pedido anterior, que se había dado por hecho).
+
+Las pruebas de punta a punta se repitieron hoy: la funcional había fallado en "turnos de hoy
+primero" porque la base era del día anterior (los turnos de ejemplo se fechan al correr `04`).
+Con la base recreada pasaron las tres suites (61, 65 y 16 pruebas).
+
+### 2026-10-07 (cont.) — Barra lateral, opciones de filtro, columnas y "Ver"; datos fiscales, productos, factura y roles editables
+
+Segundo pedido del usuario del día, en 13 puntos. Antes de arrancar se commiteó el pulido anterior
+y se arregló LocalDB en esta máquina (ver la sección 4). Decisiones (las de negocio, en
+Requerimientos §9.7 a §9.12):
+
+- **Tres decisiones del usuario antes de diseñar:** productos como supertipo con Servicio e
+  Insumo de subtipos (frente a una sola tabla o solo una pantalla común); roles completos (crear,
+  renombrar, borrar y permisos, no solo los permisos de los 4 roles); y los precios, que el usuario
+  dejó a criterio ("no importan los registros que ya están"): quedaron **finales, con el IVA
+  incluido**, para no cambiar ningún total. Si se quisieran netos, el cambio está en un solo lugar
+  (`Iva.Contenido` y `ComprobanteVentaDAL.GenerarDesdeOrden`).
+- **Opciones de filtro en el navegador, no en el servidor.** Las casillas y desplegables que
+  filtraban en el servidor ("Incluir inactivos", estado de turnos y órdenes, "Solo con saldo") pasaron
+  a botones agrupados debajo de la barra (`.opciones-tabla`), que filtran en el navegador sobre la
+  lista completa, mismo criterio que el filtro de texto de la sesión anterior. Cada grupo filtra por
+  una columna (por el texto del encabezado) o por un atributo de la fila (`data-saldo`, `data-cuando`,
+  `data-stock`, `data-factura`); "A|B" acepta cualquiera de los dos (ej. "En curso").
+- **La lupa se encimaba con el texto** por especificidad de CSS: `.pantalla-abm input.filtro-tabla-texto`
+  e `.pantalla-abm input[type="search"]` pesan lo mismo y la regla general (padding 0.5rem 0.7rem) iba
+  después. Ahora la del buscador va después y con más especificidad.
+- **Columnas y "Ver" sin código por pantalla.** Cada grilla trae todas las columnas; las que no
+  hacen falta siempre van con la clase `oculta` (escondidas de entrada, también antes de que arranque
+  el JS para que no parpadeen). "Columnas" las muestra o esconde y se recuerda en el navegador
+  (localStorage, preferencia de cada persona). "Ver" arma una ventana con todas las columnas de la
+  fila, incluidas las escondidas; las acciones de la fila con `.accion-detalle` (Editar, Cambiar
+  dueño) aparecen en su pie. Donde el detalle tiene más que la fila (Órdenes, Ventas, Compras,
+  cuentas corrientes), "Ver" es del servidor. Consecuencia: **la columna Acciones ya no se esconde
+  en modo consulta**; se esconden solo los enlaces de escritura (`Visible='<%# PuedeEscribir %>'`).
+- **Nombre del cliente en un solo lugar:** columna calculada `Cliente.denominacion` (razón social o
+  "Nombre Apellido"), que todos los DAL leen como `nombreCliente` en vez de concatenar.
+- **Cambio de dueño con su propio modal**, y editando el vehículo el dueño se ve fijo:
+  `VehiculoDAL.Actualizar` ya no toca `idCliente`. Antes se podía cambiar desde "Editar" sin
+  validar nada, lo que dejaba turnos y órdenes en curso a nombre de alguien que ya no era el dueño
+  (y después no se podían editar). "Nuevo cliente" desde ese modal reusa el origen `"vehiculo"` de
+  Clientes con un parámetro más (`cambioDueno=1`), sin tocar la rama existente.
+- **Cierre de orden:** "Cerrar orden…" abre una confirmación en el mismo modal (sin ir al servidor)
+  con el total; con cuenta corriente ofrece "Dejar en cuenta corriente" o "Cobrar ahora". Los botones
+  van como `PostBackTrigger` porque hacen `Response.Redirect`.
+- **Factura:** tabla nueva con copia de los datos del comercio y del cliente, número tomado con
+  `UPDLOCK, HOLDLOCK` en el mismo batch del INSERT. La impresión deja solo la hoja (`@media print`
+  con `visibility`).
+- **Roles:** los permisos se guardan en un solo batch atómico (`NivelDAL.Guardar`: borra las filas
+  de `MenuNivel` del rol y vuelve a insertar las pantallas con acceso y sus grupos, sin los que el
+  menú no las muestra). Con permisos editables cualquier pantalla puede quedar "en consulta" para
+  cualquier rol: **Usuarios no chequeaba `EsSoloLectura`** (solo la veía Admin) y ahora sí, igual que
+  Roles y la factura de Ventas. `Usuario.TieneNivelMinimo` (sin uso y que comparaba ids de rol) se
+  borró: con roles nuevos dejaba de tener sentido.
+- **Bug encontrado probando:** editar un producto con alícuota 10,5 % reventaba porque la base
+  devuelve `10.50` y el desplegable tenía `10.5`. Corregido normalizando los dos lados.
+- **Los `.designer.cs` se generaron con un script** (scratchpad, no commiteado) que lee los `.aspx` y
+  declara cada control con ID fuera de las plantillas de grilla; antes de usarlo se comprobó que
+  reproducía sin diferencias los designers existentes de seis pantallas.
+- **Verificación:** rebuild limpio y `aspnet_compiler` sin errores; base recreada con `01` a `04`.
+  Pruebas de punta a punta con Chrome sin ventana (puppeteer-core contra IIS Express, en el
+  scratchpad, no commiteadas): las 17 pantallas sin errores de servidor ni de JavaScript para Admin,
+  y los flujos de los 13 puntos con Admin, Empleado y Lectura, más la vista de celular — 142
+  verificaciones, todas bien. Las facturas A y B se revisaron también en modo impresión.
 
 ### 2026-10-07 — Pulido de interfaz: modales, listas ordenables y filtrables, selectores con búsqueda y cuenta corriente opcional
 
@@ -1731,13 +1827,14 @@ falta es decidir si se unifica el criterio.
 
 Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
 
-- **LocalDB no arranca en la máquina de Federico (2026-10-07).** El `error.log` de la instancia
-  muestra "misaligned log IOs" y enseguida un stack overflow: es el problema conocido de Windows 11
-  con discos NVMe que informan sectores de más de 4 KB. El servicio `MSSQLSERVER` de esa máquina
-  también está detenido, probablemente por lo mismo. Microsoft documenta como solución, con permisos
-  de administrador y reiniciando después:
-  `reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v ForcedPhysicalSectorSizeInBytes /t REG_MULTI_SZ /d "* 4095" /f`.
-  Sin eso no se puede recrear la base ni probar nada con datos en esa máquina.
+- ~~**LocalDB no arranca en la máquina de Federico (2026-10-07).**~~ **Resuelto el mismo día.** Era
+  el problema de Windows 11 con discos NVMe que informan sectores de más de 4 KB ("misaligned log
+  IOs" en el `error.log`). La clave de Microsoft
+  (`reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v ForcedPhysicalSectorSizeInBytes /t REG_MULTI_SZ /d "* 4095" /f`
+  y reiniciar) **no alcanzó sola**: los arranques fallidos de antes habían dejado el `master` de la
+  instancia apuntando a rutas inexistentes. Hubo que borrarla y crearla de nuevo
+  (`sqllocaldb stop MSSQLLocalDB -k`, `delete`, `create`, `start`; no tenía bases propias) y correr
+  `01` a `04`.
 
 - ~~**BUG: cerrar una orden sin ninguna línea genera una venta en $0.**~~ **Resuelto el
   2026-10-05**: `GenerarDesdeOrden` rechaza el cierre si no hay servicios ni insumos (ver la
@@ -1755,7 +1852,9 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   2026-09-15 cont.), con las credenciales en `Web.MailSettings.config` (gitignoreado). Hoy
   `Web.config` quedó con `MailModoDesarrollo=false` (envío real activo, cuenta de prueba del
   usuario) en vez del `true` documentado como default seguro en `CLAUDE.md` — falta decidir si
-  se revierte a `true` antes de commitear/entregar, o si se deja en `false` a propósito.
+  se revierte a `true` antes de commitear/entregar, o si se deja en `false` a propósito. En una
+  máquina sin `Web.MailSettings.config` (cualquiera que clone el repo) los mails no salen y nadie
+  avisa; ver la entrada del 2026-10-08.
 - **Token de recuperación de clave guardado en texto plano.** `RecuperacionClave.token` guarda el
   valor tal cual, no un hash — a diferencia de la contraseña, que sí está hasheada. El usuario
   pidió evaluar guardar el hash del token en vez del token; decisión pendiente de confirmar antes
@@ -1777,5 +1876,18 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   que los cargó (`01_Esquema.sql` borra todo); `Insumo` hoy tiene exactamente las 10 filas de
   `04_DatosDemo.sql`, verificado por conteo total, sin nombres "genérico" ni activos ni de baja.
 - **Botones de navegación cruzada Cliente↔Vehículo pendientes**: hoy solo existe "Nuevo cliente"
-  desde Vehículos. Falta un botón "Ver vehículos" desde la ficha de un Cliente (la consulta
-  `VehiculoDAL.ListarPorCliente` ya existe, sin usar, pensada para esto).
+  desde Vehículos. Falta un botón "Ver vehículos" desde la ficha de un Cliente. **En parte resuelto
+  el 2026-10-07:** "Ver" de un cliente muestra las patentes de sus vehículos y el buscador de
+  Clientes encuentra por patente; el salto directo a Vehículos sigue sin hacerse.
+- **Datos del comercio para la factura:** los de `Web.config` (`Emisor.*`) son de ejemplo
+  ("Lubricentro Control S.R.L.", CUIT inventado). Reemplazarlos por los reales antes de usarla.
+- **Formato de números según la cultura del servidor:** los importes salen con `N2` y la cultura de
+  la máquina (en esta, en-GB: `3,500.00`). Si se quiere el formato argentino (`3.500,00`) hay que fijar
+  `<globalization culture="es-AR" uiCulture="es-AR">`. Revisado el 2026-10-08: los importes que se
+  tipean se leen con la misma cultura (`decimal.TryParse` sin cultura), así que dentro de una
+  máquina es coherente, y el formato de la otra cultura lo rechaza el `CompareValidator
+  Type="Currency"` de cada campo.
+- **Las líneas de Compras no validan el formato de los números.** Cantidad y precio unitario no
+  tienen `CompareValidator` (`btnAgregarLinea_Click` usa `decimal.TryParse` directo): en una
+  máquina en inglés `1500,50` se guarda como `150050`, y en una en es-AR pasa lo mismo con
+  `1500.50`, sin aviso. Hace falta el validador aunque se fije la cultura.

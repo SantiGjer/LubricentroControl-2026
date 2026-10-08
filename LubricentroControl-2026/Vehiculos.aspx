@@ -17,37 +17,55 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroVehiculos" class="filtro-tabla-texto"
-            placeholder="Filtrar por patente, marca, modelo o dueño" aria-label="Filtrar vehículos" />
-        <span class="opcion-barra">
-            <asp:CheckBox ID="chkIncluirInactivos" runat="server" AutoPostBack="true"
-                OnCheckedChanged="chkIncluirInactivos_CheckedChanged" />
-            <asp:Label runat="server" AssociatedControlID="chkIncluirInactivos">Incluir inactivos</asp:Label>
-        </span>
+            placeholder="Buscar por patente, marca, modelo o dueño" aria-label="Buscar vehículos" />
         <span class="acciones-barra">
             <asp:Button ID="btnNuevo" runat="server" CssClass="boton-rojo" Text="Nuevo vehículo"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
         </span>
     </div>
 
+    <div class="opciones-tabla" id="opcionesVehiculos">
+        <div class="grupo-opciones" data-columna="Estado" data-inicial="Activo">
+            <span class="titulo-opciones">Estado</span>
+            <button type="button" class="opcion" data-valor="Activo">Activos</button>
+            <button type="button" class="opcion" data-valor="Inactivo">Inactivos</button>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+        </div>
+        <div class="grupo-opciones" data-columna="Combustible">
+            <span class="titulo-opciones">Combustible</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="Nafta">Nafta</button>
+            <button type="button" class="opcion" data-valor="Diésel">Diésel</button>
+            <button type="button" class="opcion" data-valor="GNC">GNC</button>
+            <button type="button" class="opcion" data-valor="Eléctrico|Híbrido">Eléctrico o híbrido</button>
+        </div>
+    </div>
+
     <asp:GridView ID="gvVehiculos" runat="server" CssClass="tabla-abm" data-filtro="filtroVehiculos"
+        data-opciones-tabla="opcionesVehiculos" data-titulo-detalle="Vehículo"
         AutoGenerateColumns="false" DataKeyNames="IdVehiculo" GridLines="None"
         OnRowCommand="gvVehiculos_RowCommand" EmptyDataText="No hay vehículos cargados.">
         <Columns>
-            <asp:BoundField DataField="Patente" HeaderText="Patente" />
+            <asp:BoundField DataField="Patente" HeaderText="Patente" ItemStyle-CssClass="celda-titulo" />
             <asp:BoundField DataField="Marca" HeaderText="Marca" />
             <asp:BoundField DataField="Modelo" HeaderText="Modelo" />
             <asp:BoundField DataField="Anio" HeaderText="Año" />
+            <asp:BoundField DataField="TipoCombustible" HeaderText="Combustible" />
             <asp:BoundField DataField="NombreCliente" HeaderText="Dueño" />
+            <asp:BoundField DataField="DocumentoCliente" HeaderText="Documento del dueño"
+                HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:TemplateField HeaderText="Estado">
-                <ItemTemplate>
-                    <%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %>
-                </ItemTemplate>
+                <ItemTemplate><%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <a href="#" class="accion-ver" data-ver-detalle>Ver</a>
+                    <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir %>'
                         CommandName="Editar" CommandArgument='<%# Eval("IdVehiculo") %>'
                         CausesValidation="false">Editar</asp:LinkButton>
+                    <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir && (bool)Eval("Activo") %>'
+                        CommandName="CambiarDueno" CommandArgument='<%# Eval("IdVehiculo") %>'
+                        CausesValidation="false">Cambiar dueño</asp:LinkButton>
                 </ItemTemplate>
             </asp:TemplateField>
         </Columns>
@@ -78,12 +96,14 @@
                     <asp:HiddenField ID="hdnActivo" runat="server" Value="True" />
 
                     <div class="row campos-formulario">
-                        <div class="col-12 campo">
+                        <%-- Alta: se elige el dueño. Editando, el dueño se ve fijo: cambiarlo es
+                             "Cambiar dueño", que valida que el vehículo no tenga nada en curso. --%>
+                        <asp:Panel ID="pnlDuenoSeleccion" runat="server" CssClass="col-12 campo">
                             <asp:Label runat="server" AssociatedControlID="txtCliente">Dueño</asp:Label>
                             <div class="selector-con-boton">
                                 <div class="selector-busqueda" data-opciones="<%: OpcionesClientes %>">
                                     <asp:TextBox ID="txtCliente" runat="server" CssClass="selector-texto" autocomplete="off"
-                                        placeholder="Elegí el dueño o buscalo por nombre o DNI" />
+                                        placeholder="Elegí el dueño o buscalo por nombre o documento" />
                                     <button type="button" class="selector-boton" tabindex="-1" aria-label="Ver los clientes"></button>
                                     <asp:HiddenField ID="hdnIdCliente" runat="server" />
                                 </div>
@@ -93,7 +113,16 @@
                             <asp:CustomValidator runat="server" OnServerValidate="valCliente_ServerValidate"
                                 CssClass="text-danger small" Display="Dynamic" ValidationGroup="Vehiculo"
                                 ErrorMessage="Seleccioná el cliente dueño del vehículo." />
-                        </div>
+                        </asp:Panel>
+
+                        <asp:Panel ID="pnlDuenoFijo" runat="server" CssClass="col-12 campo" Visible="false">
+                            <label>Dueño</label>
+                            <div class="valor-fijo valor-fijo-con-boton">
+                                <asp:Literal ID="litDuenoActual" runat="server" />
+                                <asp:Button ID="btnCambiarDueno" runat="server" CssClass="boton-borde-rojo" Text="Cambiar dueño"
+                                    OnClick="btnCambiarDueno_Click" CausesValidation="false" />
+                            </div>
+                        </asp:Panel>
 
                         <div class="col-md-6 campo">
                             <asp:Label runat="server" AssociatedControlID="txtPatente">Patente</asp:Label>
@@ -142,6 +171,63 @@
                     <button type="button" class="boton-gris" data-bs-dismiss="modal">Cancelar</button>
                     <asp:Button ID="btnGuardar" runat="server" CssClass="boton-rojo" Text="Guardar"
                         OnClick="btnGuardar_Click" ValidationGroup="Vehiculo" />
+                </div>
+            </asp:Panel>
+        </div>
+    </div>
+
+    <%-- Cambio de dueño: el vehículo pasa a otro cliente. Lo hecho para el dueño anterior
+         (turnos, órdenes, ventas) queda a su nombre; no se puede con una orden o un turno en curso. --%>
+    <div class="modal fade" id="modalCambioDueno" tabindex="-1" aria-labelledby="tituloModalCambioDueno"
+        aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <asp:Panel ID="pnlCambioDueno" runat="server" CssClass="modal-content" DefaultButton="btnConfirmarCambioDueno">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="tituloModalCambioDueno">
+                        <asp:Literal ID="litTituloCambioDueno" runat="server" Text="Cambiar dueño" /></h2>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <asp:Panel ID="pnlErrorCambioDueno" runat="server" Visible="false" CssClass="alert alert-danger" role="alert">
+                        <asp:Literal ID="litErrorCambioDueno" runat="server" />
+                    </asp:Panel>
+
+                    <asp:HiddenField ID="hdnIdVehiculoDueno" runat="server" />
+
+                    <dl class="datos-resumen">
+                        <dt>Vehículo</dt><dd><asp:Literal ID="litVehiculoCambio" runat="server" /></dd>
+                        <dt>Dueño actual</dt><dd><asp:Literal ID="litDuenoAnterior" runat="server" /></dd>
+                    </dl>
+
+                    <div class="row campos-formulario">
+                        <div class="col-12 campo">
+                            <asp:Label runat="server" AssociatedControlID="txtNuevoDueno">Nuevo dueño</asp:Label>
+                            <div class="selector-con-boton">
+                                <div class="selector-busqueda" data-opciones="<%: OpcionesClientes %>">
+                                    <asp:TextBox ID="txtNuevoDueno" runat="server" CssClass="selector-texto" autocomplete="off"
+                                        placeholder="Elegí el nuevo dueño o buscalo por nombre o documento" />
+                                    <button type="button" class="selector-boton" tabindex="-1" aria-label="Ver los clientes"></button>
+                                    <asp:HiddenField ID="hdnIdNuevoDueno" runat="server" />
+                                </div>
+                                <asp:Button ID="btnNuevoClienteDueno" runat="server" CssClass="boton-gris" Text="Nuevo cliente"
+                                    OnClick="btnNuevoClienteDueno_Click" CausesValidation="false" />
+                            </div>
+                            <asp:CustomValidator runat="server" OnServerValidate="valNuevoDueno_ServerValidate"
+                                CssClass="text-danger small" Display="Dynamic" ValidationGroup="CambioDueno"
+                                ErrorMessage="Seleccioná el nuevo dueño." />
+                            <p class="texto-ayuda">
+                                Los turnos, órdenes y ventas que ya tiene el vehículo quedan a nombre del dueño anterior.
+                                No se puede cambiar mientras tenga una orden en el taller o un turno pendiente.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="boton-gris" data-bs-dismiss="modal">Cancelar</button>
+                    <asp:Button ID="btnConfirmarCambioDueno" runat="server" CssClass="boton-rojo" Text="Cambiar dueño"
+                        OnClick="btnConfirmarCambioDueno_Click" ValidationGroup="CambioDueno" />
                 </div>
             </asp:Panel>
         </div>

@@ -88,6 +88,11 @@ Login por mail + contraseña (hasheada). Recuperación de contraseña vía mail 
 ver §9.6. Solo consulta en todas las filas de arriba salvo "Gestión de usuarios" y "Reportes
 financieros", que no ve.
 
+**Nota (2026-10-07):** la matriz de arriba es la **configuración inicial**. Desde esta fecha los
+roles y sus permisos por pantalla se editan desde la aplicación (pantalla Roles y permisos, ver
+§9.11): se pueden crear roles nuevos y cambiar el acceso de cada uno, salvo el de Admin, que queda
+siempre con acceso completo.
+
 ---
 
 ## 6. Módulos y requerimientos funcionales
@@ -121,6 +126,8 @@ financieros", que no ve.
 ### 6.5 Proveedores, Insumos y Compras
 - ABM de proveedores (razón social, CUIT, teléfono, dirección).
 - ABM de insumos/productos (nombre, marca, unidad de medida, stock actual, stock mínimo, precio de venta).
+  Desde el 2026-10-07 servicios e insumos se cargan juntos como **productos** (§9.9), con SKU,
+  código de barras e IVA.
 - Registro de compras a proveedores (`ComprobanteCompra` + `DetalleCompra`), con condición de pago, subtotal, impuestos, total, número de comprobante.
 - **Al cargar una compra, el stock del insumo se suma automáticamente** (simétrico a la venta).
 - El pago de una compra **puede quedar pendiente** (compra "a cuenta" con el proveedor).
@@ -129,6 +136,8 @@ financieros", que no ve.
 - El comprobante de venta **se genera automáticamente al cerrar la orden de trabajo** (no es un paso manual separado).
 - Es un **comprobante interno simple**, sin validez fiscal (sin integración AFIP).
 - Incluye detalle línea por línea (servicios + insumos consumidos en la orden), subtotal, impuestos, total y saldo pendiente.
+- Desde el 2026-10-07, cada venta se puede **facturar** desde la misma pantalla de Ventas (§9.10):
+  factura A, B o C según la condición frente al IVA, imprimible, también sin validez fiscal.
 
 ### 6.7 Pagos
 - Medios de pago aceptados: **efectivo, transferencia, tarjeta**.
@@ -181,6 +190,11 @@ Basado en el diagrama E/R provisto (`01__Modelo_Conceptual_Diagrama_ER.pdf`, not
 **Nota (2026-09-07):** se sumó `MovimientoStock` en Fase 2, como entidad adicional a las 21 del
 diagrama original — kardex de stock, ver §9.3. No es parte del diagrama entregado por la
 cátedra; es un agregado posterior justificado por una necesidad real de trazabilidad.
+
+**Nota (2026-10-07):** se sumaron dos entidades más: `Producto`, supertipo de `Servicio` e
+`Insumo` (una especialización: los dos pasan a ser sus subcategorías, §9.9), y `Factura`, la
+factura imprimible de una venta (§9.10). `Cliente` sumó sus datos fiscales (§9.8) y
+`DetalleComprobanteVenta` el IVA de cada línea.
 
 ---
 
@@ -323,12 +337,93 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
   (a confirmar con el dueño del negocio).
 - Los proveedores no tienen este interruptor: la compra a cuenta corriente se sigue eligiendo
   compra por compra (§9.5).
+- **Ampliado el mismo día:** al cerrar la orden de un cliente **con** cuenta corriente, la pantalla
+  pregunta si el saldo va a la cuenta o se cobra en el momento. "Cobrar ahora" lleva a Pagos igual
+  que en un cliente sin cuenta (cliente, monto y observación ya cargados; queda elegir el medio de
+  pago), y lo que no se cobre queda en la cuenta. Después del cobro, Pagos ofrece ir a la venta
+  para facturarla.
+
+### 9.8 Datos fiscales del cliente (confirmado 2026-10-07)
+
+- **Tipo de cliente:** persona física (se nombra por nombre y apellido) o empresa (por razón
+  social). En todas las pantallas el cliente aparece por su "denominación": la razón social o
+  "Nombre Apellido" (columna calculada `Cliente.denominacion`).
+- **Tipo de identificación:** DNI, CUIT, CUIL, LE, LC o Pasaporte, con el número aparte
+  (`Cliente.tipoDocumento` + `numeroDocumento`, únicos como par; reemplazan a `Cliente.dni`).
+  DNI, LE y LC con 7 u 8 dígitos; CUIT y CUIL con 11 (se aceptan con guiones o puntos y se
+  guardan solo los dígitos; CUIT/CUIL se muestran con guiones); pasaporte, de 6 a 12 letras y
+  números. No se valida el dígito verificador, igual que el CUIT de proveedores (§9.1).
+- **Condición frente al IVA:** Consumidor Final, Responsable Inscripto, Monotributista o Exento.
+  Una empresa, y cualquiera que no sea consumidor final, se identifica con CUIT (lo exige también
+  la base, `CK_Cliente_cuit`).
+- **Domicilio:** dirección, localidad, provincia (lista fija de las 23 provincias y CABA) y código
+  postal (4 dígitos, o el CPA de 8 caracteres). Todos opcionales.
+
+### 9.9 Productos: servicios e insumos como subcategorías (confirmado 2026-10-07)
+
+- **Producto** es el supertipo de lo que se vende en una orden: nombre, descripción, SKU, código de
+  barras, precio, tipo de IVA y alícuota. **Servicio** e **Insumo** son sus subcategorías,
+  excluyentes y fijas desde el alta: cada una es una tabla con el mismo id que su `Producto`
+  (`Servicio` sin datos propios por ahora; `Insumo` con marca, unidad de medida y stock). Las
+  órdenes, compras, ventas y el kardex siguen apuntando al subtipo, así que no cambiaron. La FK
+  compuesta (id, tipo) de cada subtipo impide colgar un servicio de un producto de tipo Insumo.
+- Elegido entre tres opciones (supertipo con subtipos, una sola tabla, o solo una pantalla común):
+  el supertipo es la "especialización" del modelo E/R y es el que menos toca lo ya hecho.
+- Una sola pantalla, **Productos** (en Operación), reemplaza a Servicios e Insumos, con opciones
+  para ver solo servicios o solo insumos. Mismos permisos que tenían las dos (Empleado, consulta).
+- **SKU y código de barras:** opcionales, letras, números y guiones; no se repiten entre productos
+  (índices únicos filtrados en la base). El SKU se guarda en mayúsculas.
+
+### 9.10 IVA y factura (confirmado 2026-10-07)
+
+- **Los precios cargados son finales, con el IVA incluido** (lo habitual en la venta al público).
+  Los totales de las ventas no cambiaron: el IVA es el que ya contiene cada precio.
+- Cada producto tiene **tipo de IVA** (Gravado, Exento o No gravado) y, si es gravado, **alícuota**
+  (21, 10,5, 27, 5 o 2,5 %). Al generar la venta, cada línea copia el IVA de su producto y guarda
+  el IVA contenido (neto redondeado a 2 decimales, IVA = diferencia); la venta suma el neto en
+  `subtotal` y el IVA en `impuestos`.
+- **Factura:** se genera a pedido desde Ventas ("Facturar"), una por venta, y no se anula ni se
+  edita. La letra sale de la condición frente al IVA del comercio y del cliente: un responsable
+  inscripto le factura **A** a otro responsable inscripto y a un monotributista, y **B** al resto;
+  un comercio monotributista o exento emite **C**. Numeración correlativa por letra y punto de
+  venta (formato `00001-00000001`). La A discrimina neto e IVA por alícuota; la B muestra precios
+  finales e informa el IVA contenido (Régimen de Transparencia Fiscal al Consumidor, Ley 27.743).
+  Se imprime (o se guarda como PDF) desde el navegador.
+- **Sin validez fiscal:** no hay CAE de ARCA (ex AFIP); la factura lo dice. La facturación
+  electrónica real sigue fuera de alcance (§10).
+- Los datos del comercio (razón social, CUIT, condición frente al IVA, domicilio, ingresos brutos,
+  inicio de actividades, punto de venta) van en `Web.config` (claves `Emisor.*`). La factura guarda
+  una copia de esos datos y de los del cliente al emitirse, para no cambiar si después se editan.
+
+### 9.11 Roles y permisos editables (confirmado 2026-10-07)
+
+- Pantalla **Roles y permisos** (Administración): crear, renombrar y borrar roles, y para cada
+  pantalla del menú elegir **sin acceso**, **consulta** o **completo**. Se guarda en `MenuNivel`
+  (la misma tabla que ya usaba el menú), así que el cambio vale desde el próximo clic de cada
+  usuario, sin volver a ingresar.
+- **Admin** queda siempre con acceso completo y no se edita (para que siempre haya quien
+  administre usuarios y permisos). **Lectura** no se puede borrar: es el rol de las cuentas
+  creadas desde el registro público (§9.6). Un rol con usuarios (activos o no) no se borra.
+  Inicio queda siempre con acceso: es adonde lleva el ingreso.
+- Como cualquier pantalla puede quedar "en consulta" para cualquier rol, todas respetan ese modo
+  (también Usuarios, Roles y Ventas, que antes solo veía quien podía escribir).
+
+### 9.12 Cambio de dueño de un vehículo (confirmado 2026-10-07)
+
+- Acción **Cambiar dueño** en la lista y en la edición del vehículo (editando, el dueño se ve fijo
+  y solo se cambia por ahí), con el atajo "Nuevo cliente" si el nuevo dueño todavía no existe.
+- El historial no se mueve: cada turno, orden y venta guarda su propio cliente, así que lo hecho
+  para el dueño anterior queda a su nombre.
+- No se permite mientras el vehículo tenga una orden en el taller (Abierta o En proceso) o un turno
+  pendiente (Solicitado o Confirmado): quedarían a nombre de un cliente que ya no es el dueño. Hay
+  que cerrarlos o cancelarlos antes.
 
 ---
 
 ## 10. Fuera de alcance (por ahora)
 
-- Integración fiscal con AFIP (facturación electrónica real).
+- Integración fiscal con AFIP/ARCA (facturación electrónica real, con CAE). La factura imprimible
+  de §9.10 es un comprobante sin validez fiscal.
 - Portal público para que el cliente pida turno online por su cuenta.
 - Notificaciones automáticas por mail/SMS (recordatorio de turno, aviso de stock bajo, etc.).
 - Multi-sucursal (se asume un único local).

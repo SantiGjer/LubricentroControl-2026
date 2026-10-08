@@ -2,21 +2,35 @@
 
    1. Tablas (table.tabla-abm): orden al hacer clic en un encabezado, filtro por texto y, si la
       tabla lo pide con data-filas-por-pagina, paginado. Todo en el navegador, sobre las filas
-      que ya mandó el servidor. Lo que el usuario dejó elegido (filtro, orden, página) sobrevive a
-      los postbacks porque se guarda en el campo oculto hdnEstadoTablas del Site.Master: un GET
-      nuevo arranca de cero, un postback lo recupera.
+      que ya mandó el servidor. Lo que el usuario dejó elegido (filtro, opciones, orden, página)
+      sobrevive a los postbacks porque se guarda en el campo oculto hdnEstadoTablas del
+      Site.Master: un GET nuevo arranca de cero, un postback lo recupera.
         - data-filtro="id": usa ese input como filtro en vez de agregar uno arriba de la tabla.
-        - data-sin-filtro: tabla sin filtro (solo orden), para las grillas chicas de un formulario.
-        - data-buscar (en una fila): texto extra que el filtro tiene en cuenta aunque no se vea
-          (ej. el DNI del cliente en Turnos).
+        - data-sin-filtro: tabla sin filtro ni elección de columnas (solo orden), para las grillas
+          chicas de un formulario.
+        - data-buscar (en una fila): texto extra que el filtro tiene en cuenta aunque no se vea.
         - Las columnas con clase "sin-orden" en el encabezado (las de Acciones) no se ordenan.
+      Opciones: data-opciones-tabla="id" apunta a un contenedor .opciones-tabla con grupos
+      (.grupo-opciones) de botones (.opcion). Cada grupo filtra por una columna
+      (data-columna="Estado", por el texto del encabezado) o por un atributo de la fila
+      (data-atributo="saldo" lee data-saldo); data-valor="" es "todos", y "A|B" acepta
+      cualquiera de los dos. data-inicial elige la opción con que arranca la pantalla.
+      Columnas: el botón "Columnas" deja elegir qué columnas se ven; la elección se recuerda en
+      este navegador. Las columnas con clase "oculta" arrancan escondidas.
+      Ver: un enlace .accion-ver con data-ver-detalle en la fila abre una ventana con todos los
+      datos de la fila, incluidas las columnas escondidas; los elementos .accion-detalle de la
+      fila aparecen como botones en el pie de esa ventana. Las celdas con clase "celda-titulo"
+      (el nombre o el número) abren lo mismo que el .accion-ver de su fila.
    2. Selectores con búsqueda (.selector-busqueda): campo de texto con la lista de opciones
       desplegable y el botón de búsqueda adentro del mismo campo. Las opciones vienen del
       servidor en data-opciones ([{ "v": valor, "t": texto }]) y el valor elegido queda en el
       HiddenField de adentro. Con data-postback="true" avisa al servidor al elegir (dispara el
       ValueChanged de ese HiddenField).
    3. Modales: Lubricentro.abrirModal(id). El servidor lo llama después de un postback
-      (Utilidades/Interfaz.AbrirModal) para que el formulario siga a la vista. */
+      (Utilidades/Interfaz.AbrirModal) para que el formulario siga a la vista.
+      Campos condicionales: data-mostrar-si="idControl=Valor" (ver iniciarCondicionales).
+   4. Barra lateral: Lubricentro.restaurarMenu() reabre los grupos del menú que el usuario dejó
+      abiertos (se recuerda en este navegador). */
 (function () {
     'use strict';
 
@@ -56,6 +70,25 @@
             return false;
         }
         return true;
+    }
+
+    // --- Preferencias del navegador (localStorage) ---------------------------------------
+    // Solo comodidades de cada persona (columnas elegidas, grupos del menú abiertos): si el
+    // navegador no deja guardar, todo funciona igual con los valores por defecto.
+
+    function leerPreferencia(clave) {
+        try {
+            var valor = window.localStorage.getItem('lubricentro.' + clave);
+            return valor ? JSON.parse(valor) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function guardarPreferencia(clave, valor) {
+        try {
+            window.localStorage.setItem('lubricentro.' + clave, JSON.stringify(valor));
+        } catch (e) { /* sin almacenamiento: no se recuerda */ }
     }
 
     // --- Estado que sobrevive a los postbacks --------------------------------------------
@@ -103,7 +136,7 @@
     function leerNumero(texto) {
         var miles = document.body.getAttribute('data-separador-miles') || ',';
         var decimal = document.body.getAttribute('data-separador-decimal') || '.';
-        var t = texto.replace(/[$\s ]/g, '');
+        var t = texto.replace(/[$\s ]/g, '');
         if (!t) return null;
         t = t.split(miles).join('');
         if (decimal !== '.') t = t.split(decimal).join('.');
@@ -133,9 +166,13 @@
         return celda ? celda.textContent.replace(/\s+/g, ' ').trim() : '';
     }
 
+    function esColumnaDeAcciones(th) {
+        var texto = normalizar(th.textContent);
+        return texto === 'acciones' || texto === '';
+    }
+
     function esOrdenable(th) {
-        return !th.classList.contains('sin-orden') && normalizar(th.textContent) !== 'acciones' &&
-            normalizar(th.textContent) !== '';
+        return !th.classList.contains('sin-orden') && !esColumnaDeAcciones(th);
     }
 
     function crearFiltro(tabla) {
@@ -183,7 +220,7 @@
                 if (columnasOrdenables[k]) partes.push(f.cells[k].textContent);
             partes.push(f.getAttribute('data-buscar') || '');
             var texto = normalizar(partes.join(' '));
-            return { fila: f, indice: indice, texto: texto, compacto: compactar(texto) };
+            return { fila: f, indice: indice, texto: texto, compacto: compactar(texto), opciones: {} };
         });
 
         var t = {
@@ -199,7 +236,10 @@
             tipos: {},
             input: null,
             paginador: null,
-            filaVacia: null
+            filaVacia: null,
+            grupos: [],
+            opciones: {},
+            contador: null
         };
 
         var guardado = leerEstado(t.clave);
@@ -251,6 +291,10 @@
             });
         }
 
+        iniciarOpciones(t, guardado);
+        if (!tabla.hasAttribute('data-sin-filtro')) iniciarColumnas(t);
+        iniciarVer(t);
+
         if (t.porPagina > 0) {
             t.paginador = document.createElement('div');
             t.paginador.className = 'paginador-tabla';
@@ -289,6 +333,18 @@
         };
     }
 
+    // Una fila pasa las opciones si en cada grupo coincide con alguno de los valores elegidos.
+    function cumpleOpciones(t, d) {
+        for (var i = 0; i < t.grupos.length; i++) {
+            var grupo = t.grupos[i];
+            var elegido = t.opciones[grupo.clave];
+            if (!elegido) continue;
+            var aceptados = elegido.split('|').map(normalizar);
+            if (aceptados.indexOf(d.opciones[grupo.clave]) < 0) return false;
+        }
+        return true;
+    }
+
     function aplicar(t) {
         var palabras = partirEnPalabras(t.filtro);
 
@@ -296,7 +352,7 @@
         if (t.columna >= 0 && t.columna < t.encabezado.cells.length) ordenados.sort(compararFilas(t));
 
         var visibles = ordenados.filter(function (d) {
-            return !palabras.length || coincide(palabras, d.texto, d.compacto);
+            return (!palabras.length || coincide(palabras, d.texto, d.compacto)) && cumpleOpciones(t, d);
         });
 
         var paginas = t.porPagina > 0 ? Math.max(1, Math.ceil(visibles.length / t.porPagina)) : 1;
@@ -330,7 +386,13 @@
 
         if (t.paginador) dibujarPaginador(t, paginas);
 
-        guardarEstado(t.clave, { f: t.filtro, c: t.columna, d: t.direccion, p: t.pagina });
+        if (t.contador) {
+            t.contador.textContent = visibles.length === t.datos.length
+                ? (t.datos.length === 1 ? '1 registro' : t.datos.length + ' registros')
+                : visibles.length + ' de ' + t.datos.length;
+        }
+
+        guardarEstado(t.clave, { f: t.filtro, c: t.columna, d: t.direccion, p: t.pagina, o: t.opciones });
     }
 
     function mostrarFilaVacia(t, mostrar) {
@@ -373,8 +435,281 @@
         t.paginador.appendChild(boton('Siguiente ►', t.pagina + 1, t.pagina < paginas - 1));
     }
 
+    // --- Opciones de filtro (botones agrupados debajo de la barra de herramientas) -----------
+
+    function indiceDeColumna(t, nombre) {
+        var buscado = normalizar(nombre);
+        for (var i = 0; i < t.encabezado.cells.length; i++)
+            if (normalizar(t.encabezado.cells[i].textContent) === buscado) return i;
+        return -1;
+    }
+
+    function iniciarOpciones(t, guardado) {
+        var idOpciones = t.tabla.getAttribute('data-opciones-tabla');
+        var contenedor = idOpciones ? document.getElementById(idOpciones) : null;
+        if (!contenedor) return;
+
+        Array.prototype.forEach.call(contenedor.querySelectorAll('.grupo-opciones'), function (elemento) {
+            var columna = elemento.getAttribute('data-columna');
+            var atributo = elemento.getAttribute('data-atributo');
+            var clave = columna ? 'col:' + normalizar(columna) : 'atr:' + atributo;
+            var indice = columna ? indiceDeColumna(t, columna) : -1;
+            if (columna && indice < 0) return;
+
+            t.datos.forEach(function (d) {
+                d.opciones[clave] = normalizar(columna ? textoCelda(d.fila, indice) : d.fila.getAttribute('data-' + atributo));
+            });
+
+            var botones = elemento.querySelectorAll('.opcion');
+            var grupo = { clave: clave, botones: botones };
+            t.grupos.push(grupo);
+
+            var inicial = guardado && guardado.o && guardado.o[clave] !== undefined
+                ? guardado.o[clave]
+                : (elemento.getAttribute('data-inicial') || '');
+            elegirOpcion(t, grupo, inicial);
+
+            Array.prototype.forEach.call(botones, function (boton) {
+                boton.setAttribute('type', 'button');
+                boton.addEventListener('click', function () {
+                    elegirOpcion(t, grupo, boton.getAttribute('data-valor') || '');
+                    t.pagina = 0;
+                    aplicar(t);
+                });
+            });
+        });
+
+        t.contador = document.createElement('span');
+        t.contador.className = 'contador-tabla';
+        t.contador.setAttribute('aria-live', 'polite');
+        contenedor.appendChild(t.contador);
+    }
+
+    function elegirOpcion(t, grupo, valor) {
+        var encontrado = false;
+        Array.prototype.forEach.call(grupo.botones, function (boton) {
+            var activo = (boton.getAttribute('data-valor') || '') === valor;
+            if (activo) encontrado = true;
+            boton.classList.toggle('activa', activo);
+            boton.setAttribute('aria-pressed', activo ? 'true' : 'false');
+        });
+        // Un valor guardado que ya no existe vuelve a "todos".
+        if (!encontrado && valor) return elegirOpcion(t, grupo, '');
+        t.opciones[grupo.clave] = valor;
+    }
+
+    // --- Elegir columnas ---------------------------------------------------------------------
+
+    function claveColumnas(t) {
+        return 'columnas.' + window.location.pathname.toLowerCase() + '.' + t.clave;
+    }
+
+    function aplicarColumnas(t, ocultas) {
+        var nombres = Array.prototype.map.call(t.encabezado.cells, function (th) { return normalizar(th.textContent); });
+        Array.prototype.forEach.call(t.tabla.rows, function (fila) {
+            // La fila de "sin datos" ocupa todo el ancho con una sola celda.
+            if (fila.cells.length !== nombres.length) return;
+            for (var i = 0; i < nombres.length; i++)
+                fila.cells[i].classList.toggle('columna-oculta', ocultas.indexOf(nombres[i]) >= 0);
+        });
+    }
+
+    function iniciarColumnas(t) {
+        var columnas = [];
+        Array.prototype.forEach.call(t.encabezado.cells, function (th) {
+            if (!esColumnaDeAcciones(th))
+                columnas.push({ nombre: normalizar(th.textContent), texto: th.textContent.trim(), oculta: th.classList.contains('oculta') });
+        });
+        if (columnas.length < 3) return;
+
+        var ocultas = leerPreferencia(claveColumnas(t));
+        if (!Array.isArray(ocultas))
+            ocultas = columnas.filter(function (c) { return c.oculta; }).map(function (c) { return c.nombre; });
+        aplicarColumnas(t, ocultas);
+
+        var selector = document.createElement('div');
+        selector.className = 'selector-columnas';
+        var boton = document.createElement('button');
+        boton.type = 'button';
+        boton.className = 'boton-columnas';
+        boton.setAttribute('aria-expanded', 'false');
+        boton.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6 2.5v11M10 2.5v11" stroke="currentColor" stroke-width="1.4"/></svg><span>Columnas</span>';
+        var panel = document.createElement('div');
+        panel.className = 'panel-columnas';
+        panel.hidden = true;
+
+        var titulo = document.createElement('div');
+        titulo.className = 'panel-columnas-titulo';
+        titulo.textContent = 'Columnas visibles';
+        panel.appendChild(titulo);
+
+        columnas.forEach(function (columna, indice) {
+            var etiqueta = document.createElement('label');
+            var casilla = document.createElement('input');
+            casilla.type = 'checkbox';
+            casilla.checked = ocultas.indexOf(columna.nombre) < 0;
+            casilla.id = t.clave + '_columna' + indice;
+            casilla.addEventListener('change', function () {
+                var visibles = panel.querySelectorAll('input:checked').length;
+                if (!casilla.checked && visibles === 0) {
+                    casilla.checked = true; // siempre queda al menos una columna
+                    return;
+                }
+                if (casilla.checked) ocultas = ocultas.filter(function (n) { return n !== columna.nombre; });
+                else if (ocultas.indexOf(columna.nombre) < 0) ocultas.push(columna.nombre);
+                aplicarColumnas(t, ocultas);
+                guardarPreferencia(claveColumnas(t), ocultas);
+            });
+            etiqueta.appendChild(casilla);
+            etiqueta.appendChild(document.createTextNode(' ' + columna.texto));
+            panel.appendChild(etiqueta);
+        });
+
+        var restaurar = document.createElement('button');
+        restaurar.type = 'button';
+        restaurar.className = 'panel-columnas-restaurar';
+        restaurar.textContent = 'Volver a las columnas de siempre';
+        restaurar.addEventListener('click', function () {
+            ocultas = columnas.filter(function (c) { return c.oculta; }).map(function (c) { return c.nombre; });
+            Array.prototype.forEach.call(panel.querySelectorAll('input'), function (casilla, i) {
+                casilla.checked = ocultas.indexOf(columnas[i].nombre) < 0;
+            });
+            aplicarColumnas(t, ocultas);
+            guardarPreferencia(claveColumnas(t), null);
+        });
+        panel.appendChild(restaurar);
+
+        selector.appendChild(boton);
+        selector.appendChild(panel);
+
+        var cerrar = function () {
+            panel.hidden = true;
+            boton.setAttribute('aria-expanded', 'false');
+        };
+        boton.addEventListener('click', function () {
+            panel.hidden = !panel.hidden;
+            boton.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
+        });
+        document.addEventListener('click', function (e) {
+            if (!panel.hidden && !selector.contains(e.target)) cerrar();
+        });
+        selector.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !panel.hidden) {
+                e.stopPropagation();
+                cerrar();
+                boton.focus();
+            }
+        });
+
+        // En la barra de herramientas de la pantalla (antes del botón "Nuevo …"), o al lado del
+        // filtro que se agregó arriba de la tabla.
+        var barra = t.input ? t.input.closest('.barra-herramientas, .filtro-tabla') : null;
+        if (barra) {
+            var acciones = barra.querySelector('.acciones-barra');
+            if (acciones) barra.insertBefore(selector, acciones);
+            else barra.appendChild(selector);
+        } else {
+            var contenedor = document.createElement('div');
+            contenedor.className = 'filtro-tabla';
+            contenedor.appendChild(selector);
+            t.tabla.parentNode.insertBefore(contenedor, t.tabla);
+        }
+    }
+
+    // --- Ver todos los datos de una fila -------------------------------------------------------
+
+    var modalDetalle = null;
+
+    function crearModalDetalle(pantalla) {
+        var modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'modalDetalleFila';
+        modal.tabIndex = -1;
+        modal.setAttribute('aria-hidden', 'true');
+        modal.setAttribute('aria-labelledby', 'tituloDetalleFila');
+        modal.innerHTML =
+            '<div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">' +
+            '<div class="modal-header"><h2 class="modal-title" id="tituloDetalleFila"></h2>' +
+            '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>' +
+            '<div class="modal-body"><dl class="datos-resumen datos-detalle"></dl></div>' +
+            '<div class="modal-footer"><span class="acciones-secundarias"></span>' +
+            '<button type="button" class="boton-gris" data-bs-dismiss="modal">Cerrar</button></div>' +
+            '</div></div>';
+        pantalla.appendChild(modal);
+        return modal;
+    }
+
+    function verFila(t, fila) {
+        var pantalla = t.tabla.closest('.pantalla-abm') || document.body;
+        if (!modalDetalle || !pantalla.contains(modalDetalle)) modalDetalle = crearModalDetalle(pantalla);
+
+        var celdaTitulo = fila.querySelector('.celda-titulo') || fila.cells[0];
+        var prefijo = t.tabla.getAttribute('data-titulo-detalle');
+        var titulo = celdaTitulo ? celdaTitulo.textContent.replace(/\s+/g, ' ').trim() : '';
+        modalDetalle.querySelector('.modal-title').textContent = prefijo ? prefijo + ': ' + titulo : titulo;
+
+        var lista = modalDetalle.querySelector('dl');
+        lista.innerHTML = '';
+        Array.prototype.forEach.call(t.encabezado.cells, function (th, i) {
+            if (esColumnaDeAcciones(th)) return;
+            var dt = document.createElement('dt');
+            dt.textContent = th.textContent.trim();
+            var dd = document.createElement('dd');
+            dd.textContent = textoCelda(fila, i) || '—';
+            lista.appendChild(dt);
+            lista.appendChild(dd);
+        });
+
+        // Las acciones de la fila (Editar, Cambiar dueño…) también desde la ventana.
+        var acciones = modalDetalle.querySelector('.acciones-secundarias');
+        acciones.innerHTML = '';
+        Array.prototype.forEach.call(fila.querySelectorAll('.accion-detalle'), function (accion) {
+            var boton = document.createElement('button');
+            boton.type = 'button';
+            boton.className = 'boton-rojo';
+            boton.textContent = accion.textContent.trim();
+            boton.addEventListener('click', function () {
+                bootstrap.Modal.getOrCreateInstance(modalDetalle).hide();
+                accion.click();
+            });
+            acciones.appendChild(boton);
+        });
+
+        if (window.bootstrap) bootstrap.Modal.getOrCreateInstance(modalDetalle).show();
+    }
+
+    function iniciarVer(t) {
+        t.datos.forEach(function (d) {
+            var ver = d.fila.querySelector('.accion-ver');
+
+            if (ver && ver.hasAttribute('data-ver-detalle')) {
+                ver.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    verFila(t, d.fila);
+                });
+            }
+
+            // La celda del nombre (o del número) abre lo mismo que "Ver".
+            if (!ver) return;
+            Array.prototype.forEach.call(d.fila.querySelectorAll('.celda-titulo'), function (celda) {
+                if (celda.querySelector('a')) return;
+                var enlace = document.createElement('a');
+                enlace.href = '#';
+                enlace.className = 'enlace-titulo';
+                while (celda.firstChild) enlace.appendChild(celda.firstChild);
+                celda.appendChild(enlace);
+                enlace.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    ver.click();
+                });
+            });
+        });
+    }
+
+    // data-estatica: tabla con el estilo de las demás pero sin orden ni filtro (la matriz de
+    // permisos de Roles, que tiene filas de grupo que no se pueden mover).
     function iniciarTablas(raiz) {
-        var tablas = raiz.querySelectorAll('table.tabla-abm');
+        var tablas = raiz.querySelectorAll('table.tabla-abm:not([data-estatica])');
         for (var i = 0; i < tablas.length; i++)
             if (!tablas[i].hasAttribute('data-tabla-iniciada')) iniciarTabla(tablas[i]);
     }
@@ -592,11 +927,95 @@
             abrir();
     };
 
+    // --- Campos que dependen de otra elección ---------------------------------------------
+    // data-mostrar-si="idControl=Valor" (o "Valor1|Valor2") muestra el elemento solo mientras el
+    // desplegable o el grupo de opciones idControl tenga ese valor: los datos de una empresa o de
+    // una persona, los de stock de un insumo, la alícuota de un producto gravado. El servidor
+    // valida igual cada caso; esto solo esconde lo que no corresponde completar.
+
+    function valorDe(control) {
+        if (control.tagName === 'SELECT' || control.tagName === 'INPUT') return control.value;
+        var elegido = control.querySelector('input:checked');
+        return elegido ? elegido.value : '';
+    }
+
+    function iniciarCondicionales(raiz) {
+        Array.prototype.forEach.call(raiz.querySelectorAll('[data-mostrar-si]'), function (elemento) {
+            if (elemento.hasAttribute('data-condicional-iniciado')) return;
+            elemento.setAttribute('data-condicional-iniciado', '');
+
+            var regla = elemento.getAttribute('data-mostrar-si');
+            var corte = regla.indexOf('=');
+            var control = document.getElementById(regla.substring(0, corte));
+            if (!control) return;
+            var valores = regla.substring(corte + 1).split('|');
+
+            var actualizar = function () {
+                elemento.hidden = valores.indexOf(valorDe(control)) < 0;
+            };
+            control.addEventListener('change', actualizar);
+            actualizar();
+        });
+    }
+
+    // Roles: pone todas las pantallas de la matriz en el mismo acceso (las fijas, como Inicio,
+    // vienen deshabilitadas y no se tocan).
+    Lubricentro.marcarPermisos = function (acceso) {
+        Array.prototype.forEach.call(document.querySelectorAll('.acceso-pantalla input[type="radio"]'), function (radio) {
+            if (!radio.disabled && radio.value === acceso) radio.checked = true;
+        });
+    };
+
+    // Muestra u oculta un bloque de la pantalla (ej. la confirmación de cierre de una orden).
+    Lubricentro.alternar = function (id) {
+        var elemento = document.getElementById(id);
+        if (!elemento) return;
+        elemento.hidden = !elemento.hidden;
+        if (!elemento.hidden) elemento.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    };
+
+    // --- Barra lateral ---------------------------------------------------------------------
+
+    var ClaveMenu = 'menuAbiertos';
+
+    function gruposDelMenu() {
+        return document.querySelectorAll('.menu-lateral .collapse[data-grupo]');
+    }
+
+    // Se llama desde el Site.Master apenas se dibuja el menú, antes de que se vea: reabre los
+    // grupos que el usuario dejó abiertos (el de la pantalla actual ya viene abierto) y desde
+    // ahí recuerda cada grupo que se abre o se cierra.
+    Lubricentro.restaurarMenu = function () {
+        var abiertos = leerPreferencia(ClaveMenu) || [];
+
+        Array.prototype.forEach.call(gruposDelMenu(), function (grupo) {
+            var boton = document.querySelector('[data-bs-target="#' + grupo.id + '"]');
+            if (abiertos.indexOf(grupo.getAttribute('data-grupo')) >= 0 && !grupo.classList.contains('show')) {
+                grupo.classList.add('show');
+                if (boton) {
+                    boton.classList.remove('collapsed');
+                    boton.setAttribute('aria-expanded', 'true');
+                }
+            }
+
+            var recordar = function () {
+                var lista = [];
+                Array.prototype.forEach.call(gruposDelMenu(), function (g) {
+                    if (g.classList.contains('show')) lista.push(g.getAttribute('data-grupo'));
+                });
+                guardarPreferencia(ClaveMenu, lista);
+            };
+            grupo.addEventListener('shown.bs.collapse', recordar);
+            grupo.addEventListener('hidden.bs.collapse', recordar);
+        });
+    };
+
     // --- Arranque ----------------------------------------------------------------------------
 
     function iniciar() {
         iniciarTablas(document);
         iniciarSelectores(document);
+        iniciarCondicionales(document);
     }
 
     // Sys.Application.add_load corre al cargar la página y otra vez después de cada postback

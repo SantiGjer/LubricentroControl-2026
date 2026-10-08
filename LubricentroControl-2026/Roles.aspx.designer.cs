@@ -6,7 +6,7 @@
 
 namespace LubricentroControl_2026
 {
-    public partial class Servicios
+    public partial class Roles
     {
         /// <summary>Control pnlMensaje.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlMensaje;
@@ -14,14 +14,11 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control chkIncluirInactivos.</summary>
-        protected global::System.Web.UI.WebControls.CheckBox chkIncluirInactivos;
-
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
 
-        /// <summary>Control gvServicios.</summary>
-        protected global::System.Web.UI.WebControls.GridView gvServicios;
+        /// <summary>Control gvRoles.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvRoles;
 
         /// <summary>Control pnlFormulario.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlFormulario;
@@ -35,26 +32,26 @@ namespace LubricentroControl_2026
         /// <summary>Control litErrorFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litErrorFormulario;
 
-        /// <summary>Control hdnIdServicio.</summary>
-        protected global::System.Web.UI.WebControls.HiddenField hdnIdServicio;
+        /// <summary>Control pnlAvisoRol.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlAvisoRol;
 
-        /// <summary>Control hdnActivo.</summary>
-        protected global::System.Web.UI.WebControls.HiddenField hdnActivo;
+        /// <summary>Control litAvisoRol.</summary>
+        protected global::System.Web.UI.WebControls.Literal litAvisoRol;
+
+        /// <summary>Control hdnIdNivel.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdNivel;
 
         /// <summary>Control txtNombre.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtNombre;
 
-        /// <summary>Control txtDescripcion.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtDescripcion;
+        /// <summary>Control pnlAccesosRapidos.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlAccesosRapidos;
 
-        /// <summary>Control txtPrecioBase.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtPrecioBase;
+        /// <summary>Control rptPermisos.</summary>
+        protected global::System.Web.UI.WebControls.Repeater rptPermisos;
 
-        /// <summary>Control btnBorrar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnBorrar;
-
-        /// <summary>Control btnReactivar.</summary>
-        protected global::System.Web.UI.WebControls.Button btnReactivar;
+        /// <summary>Control litBotonCerrar.</summary>
+        protected global::System.Web.UI.WebControls.Literal litBotonCerrar;
 
         /// <summary>Control btnGuardar.</summary>
         protected global::System.Web.UI.WebControls.Button btnGuardar;

@@ -51,7 +51,7 @@ namespace BIZ.Data
             {
                 using (var mensaje = new MailMessage())
                 {
-                    mensaje.From = new MailAddress(Remitente, "LubricentroControl");
+                    mensaje.From = new MailAddress(Remitente, "Lubricentro Control");
                     mensaje.To.Add(destinatario);
                     mensaje.Subject = asunto;
                     mensaje.Body = cuerpoHtml;
@@ -101,7 +101,7 @@ namespace BIZ.Data
         {
             return
                 "<p>Hola " + Escapar(nombreUsuario) + ",</p>" +
-                "<p>Recibimos un pedido para restablecer tu contraseña de LubricentroControl.</p>" +
+                "<p>Recibimos un pedido para restablecer tu contraseña de Lubricentro Control.</p>" +
                 "<p><a href=\"" + Escapar(enlace) + "\">Restablecer mi contraseña</a></p>" +
                 "<p>El enlace es de un solo uso y vence en " + minutosVigencia + " minutos.</p>" +
                 "<p>Si no pediste esto, ignorá este mensaje: tu contraseña sigue igual.</p>";
@@ -111,7 +111,7 @@ namespace BIZ.Data
         {
             return
                 "<p>Hola " + Escapar(nombreUsuario) + ",</p>" +
-                "<p>Se creó tu cuenta en LubricentroControl.</p>" +
+                "<p>Se creó tu cuenta en Lubricentro Control.</p>" +
                 "<p>Usuario: <b>" + Escapar(email) + "</b><br/>" +
                 "Contraseña temporal: <b>" + Escapar(passwordTemporal) + "</b></p>" +
                 "<p>Cambiala apenas ingreses por primera vez.</p>";

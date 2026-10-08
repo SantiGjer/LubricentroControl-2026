@@ -14,9 +14,6 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control chkIncluirSinCuenta.</summary>
-        protected global::System.Web.UI.WebControls.CheckBox chkIncluirSinCuenta;
-
         /// <summary>Control gvClientes.</summary>
         protected global::System.Web.UI.WebControls.GridView gvClientes;
 

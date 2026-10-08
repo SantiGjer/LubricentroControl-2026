@@ -14,9 +14,6 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control chkSoloConSaldo.</summary>
-        protected global::System.Web.UI.WebControls.CheckBox chkSoloConSaldo;
-
         /// <summary>Control btnNuevaCompra.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevaCompra;
 

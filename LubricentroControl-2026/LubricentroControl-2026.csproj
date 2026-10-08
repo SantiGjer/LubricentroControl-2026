@@ -105,7 +105,6 @@
     <Content Include="Compras.aspx" />
     <Content Include="CuentaCorrienteClientes.aspx" />
     <Content Include="CuentaCorrienteProveedores.aspx" />
-    <Content Include="Insumos.aspx" />
     <Content Include="Login.aspx" />
     <Content Include="OrdenesDeTrabajo.aspx" />
     <Content Include="Pagos.aspx" />
@@ -116,7 +115,8 @@
     <Content Include="Reportes\StockBajo.aspx" />
     <Content Include="Reportes\VentasPorPeriodo.aspx" />
     <Content Include="RestablecerClave.aspx" />
-    <Content Include="Servicios.aspx" />
+    <Content Include="Roles.aspx" />
+    <Content Include="Productos.aspx" />
     <Content Include="Turnos.aspx" />
     <Content Include="Usuarios.aspx" />
     <Content Include="Vehiculos.aspx" />
@@ -274,13 +274,6 @@
     <Compile Include="Default.aspx.designer.cs">
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Insumos.aspx.cs">
-      <DependentUpon>Insumos.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="Insumos.aspx.designer.cs">
-      <DependentUpon>Insumos.aspx</DependentUpon>
-    </Compile>
     <Compile Include="Login.aspx.cs">
       <DependentUpon>Login.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -301,6 +294,13 @@
     </Compile>
     <Compile Include="Pagos.aspx.designer.cs">
       <DependentUpon>Pagos.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Productos.aspx.cs">
+      <DependentUpon>Productos.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Productos.aspx.designer.cs">
+      <DependentUpon>Productos.aspx</DependentUpon>
     </Compile>
     <Compile Include="Proveedores.aspx.cs">
       <DependentUpon>Proveedores.aspx</DependentUpon>
@@ -351,12 +351,12 @@
     <Compile Include="RestablecerClave.aspx.designer.cs">
       <DependentUpon>RestablecerClave.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Servicios.aspx.cs">
-      <DependentUpon>Servicios.aspx</DependentUpon>
+    <Compile Include="Roles.aspx.cs">
+      <DependentUpon>Roles.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
-    <Compile Include="Servicios.aspx.designer.cs">
-      <DependentUpon>Servicios.aspx</DependentUpon>
+    <Compile Include="Roles.aspx.designer.cs">
+      <DependentUpon>Roles.aspx</DependentUpon>
     </Compile>
     <Compile Include="Turnos.aspx.cs">
       <DependentUpon>Turnos.aspx</DependentUpon>

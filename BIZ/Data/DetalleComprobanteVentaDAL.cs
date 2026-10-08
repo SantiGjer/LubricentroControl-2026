@@ -18,16 +18,21 @@ namespace BIZ.Data
                 Descripcion = AccesoDatos.LeerString(fila, "descripcion"),
                 Cantidad = AccesoDatos.LeerDecimal(fila, "cantidad"),
                 PrecioUnitario = AccesoDatos.LeerDecimal(fila, "precioUnitario"),
-                Subtotal = AccesoDatos.LeerDecimal(fila, "subtotal")
+                Subtotal = AccesoDatos.LeerDecimal(fila, "subtotal"),
+                TipoIva = AccesoDatos.LeerString(fila, "tipoIva"),
+                AlicuotaIva = AccesoDatos.LeerDecimal(fila, "alicuotaIva"),
+                ImporteIva = AccesoDatos.LeerDecimal(fila, "importeIva")
             };
         }
 
         // La inserción de líneas va dentro del batch atómico de
-        // ComprobanteVentaDAL.GenerarDesdeOrden — acá solo el listado, para mostrar una venta ya generada.
+        // ComprobanteVentaDAL.GenerarDesdeOrden — acá solo el listado, para mostrar una venta ya
+        // generada y armar su factura.
         public static List<DetalleComprobanteVenta> ListarPorVenta(int idVenta)
         {
             const string sql = @"
-                SELECT idDetalle, idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal
+                SELECT idDetalle, idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario,
+                       subtotal, tipoIva, alicuotaIva, importeIva
                 FROM DetalleComprobanteVenta
                 WHERE idVenta = @idVenta
                 ORDER BY idDetalle";

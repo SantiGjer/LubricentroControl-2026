@@ -13,22 +13,35 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroProveedores" class="filtro-tabla-texto"
-            placeholder="Filtrar por razón social o CUIT" aria-label="Filtrar proveedores" />
+            placeholder="Buscar por razón social o CUIT" aria-label="Buscar proveedores" />
+    </div>
+
+    <div class="opciones-tabla" id="opcionesCuentas">
+        <div class="grupo-opciones" data-atributo="saldo">
+            <span class="titulo-opciones">Saldo</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="debe">Les debemos</button>
+            <button type="button" class="opcion" data-valor="a-favor">A favor nuestro</button>
+            <button type="button" class="opcion" data-valor="cero">Sin saldo</button>
+        </div>
     </div>
 
     <asp:GridView ID="gvProveedores" runat="server" CssClass="tabla-abm" data-filtro="filtroProveedores"
+        data-opciones-tabla="opcionesCuentas"
         AutoGenerateColumns="false" DataKeyNames="IdProveedor" GridLines="None"
-        OnRowCommand="gvProveedores_RowCommand" EmptyDataText="No hay proveedores cargados.">
+        OnRowCommand="gvProveedores_RowCommand" OnRowDataBound="gvProveedores_RowDataBound"
+        EmptyDataText="No hay proveedores cargados.">
         <Columns>
-            <asp:BoundField DataField="RazonSocial" HeaderText="Razón social" />
+            <asp:BoundField DataField="RazonSocial" HeaderText="Razón social" ItemStyle-CssClass="celda-titulo" />
             <asp:TemplateField HeaderText="CUIT">
-                <ItemTemplate>
-                    <%# Proveedor.FormatearCuit(Eval("Cuit").ToString()) %>
-                </ItemTemplate>
+                <ItemTemplate><%# Proveedor.FormatearCuit(Eval("Cuit").ToString()) %></ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Saldo">
+                <ItemTemplate><%# SaldoDe((int)Eval("IdProveedor")).ToString("N2") %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <asp:LinkButton runat="server" CssClass="accion-ver"
                         CommandName="Ver" CommandArgument='<%# Eval("IdProveedor") %>'
                         CausesValidation="false">Ver cuenta</asp:LinkButton>
                 </ItemTemplate>

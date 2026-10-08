@@ -7,12 +7,14 @@ namespace BIZ.Data
     public static class OrdenDeTrabajoDAL
     {
         private const string SelectBase = @"
-            SELECT o.idOrden, o.idTurno, o.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente,
-                   c.dni, o.idVehiculo, v.patente, o.idUsuario,
+            SELECT o.idOrden, o.idTurno, o.idCliente, c.denominacion AS nombreCliente,
+                   c.tipoDocumento, c.numeroDocumento, c.cuentaCorriente, o.idVehiculo, v.patente, o.idUsuario,
+                   u.nombre + ' ' + u.apellido AS nombreUsuario,
                    o.fecha, o.kilometraje, o.observaciones, o.estado
             FROM OrdenDeTrabajo o
             INNER JOIN Cliente c ON c.idCliente = o.idCliente
-            INNER JOIN Vehiculo v ON v.idVehiculo = o.idVehiculo";
+            INNER JOIN Vehiculo v ON v.idVehiculo = o.idVehiculo
+            INNER JOIN Usuario u ON u.idUsuario = o.idUsuario";
 
         private static OrdenDeTrabajo Mapear(DataRow fila)
         {
@@ -22,10 +24,13 @@ namespace BIZ.Data
                 IdTurno = AccesoDatos.LeerIntNullable(fila, "idTurno"),
                 IdCliente = AccesoDatos.LeerInt(fila, "idCliente"),
                 NombreCliente = AccesoDatos.LeerString(fila, "nombreCliente"),
-                Dni = AccesoDatos.LeerString(fila, "dni"),
+                TipoDocumento = AccesoDatos.LeerString(fila, "tipoDocumento"),
+                NumeroDocumento = AccesoDatos.LeerString(fila, "numeroDocumento"),
+                ClienteConCuentaCorriente = AccesoDatos.LeerBool(fila, "cuentaCorriente"),
                 IdVehiculo = AccesoDatos.LeerInt(fila, "idVehiculo"),
                 Patente = AccesoDatos.LeerString(fila, "patente"),
                 IdUsuario = AccesoDatos.LeerInt(fila, "idUsuario"),
+                NombreUsuario = AccesoDatos.LeerString(fila, "nombreUsuario"),
                 Fecha = AccesoDatos.LeerFecha(fila, "fecha"),
                 Kilometraje = AccesoDatos.LeerIntNullable(fila, "kilometraje"),
                 Observaciones = AccesoDatos.LeerString(fila, "observaciones"),
@@ -33,20 +38,28 @@ namespace BIZ.Data
             };
         }
 
-        public static List<OrdenDeTrabajo> Listar(string estado = null)
+        // Todas, de la más nueva a la más vieja: el estado lo filtra la tabla en el navegador
+        // (opciones de OrdenesDeTrabajo.aspx, que arrancan en "Abierta").
+        public static List<OrdenDeTrabajo> Listar()
         {
-            var sql = SelectBase +
-                      (string.IsNullOrWhiteSpace(estado) ? "" : " WHERE o.estado = @estado") +
-                      " ORDER BY o.fecha DESC";
-
             var lista = new List<OrdenDeTrabajo>();
-            var tabla = string.IsNullOrWhiteSpace(estado)
-                ? AccesoDatos.Consultar(sql)
-                : AccesoDatos.Consultar(sql, AccesoDatos.Param("@estado", estado));
-
-            foreach (DataRow fila in tabla.Rows)
+            foreach (DataRow fila in AccesoDatos.Consultar(SelectBase + " ORDER BY o.fecha DESC").Rows)
                 lista.Add(Mapear(fila));
             return lista;
+        }
+
+        // Órdenes todavía en el taller (Abierta o En proceso) de un vehículo: mientras haya alguna,
+        // no se le cambia el dueño (VehiculoDAL.CambiarDueno).
+        public static int ContarEnCursoPorVehiculo(int idVehiculo)
+        {
+            var cantidad = AccesoDatos.Escalar(
+                @"SELECT COUNT(*) FROM OrdenDeTrabajo
+                  WHERE idVehiculo = @idVehiculo AND estado IN (@estadoAbierta, @estadoEnProceso)",
+                AccesoDatos.Param("@idVehiculo", idVehiculo),
+                AccesoDatos.Param("@estadoAbierta", OrdenDeTrabajo.EstadoAbierta),
+                AccesoDatos.Param("@estadoEnProceso", OrdenDeTrabajo.EstadoEnProceso));
+
+            return System.Convert.ToInt32(cantidad);
         }
 
         // Órdenes que todavía están en el taller (Abierta o En proceso), la más antigua primero:

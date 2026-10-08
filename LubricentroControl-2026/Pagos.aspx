@@ -12,30 +12,48 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroPagos" class="filtro-tabla-texto"
-            placeholder="Filtrar por cliente, proveedor, fecha o medio de pago" aria-label="Filtrar pagos" />
+            placeholder="Buscar por cliente, proveedor, comprobante, fecha o medio de pago" aria-label="Buscar pagos" />
         <span class="acciones-barra">
             <asp:Button ID="btnNuevo" runat="server" CssClass="boton-rojo" Text="Registrar pago"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
         </span>
     </div>
 
+    <div class="opciones-tabla" id="opcionesPagos">
+        <div class="grupo-opciones" data-columna="Tipo">
+            <span class="titulo-opciones">Tipo</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="Cliente">De clientes</button>
+            <button type="button" class="opcion" data-valor="Proveedor">A proveedores</button>
+        </div>
+        <div class="grupo-opciones" data-columna="Medio de pago">
+            <span class="titulo-opciones">Medio</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="Efectivo">Efectivo</button>
+            <button type="button" class="opcion" data-valor="Transferencia">Transferencia</button>
+            <button type="button" class="opcion" data-valor="Tarjeta">Tarjeta</button>
+        </div>
+    </div>
+
+    <%-- Un pago que canceló varias deudas se guarda como una fila por comprobante (PagoDAL.Registrar). --%>
     <asp:GridView ID="gvPagos" runat="server" CssClass="tabla-abm" data-filtro="filtroPagos"
+        data-opciones-tabla="opcionesPagos" data-titulo-detalle="Pago"
         AutoGenerateColumns="false" DataKeyNames="IdPago" GridLines="None"
         EmptyDataText="Todavía no hay pagos registrados.">
         <Columns>
-            <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy}" />
-            <asp:TemplateField HeaderText="Tipo">
-                <ItemTemplate>
-                    <%# Eval("Tipo").ToString() == "C" ? "Cliente" : "Proveedor" %>
-                </ItemTemplate>
-            </asp:TemplateField>
-            <asp:TemplateField HeaderText="Titular">
-                <ItemTemplate>
-                    <%# Eval("Tipo").ToString() == "C" ? Eval("NombreCliente") : Eval("RazonSocial") %>
-                </ItemTemplate>
+            <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy HH:mm}" />
+            <asp:BoundField DataField="TipoDescripcion" HeaderText="Tipo" />
+            <asp:BoundField DataField="Titular" HeaderText="Titular" ItemStyle-CssClass="celda-titulo" />
+            <asp:TemplateField HeaderText="Comprobante">
+                <ItemTemplate><%#: Eval("NumeroComprobante") ?? "A cuenta" %></ItemTemplate>
             </asp:TemplateField>
             <asp:BoundField DataField="MedioPago" HeaderText="Medio de pago" />
             <asp:BoundField DataField="Monto" HeaderText="Monto" DataFormatString="{0:N2}" />
+            <asp:BoundField DataField="NombreUsuario" HeaderText="Registró" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="Observaciones" HeaderText="Observaciones" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
+                <ItemTemplate><a href="#" class="accion-ver" data-ver-detalle>Ver</a></ItemTemplate>
+            </asp:TemplateField>
         </Columns>
     </asp:GridView>
 
@@ -53,10 +71,12 @@
                         <asp:Literal ID="litErrorFormulario" runat="server" />
                     </asp:Panel>
 
-                    <%-- Se llegó cerrando la orden de un cliente sin cuenta corriente: la venta se cobra ya. --%>
+                    <%-- Se llegó cerrando una orden con "cobrar ahora" (o la de un cliente sin cuenta
+                         corriente): la venta se cobra ya. --%>
                     <asp:Panel ID="pnlVieneDeOrden" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
                         <asp:Literal ID="litVieneDeOrden" runat="server" />
                     </asp:Panel>
+                    <asp:HiddenField ID="hdnIdVentaCobro" runat="server" />
 
                     <%-- Elegir el tipo o el titular es un postback parcial (muestra el saldo del
                          titular elegido) que no cierra el modal. --%>

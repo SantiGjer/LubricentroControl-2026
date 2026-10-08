@@ -13,8 +13,8 @@ namespace LubricentroControl_2026
     // corrientes, acá Empleado también puede cobrar —; Lectura, solo consulta. Un pago no se edita
     // ni se borra una vez cargado. No se elige comprobante: PagoDAL.Registrar cancela primero las
     // deudas más viejas y deja el sobrante a favor. El formulario se abre en un modal sobre la
-    // lista, y se abre solo cuando Órdenes de trabajo manda a cobrar la venta de un cliente sin
-    // cuenta corriente (?idVenta=).
+    // lista, y se abre solo, ya completo, cuando Órdenes de trabajo manda a cobrar la venta de una
+    // orden recién cerrada (?idVenta=): "Cobrar ahora", o un cliente sin cuenta corriente.
     public partial class Pagos : PaginaSegura
     {
         private const string IdModal = "modalPago";
@@ -52,22 +52,29 @@ namespace LubricentroControl_2026
             get { return Selectores.OpcionesProveedores(); }
         }
 
-        // Llegada desde Órdenes de trabajo al cerrar la orden de un cliente sin cuenta corriente:
-        // el formulario se abre con el cliente y el saldo de esa venta ya cargados. El monto se
-        // lee de la base, no del query string.
+        // Llegada desde Órdenes de trabajo al cerrar una orden: el formulario se abre con el
+        // cliente, el saldo de esa venta y la observación ya cargados (queda elegir el medio de
+        // pago). El monto se lee de la base, no del query string.
         private void PrepararCobroDeVenta(int idVenta)
         {
             var venta = ComprobanteVentaDAL.ObtenerPorId(idVenta);
             if (venta == null || venta.SaldoPendiente <= 0) return;
 
+            var cliente = ClienteDAL.ObtenerPorId(venta.IdCliente);
+
             LimpiarFormulario();
             SeleccionarCliente(venta.IdCliente);
             txtMonto.Text = venta.SaldoPendiente.ToString("0.00");
             txtObservaciones.Text = "Cobro de la venta " + venta.NumeroComprobante;
+            hdnIdVentaCobro.Value = venta.IdVenta.ToString();
 
             litVieneDeOrden.Text = "La orden se cerró y generó la venta <b>" + HttpUtility.HtmlEncode(venta.NumeroComprobante)
-                + "</b> por <b>$" + venta.Total.ToString("N2") + "</b>. Como el cliente no tiene cuenta corriente, "
-                + "registrá ahora el cobro de los <b>$" + venta.SaldoPendiente.ToString("N2") + "</b> pendientes.";
+                + "</b> por <b>$" + venta.Total.ToString("N2") + "</b>. "
+                + (cliente != null && cliente.CuentaCorriente
+                    ? "Registrá el cobro de los <b>$" + venta.SaldoPendiente.ToString("N2") + "</b> pendientes "
+                      + "(si cobrás menos, el resto queda en su cuenta corriente)."
+                    : "Como el cliente no tiene cuenta corriente, registrá ahora el cobro de los <b>$"
+                      + venta.SaldoPendiente.ToString("N2") + "</b> pendientes.");
             pnlVieneDeOrden.Visible = true;
 
             MostrarFormulario();
@@ -210,7 +217,14 @@ namespace LubricentroControl_2026
                 return;
             }
 
-            MostrarMensaje(resultado.Mensaje, true);
+            // Cobrada la venta de una orden recién cerrada, lo que sigue es su factura (en Ventas).
+            var idVentaCobro = LeerIdOculto(hdnIdVentaCobro.Value);
+            var mensaje = resultado.Mensaje;
+            if (idVentaCobro > 0 && MenuDAL.ObtenerPermiso(UsuarioActual.IdNivel, "~/Ventas") != null)
+                mensaje += " <a class=\"boton-gris enlace-boton\" href=\"" + ResolveUrl("~/Ventas?ver=" + idVentaCobro) +
+                           "\">Ver la venta y su factura</a>";
+
+            MostrarMensaje(mensaje, true);
             LimpiarFormulario();
             CargarGrilla();
         }
@@ -237,6 +251,7 @@ namespace LubricentroControl_2026
             txtMonto.Text = string.Empty;
             txtObservaciones.Text = string.Empty;
             pnlVieneDeOrden.Visible = false;
+            hdnIdVentaCobro.Value = string.Empty;
         }
 
         private void MostrarFormulario()

@@ -15,7 +15,7 @@
             </div>
 
             <h1 class="login-title">Recuperar contraseña</h1>
-            <p class="login-subtitle">LubricentroControl</p>
+            <p class="login-subtitle">Lubricentro Control</p>
 
             <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert">
                 <asp:Literal ID="litMensaje" runat="server" />

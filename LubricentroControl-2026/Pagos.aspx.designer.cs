@@ -35,6 +35,9 @@ namespace LubricentroControl_2026
         /// <summary>Control litVieneDeOrden.</summary>
         protected global::System.Web.UI.WebControls.Literal litVieneDeOrden;
 
+        /// <summary>Control hdnIdVentaCobro.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdVentaCobro;
+
         /// <summary>Control upnlTitular.</summary>
         protected global::System.Web.UI.UpdatePanel upnlTitular;
 

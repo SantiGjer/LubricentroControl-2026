@@ -8,7 +8,8 @@
    armado a mano respetando las mismas reglas que aplican los DAL reales de
    BIZ/Data: no son filas sueltas, es un circuito consistente de punta a
    punta para poder probar cualquier pantalla ya implementada y los reportes
-   de Fase 5 en cuanto existan.
+   de Fase 5 en cuanto existan. Servicios e insumos son Productos (§9.9): la
+   fila de Producto más la de su subtipo, con el mismo id.
 
    Correr DESPUÉS de 01_Esquema.sql y 02_DatosIniciales.sql. 03_UsuariosDePrueba.sql
    es opcional: este script funciona solo con el admin sembrado por 02, y usa
@@ -19,6 +20,11 @@
    No es idempotente: asume que las tablas de negocio están vacías. Para
    recargar, volver a correr 01_Esquema.sql primero (ya borra y recrea todo).
    ============================================================================ */
+
+/* Producto tiene índices filtrados (SKU, código de barras): insertar ahí exige
+   QUOTED_IDENTIFIER ON, y sqlcmd lo trae apagado. */
+SET QUOTED_IDENTIFIER ON;
+GO
 
 USE LubricentroControl;
 GO
@@ -33,29 +39,43 @@ DECLARE @empleado INT = ISNULL((SELECT idUsuario FROM Usuario WHERE email = 'emp
 /* --- 1. Clientes (10) -----------------------------------------------------
    Con cuenta corriente solo los tres que la usan más abajo: Carlos y Valentina
    quedan debiendo parte de su venta, y Juan deja un pago a cuenta. El resto
-   paga al cerrar la orden (cuentaCorriente = 0).                            */
-INSERT INTO Cliente (nombre, apellido, dni, telefono, email, direccion, cuentaCorriente) VALUES
-    ('Juan', 'Pérez', '30111222', '11-4321-5678', 'juan.perez@gmail.com', 'Av. Rivadavia 1234, CABA', 1),
-    ('María', 'Gómez', '28222333', '11-4555-1122', 'maria.gomez@gmail.com', 'Calle San Martín 456, Vicente López', 0),
-    ('Carlos', 'Rodríguez', '25333444', '11-4666-2233', 'carlos.rodriguez@gmail.com', 'Av. Cabildo 789, CABA', 1),
-    ('Ana', 'López', '32444555', '11-4777-3344', 'ana.lopez@hotmail.com', 'Belgrano 234, San Isidro', 0),
-    ('Luis', 'Fernández', '27555666', '11-4888-4455', 'luis.fernandez@gmail.com', 'Av. Mitre 1560, Avellaneda', 0),
-    ('Laura', 'Martínez', '31666777', '11-4999-5566', 'laura.martinez@gmail.com', 'Sarmiento 890, Morón', 0),
-    ('Diego', 'Sánchez', '29777888', '11-4111-6677', 'diego.sanchez@gmail.com', 'Av. Corrientes 3200, CABA', 0),
-    ('Sofía', 'Romero', '33888999', '11-4222-7788', 'sofia.romero@hotmail.com', 'Moreno 550, Quilmes', 0),
-    ('Martín', 'Díaz', '26999000', '11-4333-8899', 'martin.diaz@gmail.com', 'Av. Pueyrredón 1122, CABA', 0),
-    ('Valentina', 'Torres', '34000111', '11-4444-9900', 'valentina.torres@gmail.com', 'Independencia 678, La Plata', 1);
+   paga al cerrar la orden (cuentaCorriente = 0).
+   Datos fiscales (§9.8): casi todos consumidores finales con DNI; Carlos es
+   responsable inscripto (su venta se factura con letra A) y Sofía
+   monotributista, los dos con CUIT, y Agropecuaria Díaz S.A. es una empresa. */
+INSERT INTO Cliente (tipoCliente, nombre, apellido, razonSocial, tipoDocumento, numeroDocumento, condicionIva,
+                     telefono, email, direccion, localidad, provincia, codigoPostal, cuentaCorriente) VALUES
+    (N'Persona física', N'Juan', N'Pérez', NULL, 'DNI', '30111222', 'Consumidor Final',
+     '11-4321-5678', 'juan.perez@gmail.com', N'Av. Rivadavia 1234', N'Caballito', N'Ciudad Autónoma de Buenos Aires', 'C1406GZA', 1),
+    (N'Persona física', N'María', N'Gómez', NULL, 'DNI', '28222333', 'Consumidor Final',
+     '11-4555-1122', 'maria.gomez@gmail.com', N'San Martín 456', N'Vicente López', N'Buenos Aires', '1638', 0),
+    (N'Persona física', N'Carlos', N'Rodríguez', NULL, 'CUIT', '20253334445', 'Responsable Inscripto',
+     '11-4666-2233', 'carlos.rodriguez@gmail.com', N'Av. Cabildo 789', N'Belgrano', N'Ciudad Autónoma de Buenos Aires', '1426', 1),
+    (N'Persona física', N'Ana', N'López', NULL, 'DNI', '32444555', 'Consumidor Final',
+     '11-4777-3344', 'ana.lopez@hotmail.com', N'Belgrano 234', N'San Isidro', N'Buenos Aires', '1642', 0),
+    (N'Persona física', N'Luis', N'Fernández', NULL, 'DNI', '27555666', 'Consumidor Final',
+     '11-4888-4455', 'luis.fernandez@gmail.com', N'Av. Mitre 1560', N'Avellaneda', N'Buenos Aires', '1870', 0),
+    (N'Persona física', N'Laura', N'Martínez', NULL, 'DNI', '31666777', 'Consumidor Final',
+     '11-4999-5566', 'laura.martinez@gmail.com', N'Sarmiento 890', N'Morón', N'Buenos Aires', '1708', 0),
+    (N'Persona física', N'Diego', N'Sánchez', NULL, 'DNI', '29777888', 'Consumidor Final',
+     '11-4111-6677', 'diego.sanchez@gmail.com', N'Av. Corrientes 3200', N'Almagro', N'Ciudad Autónoma de Buenos Aires', '1193', 0),
+    (N'Persona física', N'Sofía', N'Romero', NULL, 'CUIT', '27338889998', 'Monotributista',
+     '11-4222-7788', 'sofia.romero@hotmail.com', N'Moreno 550', N'Quilmes', N'Buenos Aires', '1878', 0),
+    (N'Empresa', NULL, NULL, N'Agropecuaria Díaz S.A.', 'CUIT', '30714598216', 'Responsable Inscripto',
+     '02324-42-8899', 'administracion@agrodiaz.com.ar', N'Ruta 5 Km 103', N'Mercedes', N'Buenos Aires', '6600', 0),
+    (N'Persona física', N'Valentina', N'Torres', NULL, 'DNI', '34000111', 'Consumidor Final',
+     '11-4444-9900', 'valentina.torres@gmail.com', N'Independencia 678', N'La Plata', N'Buenos Aires', 'B1900ABC', 1);
 
-DECLARE @cliJuan INT = (SELECT idCliente FROM Cliente WHERE dni = '30111222');
-DECLARE @cliMaria INT = (SELECT idCliente FROM Cliente WHERE dni = '28222333');
-DECLARE @cliCarlos INT = (SELECT idCliente FROM Cliente WHERE dni = '25333444');
-DECLARE @cliAna INT = (SELECT idCliente FROM Cliente WHERE dni = '32444555');
-DECLARE @cliLuis INT = (SELECT idCliente FROM Cliente WHERE dni = '27555666');
-DECLARE @cliLaura INT = (SELECT idCliente FROM Cliente WHERE dni = '31666777');
-DECLARE @cliDiego INT = (SELECT idCliente FROM Cliente WHERE dni = '29777888');
-DECLARE @cliSofia INT = (SELECT idCliente FROM Cliente WHERE dni = '33888999');
-DECLARE @cliMartin INT = (SELECT idCliente FROM Cliente WHERE dni = '26999000');
-DECLARE @cliValentina INT = (SELECT idCliente FROM Cliente WHERE dni = '34000111');
+DECLARE @cliJuan INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '30111222');
+DECLARE @cliMaria INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '28222333');
+DECLARE @cliCarlos INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '20253334445');
+DECLARE @cliAna INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '32444555');
+DECLARE @cliLuis INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '27555666');
+DECLARE @cliLaura INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '31666777');
+DECLARE @cliDiego INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '29777888');
+DECLARE @cliSofia INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '27338889998');
+DECLARE @cliAgroDiaz INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '30714598216');
+DECLARE @cliValentina INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '34000111');
 
 /* --- 2. Vehículos (10, uno por cliente) ----------------------------------- */
 INSERT INTO Vehiculo (idCliente, patente, marca, modelo, anio, tipoCombustible) VALUES
@@ -67,7 +87,7 @@ INSERT INTO Vehiculo (idCliente, patente, marca, modelo, anio, tipoCombustible) 
     (@cliLaura, 'AF234BC', 'Fiat', 'Cronos', 2022, 'GNC'),
     (@cliDiego, 'MNO654', 'Peugeot', '208', 2019, 'Nafta'),
     (@cliSofia, 'AG567DE', 'Honda', 'Civic', 2017, 'Nafta'),
-    (@cliMartin, 'PQR987', 'Toyota', 'Hilux', 2020, 'Diésel'),
+    (@cliAgroDiaz, 'PQR987', 'Toyota', 'Hilux', 2020, 'Diésel'),
     (@cliValentina, 'AH890FG', 'Chevrolet', 'Spark', 2023, 'Eléctrico');
 
 DECLARE @vehJuan INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'ABC123');
@@ -78,7 +98,7 @@ DECLARE @vehLuis INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'JKL321'
 DECLARE @vehLaura INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'AF234BC');
 DECLARE @vehDiego INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'MNO654');
 DECLARE @vehSofia INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'AG567DE');
-DECLARE @vehMartin INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'PQR987');
+DECLARE @vehAgroDiaz INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'PQR987');
 DECLARE @vehValentina INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'AH890FG');
 
 /* --- 3. Proveedores (10) --------------------------------------------------- */
@@ -105,56 +125,75 @@ DECLARE @provTotal INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '307112
 DECLARE @provBosch INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234569');
 DECLARE @provNorte INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234570');
 
-/* --- 4. Servicios (10) ------------------------------------------------------ */
-INSERT INTO Servicio (nombre, descripcion, precioBase) VALUES
-    ('Cambio de aceite y filtro', 'Cambio de aceite de motor y filtro de aceite', 15000),
-    ('Rotación de neumáticos', 'Rotación de las cuatro ruedas', 8000),
-    ('Alineación', 'Alineación de dirección', 12000),
-    ('Balanceo', 'Balanceo de las cuatro ruedas', 10000),
-    ('Cambio de filtro de aire', 'Reemplazo del filtro de aire del motor', 6000),
-    ('Cambio de filtro de combustible', 'Reemplazo del filtro de combustible', 7000),
-    ('Cambio de líquido de frenos', 'Purga y reemplazo de líquido de frenos', 11000),
-    ('Cambio de correa de distribución', 'Reemplazo de correa de distribución', 45000),
-    ('Revisión y carga de batería', 'Diagnóstico y carga de batería', 5000),
-    ('Cambio de amortiguadores', 'Reemplazo de amortiguadores delanteros o traseros', 60000);
+/* --- 4. Productos (20): 10 servicios y 10 insumos ---------------------------
+   Supertipo Producto con lo común (precio final con IVA, SKU, código de barras
+   e IVA) y la fila del subtipo con el mismo id, igual que ProductoDAL.Crear.
+   Los servicios no llevan código de barras; los insumos, un EAN-13 de ejemplo. */
+INSERT INTO Producto (tipo, nombre, descripcion, sku, codigoBarras, precio, tipoIva, alicuotaIva) VALUES
+    ('Servicio', N'Cambio de aceite y filtro', N'Cambio de aceite de motor y filtro de aceite', 'SRV-ACEITE', NULL, 15000, 'Gravado', 21),
+    ('Servicio', N'Rotación de neumáticos', N'Rotación de las cuatro ruedas', 'SRV-ROTACION', NULL, 8000, 'Gravado', 21),
+    ('Servicio', N'Alineación', N'Alineación de dirección', 'SRV-ALINEACION', NULL, 12000, 'Gravado', 21),
+    ('Servicio', N'Balanceo', N'Balanceo de las cuatro ruedas', 'SRV-BALANCEO', NULL, 10000, 'Gravado', 21),
+    ('Servicio', N'Cambio de filtro de aire', N'Reemplazo del filtro de aire del motor', 'SRV-FILTRO-AIRE', NULL, 6000, 'Gravado', 21),
+    ('Servicio', N'Cambio de filtro de combustible', N'Reemplazo del filtro de combustible', 'SRV-FILTRO-COMB', NULL, 7000, 'Gravado', 21),
+    ('Servicio', N'Cambio de líquido de frenos', N'Purga y reemplazo de líquido de frenos', 'SRV-FRENOS', NULL, 11000, 'Gravado', 21),
+    ('Servicio', N'Cambio de correa de distribución', N'Reemplazo de correa de distribución', 'SRV-CORREA', NULL, 45000, 'Gravado', 21),
+    ('Servicio', N'Revisión y carga de batería', N'Diagnóstico y carga de batería', 'SRV-BATERIA', NULL, 5000, 'Gravado', 21),
+    ('Servicio', N'Cambio de amortiguadores', N'Reemplazo de amortiguadores delanteros o traseros', 'SRV-AMORTIGUADORES', NULL, 60000, 'Gravado', 21),
+    ('Insumo', N'Aceite 15W40', N'Aceite mineral para motores nafteros y diésel', 'ACE-15W40-1L', '7790123000010', 3500, 'Gravado', 21),
+    ('Insumo', N'Aceite 5W30 sintético', N'Aceite sintético para motores modernos', 'ACE-5W30-1L', '7790123000027', 5200, 'Gravado', 21),
+    ('Insumo', N'Filtro de aceite', NULL, 'FIL-ACEITE', '7790123000034', 4500, 'Gravado', 21),
+    ('Insumo', N'Filtro de aire', NULL, 'FIL-AIRE', '7790123000041', 5000, 'Gravado', 21),
+    ('Insumo', N'Filtro de combustible', NULL, 'FIL-COMBUSTIBLE', '7790123000058', 6000, 'Gravado', 21),
+    ('Insumo', N'Líquido de frenos DOT4', NULL, 'LIQ-FRENOS-DOT4', '7790123000065', 4200, 'Gravado', 21),
+    ('Insumo', N'Refrigerante', N'Refrigerante orgánico listo para usar', 'REFRIGERANTE-1L', '7790123000072', 3800, 'Gravado', 21),
+    ('Insumo', N'Correa de distribución', NULL, 'CORREA-DIST', '7790123000089', 18000, 'Gravado', 21),
+    ('Insumo', N'Batería 12V 65Ah', NULL, 'BAT-12V-65AH', '7790123000096', 55000, 'Gravado', 21),
+    ('Insumo', N'Bujías (caja x4)', NULL, 'BUJIAS-X4', '7790123000102', 9000, 'Gravado', 21);
 
-DECLARE @svcCambioAceite INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Cambio de aceite y filtro');
-DECLARE @svcRotacion INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Rotación de neumáticos');
-DECLARE @svcAlineacion INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Alineación');
-DECLARE @svcBalanceo INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Balanceo');
-DECLARE @svcFiltroAire INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Cambio de filtro de aire');
-DECLARE @svcFiltroComb INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Cambio de filtro de combustible');
-DECLARE @svcLiquidoFrenos INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Cambio de líquido de frenos');
-DECLARE @svcCorrea INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Cambio de correa de distribución');
-DECLARE @svcBateria INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Revisión y carga de batería');
-DECLARE @svcAmortiguadores INT = (SELECT idServicio FROM Servicio WHERE nombre = 'Cambio de amortiguadores');
+INSERT INTO Servicio (idServicio)
+SELECT idProducto FROM Producto WHERE tipo = 'Servicio';
 
-/* --- 5. Insumos (10) --------------------------------------------------------
-   Se insertan con stockActual = 0 y el stock inicial se respalda con un
-   movimiento AjusteManual en el kardex, igual que InsumoDAL.Crear +
-   MovimientoStockDAL.RegistrarAjusteManual.                                 */
-INSERT INTO Insumo (nombre, marca, unidadMedida, stockActual, stockMinimo, precioVenta) VALUES
-    ('Aceite 15W40', 'YPF', 'Litro', 0, 20, 3500),
-    ('Aceite 5W30 sintético', 'Shell', 'Litro', 0, 15, 5200),
-    ('Filtro de aceite', 'Fram', 'Unidad', 0, 10, 4500),
-    ('Filtro de aire', 'Fram', 'Unidad', 0, 10, 5000),
-    ('Filtro de combustible', 'Bosch', 'Unidad', 0, 8, 6000),
-    ('Líquido de frenos DOT4', 'Motul', 'Litro', 0, 5, 4200),
-    ('Refrigerante', 'Genérico', 'Litro', 0, 5, 3800),
-    ('Correa de distribución', 'Gates', 'Unidad', 0, 3, 18000),
-    ('Batería 12V 65Ah', 'Moura', 'Unidad', 0, 2, 55000),
-    ('Bujías (caja x4)', 'NGK', 'Caja', 0, 5, 9000);
+/* Los insumos se insertan con stockActual = 0 y el stock inicial se respalda con
+   un movimiento AjusteManual en el kardex, igual que ProductoDAL.Crear +
+   MovimientoStockDAL.RegistrarAjusteManual. */
+INSERT INTO Insumo (idInsumo, marca, unidadMedida, stockActual, stockMinimo)
+SELECT p.idProducto, v.marca, v.unidad, 0, v.minimo
+FROM (VALUES
+    (N'Aceite 15W40', N'YPF', N'Litro', 20),
+    (N'Aceite 5W30 sintético', N'Shell', N'Litro', 15),
+    (N'Filtro de aceite', N'Fram', N'Unidad', 10),
+    (N'Filtro de aire', N'Fram', N'Unidad', 10),
+    (N'Filtro de combustible', N'Bosch', N'Unidad', 8),
+    (N'Líquido de frenos DOT4', N'Motul', N'Litro', 5),
+    (N'Refrigerante', N'Genérico', N'Litro', 5),
+    (N'Correa de distribución', N'Gates', N'Unidad', 3),
+    (N'Batería 12V 65Ah', N'Moura', N'Unidad', 2),
+    (N'Bujías (caja x4)', N'NGK', N'Caja', 5)
+) AS v(nombre, marca, unidad, minimo)
+JOIN Producto p ON p.nombre = v.nombre AND p.tipo = 'Insumo';
 
-DECLARE @insAceite15 INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Aceite 15W40');
-DECLARE @insAceite5w30 INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Aceite 5W30 sintético');
-DECLARE @insFiltroAceite INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Filtro de aceite');
-DECLARE @insFiltroAire INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Filtro de aire');
-DECLARE @insFiltroComb INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Filtro de combustible');
-DECLARE @insLiquidoFrenos INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Líquido de frenos DOT4');
-DECLARE @insRefrigerante INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Refrigerante');
-DECLARE @insCorrea INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Correa de distribución');
-DECLARE @insBateria INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Batería 12V 65Ah');
-DECLARE @insBujias INT = (SELECT idInsumo FROM Insumo WHERE nombre = 'Bujías (caja x4)');
+DECLARE @svcCambioAceite INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Cambio de aceite y filtro');
+DECLARE @svcRotacion INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Rotación de neumáticos');
+DECLARE @svcAlineacion INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Alineación');
+DECLARE @svcBalanceo INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Balanceo');
+DECLARE @svcFiltroAire INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Cambio de filtro de aire');
+DECLARE @svcFiltroComb INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Cambio de filtro de combustible');
+DECLARE @svcLiquidoFrenos INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Cambio de líquido de frenos');
+DECLARE @svcCorrea INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Cambio de correa de distribución');
+DECLARE @svcBateria INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Revisión y carga de batería');
+DECLARE @svcAmortiguadores INT = (SELECT idProducto FROM Producto WHERE tipo = 'Servicio' AND nombre = N'Cambio de amortiguadores');
+
+DECLARE @insAceite15 INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Aceite 15W40');
+DECLARE @insAceite5w30 INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Aceite 5W30 sintético');
+DECLARE @insFiltroAceite INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Filtro de aceite');
+DECLARE @insFiltroAire INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Filtro de aire');
+DECLARE @insFiltroComb INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Filtro de combustible');
+DECLARE @insLiquidoFrenos INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Líquido de frenos DOT4');
+DECLARE @insRefrigerante INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Refrigerante');
+DECLARE @insCorrea INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Correa de distribución');
+DECLARE @insBateria INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Batería 12V 65Ah');
+DECLARE @insBujias INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Bujías (caja x4)');
 
 /* Stock corriente de cada insumo: arranca en el stock inicial y se va
    actualizando en línea con cada línea de Orden/Compra más abajo — con solo
@@ -195,25 +234,26 @@ UPDATE Insumo SET stockActual = @stockBujias WHERE idInsumo = @insBujias;
 
 /* --- 6. Turnos (10, uno por cliente) ---------------------------------------
    Los que van a derivar en una Orden de trabajo (más abajo) quedan
-   Completado; el resto son agenda futura, o un Cancelado que nunca genera
-   orden (el cliente avisó que no podía venir).                              */
+   Completado; el resto son agenda de hoy (Luis y Sofía, para que Turnos y el
+   Inicio tengan algo que mostrar arriba de todo) o futura, o un Cancelado que
+   nunca genera orden (el cliente avisó que no podía venir).                 */
 INSERT INTO Turno (idCliente, idVehiculo, fechaSolicitud, fechaHoraAsignada, estado, observaciones) VALUES
     (@cliJuan, @vehJuan, DATEADD(DAY, 3, GETDATE()), DATEADD(DAY, 5, GETDATE()), 'Confirmado', 'Rotación de neumáticos'),
     (@cliMaria, @vehMaria, DATEADD(DAY, -22, GETDATE()), DATEADD(DAY, -20, GETDATE()), 'Completado', 'Service de aceite'),
     (@cliCarlos, @vehCarlos, DATEADD(DAY, -20, GETDATE()), DATEADD(DAY, -18, GETDATE()), 'Completado', 'Alineación y balanceo'),
     (@cliAna, @vehAna, DATEADD(DAY, -17, GETDATE()), DATEADD(DAY, -15, GETDATE()), 'Completado', 'Cambio de filtro de aire'),
-    (@cliLuis, @vehLuis, DATEADD(DAY, 1, GETDATE()), DATEADD(DAY, 3, GETDATE()), 'Solicitado', 'Consulta por ruido en frenos'),
+    (@cliLuis, @vehLuis, DATEADD(DAY, -2, GETDATE()), DATEADD(MINUTE, 630, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), 'Solicitado', 'Consulta por ruido en frenos'),
     (@cliLaura, @vehLaura, DATEADD(DAY, -12, GETDATE()), DATEADD(DAY, -10, GETDATE()), 'Cancelado', 'El cliente avisó que no podía venir'),
     (@cliDiego, @vehDiego, DATEADD(DAY, -9, GETDATE()), DATEADD(DAY, -7, GETDATE()), 'Completado', 'Correa de distribución'),
-    (@cliSofia, @vehSofia, DATEADD(DAY, 0, GETDATE()), DATEADD(DAY, 2, GETDATE()), 'Confirmado', 'Turno para revisión general'),
-    (@cliMartin, @vehMartin, DATEADD(DAY, -7, GETDATE()), DATEADD(DAY, -5, GETDATE()), 'Completado', 'Batería descargada'),
+    (@cliSofia, @vehSofia, DATEADD(DAY, -1, GETDATE()), DATEADD(MINUTE, 1020, CAST(CAST(GETDATE() AS DATE) AS DATETIME)), 'Confirmado', 'Turno para revisión general'),
+    (@cliAgroDiaz, @vehAgroDiaz, DATEADD(DAY, -7, GETDATE()), DATEADD(DAY, -5, GETDATE()), 'Completado', 'Batería descargada'),
     (@cliValentina, @vehValentina, DATEADD(DAY, 5, GETDATE()), DATEADD(DAY, 7, GETDATE()), 'Solicitado', 'Primer service');
 
 DECLARE @turnoMaria INT = (SELECT idTurno FROM Turno WHERE idCliente = @cliMaria);
 DECLARE @turnoCarlos INT = (SELECT idTurno FROM Turno WHERE idCliente = @cliCarlos);
 DECLARE @turnoAna INT = (SELECT idTurno FROM Turno WHERE idCliente = @cliAna);
 DECLARE @turnoDiego INT = (SELECT idTurno FROM Turno WHERE idCliente = @cliDiego);
-DECLARE @turnoMartin INT = (SELECT idTurno FROM Turno WHERE idCliente = @cliMartin);
+DECLARE @turnoAgroDiaz INT = (SELECT idTurno FROM Turno WHERE idCliente = @cliAgroDiaz);
 
 /* --- 7. Órdenes de trabajo (10) + detalle + kardex + ventas generadas -----
    4 Cerrada (generan venta), 3 En proceso, 2 Abierta, 1 Cancelada (repone
@@ -243,10 +283,22 @@ INSERT INTO ComprobanteVenta (idOrden, idCliente, numeroComprobante, fecha, subt
 VALUES (@orden1, @cliMaria, '(pendiente)', DATEADD(DAY, -20, GETDATE()), 33500, 0, 33500, 33500);
 DECLARE @venta1 INT = SCOPE_IDENTITY();
 
-INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal) VALUES
-    (@venta1, 'S', @svcCambioAceite, NULL, 'Cambio de aceite y filtro', 1, 15000, 15000),
-    (@venta1, 'I', NULL, @insAceite15, 'Aceite 15W40', 4, 3500, 14000),
-    (@venta1, 'I', NULL, @insFiltroAceite, 'Filtro de aceite', 1, 4500, 4500);
+/* Las líneas de venta copian el IVA del producto y guardan el IVA contenido en el
+   precio final (mismo cálculo que ComprobanteVentaDAL.GenerarDesdeOrden: el neto se
+   redondea a 2 decimales y el IVA es la diferencia). Los totales de cada venta se
+   recalculan desde sus líneas al final de esta sección. */
+INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal,
+                                     tipoIva, alicuotaIva, importeIva)
+SELECT l.idVenta, l.tipoItem, l.idServicio, l.idInsumo, p.nombre, l.cantidad, l.precio, l.cantidad * l.precio,
+       p.tipoIva, p.alicuotaIva,
+       CASE WHEN p.tipoIva = 'Gravado'
+            THEN l.cantidad * l.precio - ROUND(l.cantidad * l.precio / (1 + p.alicuotaIva / 100), 2) ELSE 0 END
+FROM (VALUES
+    (@venta1, 'S', @svcCambioAceite, NULL, 1, 15000),
+    (@venta1, 'I', NULL, @insAceite15, 4, 3500),
+    (@venta1, 'I', NULL, @insFiltroAceite, 1, 4500)
+) AS l(idVenta, tipoItem, idServicio, idInsumo, cantidad, precio)
+JOIN Producto p ON p.idProducto = ISNULL(l.idServicio, l.idInsumo);
 
 INSERT INTO CuentaCorrienteCliente (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
 VALUES (@cliMaria, 'Venta', @venta1, NULL, 33500, 0,
@@ -269,9 +321,17 @@ INSERT INTO ComprobanteVenta (idOrden, idCliente, numeroComprobante, fecha, subt
 VALUES (@orden2, @cliCarlos, '(pendiente)', DATEADD(DAY, -18, GETDATE()), 22000, 0, 22000, 22000);
 DECLARE @venta2 INT = SCOPE_IDENTITY();
 
-INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal) VALUES
-    (@venta2, 'S', @svcAlineacion, NULL, 'Alineación', 1, 12000, 12000),
-    (@venta2, 'S', @svcBalanceo, NULL, 'Balanceo', 1, 10000, 10000);
+INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal,
+                                     tipoIva, alicuotaIva, importeIva)
+SELECT l.idVenta, l.tipoItem, l.idServicio, l.idInsumo, p.nombre, l.cantidad, l.precio, l.cantidad * l.precio,
+       p.tipoIva, p.alicuotaIva,
+       CASE WHEN p.tipoIva = 'Gravado'
+            THEN l.cantidad * l.precio - ROUND(l.cantidad * l.precio / (1 + p.alicuotaIva / 100), 2) ELSE 0 END
+FROM (VALUES
+    (@venta2, 'S', @svcAlineacion, NULL, 1, 12000),
+    (@venta2, 'S', @svcBalanceo, NULL, 1, 10000)
+) AS l(idVenta, tipoItem, idServicio, idInsumo, cantidad, precio)
+JOIN Producto p ON p.idProducto = ISNULL(l.idServicio, l.idInsumo);
 
 INSERT INTO CuentaCorrienteCliente (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
 VALUES (@cliCarlos, 'Venta', @venta2, NULL, 22000, 0,
@@ -298,9 +358,17 @@ INSERT INTO ComprobanteVenta (idOrden, idCliente, numeroComprobante, fecha, subt
 VALUES (@orden3, @cliAna, '(pendiente)', DATEADD(DAY, -15, GETDATE()), 11000, 0, 11000, 11000);
 DECLARE @venta3 INT = SCOPE_IDENTITY();
 
-INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal) VALUES
-    (@venta3, 'S', @svcFiltroAire, NULL, 'Cambio de filtro de aire', 1, 6000, 6000),
-    (@venta3, 'I', NULL, @insFiltroAire, 'Filtro de aire', 1, 5000, 5000);
+INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal,
+                                     tipoIva, alicuotaIva, importeIva)
+SELECT l.idVenta, l.tipoItem, l.idServicio, l.idInsumo, p.nombre, l.cantidad, l.precio, l.cantidad * l.precio,
+       p.tipoIva, p.alicuotaIva,
+       CASE WHEN p.tipoIva = 'Gravado'
+            THEN l.cantidad * l.precio - ROUND(l.cantidad * l.precio / (1 + p.alicuotaIva / 100), 2) ELSE 0 END
+FROM (VALUES
+    (@venta3, 'S', @svcFiltroAire, NULL, 1, 6000),
+    (@venta3, 'I', NULL, @insFiltroAire, 1, 5000)
+) AS l(idVenta, tipoItem, idServicio, idInsumo, cantidad, precio)
+JOIN Producto p ON p.idProducto = ISNULL(l.idServicio, l.idInsumo);
 
 INSERT INTO CuentaCorrienteCliente (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
 VALUES (@cliAna, 'Venta', @venta3, NULL, 11000, 0,
@@ -323,9 +391,9 @@ INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsua
 VALUES (@insCorrea, 'Orden', NULL, @orden4, @empleado, 0, 1, @stockCorrea, 'Orden de trabajo #' + CAST(@orden4 AS VARCHAR(10)));
 UPDATE Insumo SET stockActual = @stockCorrea WHERE idInsumo = @insCorrea;
 
--- Orden 5: Martín Díaz / PQR987 — Abierta (batería, sin cerrar)
+-- Orden 5: Agropecuaria Díaz S.A. / PQR987 — Abierta (batería, sin cerrar)
 INSERT INTO OrdenDeTrabajo (idTurno, idCliente, idVehiculo, idUsuario, fecha, kilometraje, observaciones, estado)
-VALUES (@turnoMartin, @cliMartin, @vehMartin, @empleado, DATEADD(DAY, -5, GETDATE()), 120000, 'Batería descargada', 'Abierta');
+VALUES (@turnoAgroDiaz, @cliAgroDiaz, @vehAgroDiaz, @empleado, DATEADD(DAY, -5, GETDATE()), 120000, 'Batería descargada', 'Abierta');
 DECLARE @orden5 INT = SCOPE_IDENTITY();
 
 INSERT INTO DetalleOrdenServicio (idOrden, idServicio, cantidad, precioAplicado) VALUES (@orden5, @svcBateria, 1, 5000);
@@ -413,11 +481,19 @@ INSERT INTO ComprobanteVenta (idOrden, idCliente, numeroComprobante, fecha, subt
 VALUES (@orden10, @cliValentina, '(pendiente)', DATEADD(DAY, -2, GETDATE()), 50300, 0, 50300, 50300);
 DECLARE @venta4 INT = SCOPE_IDENTITY();
 
-INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal) VALUES
-    (@venta4, 'S', @svcCambioAceite, NULL, 'Cambio de aceite y filtro', 1, 15000, 15000),
-    (@venta4, 'S', @svcBalanceo, NULL, 'Balanceo', 1, 10000, 10000),
-    (@venta4, 'I', NULL, @insAceite5w30, 'Aceite 5W30 sintético', 4, 5200, 20800),
-    (@venta4, 'I', NULL, @insFiltroAceite, 'Filtro de aceite', 1, 4500, 4500);
+INSERT INTO DetalleComprobanteVenta (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal,
+                                     tipoIva, alicuotaIva, importeIva)
+SELECT l.idVenta, l.tipoItem, l.idServicio, l.idInsumo, p.nombre, l.cantidad, l.precio, l.cantidad * l.precio,
+       p.tipoIva, p.alicuotaIva,
+       CASE WHEN p.tipoIva = 'Gravado'
+            THEN l.cantidad * l.precio - ROUND(l.cantidad * l.precio / (1 + p.alicuotaIva / 100), 2) ELSE 0 END
+FROM (VALUES
+    (@venta4, 'S', @svcCambioAceite, NULL, 1, 15000),
+    (@venta4, 'S', @svcBalanceo, NULL, 1, 10000),
+    (@venta4, 'I', NULL, @insAceite5w30, 4, 5200),
+    (@venta4, 'I', NULL, @insFiltroAceite, 1, 4500)
+) AS l(idVenta, tipoItem, idServicio, idInsumo, cantidad, precio)
+JOIN Producto p ON p.idProducto = ISNULL(l.idServicio, l.idInsumo);
 
 INSERT INTO CuentaCorrienteCliente (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
 VALUES (@cliValentina, 'Venta', @venta4, NULL, 50300, 0,
@@ -426,6 +502,13 @@ VALUES (@cliValentina, 'Venta', @venta4, NULL, 50300, 0,
 
 UPDATE ComprobanteVenta SET numeroComprobante = 'V-' + RIGHT('000000' + CAST(@venta4 AS VARCHAR(10)), 6) WHERE idVenta = @venta4;
 UPDATE OrdenDeTrabajo SET estado = 'Cerrada' WHERE idOrden = @orden10;
+
+/* Totales de cada venta desde sus líneas: total = precios finales (con IVA, ya
+   cargado arriba), impuestos = IVA contenido, subtotal = neto. */
+UPDATE v
+SET subtotal = v.total - x.iva, impuestos = x.iva
+FROM ComprobanteVenta v
+CROSS APPLY (SELECT SUM(d.importeIva) AS iva FROM DetalleComprobanteVenta d WHERE d.idVenta = v.idVenta) x;
 
 /* --- 8. Compras (10) + detalle + kardex + cuenta corriente de proveedor --- */
 
@@ -689,11 +772,12 @@ VALUES (@provYPF, 'Pago', NULL, @pago10, 0, 10000,
 
 GO
 
-PRINT 'Datos de ejemplo cargados: 10 Clientes, 10 Vehículos, 10 Proveedores, 10 Servicios, 10 Insumos, 10 Turnos, 10 Órdenes de trabajo (4 Cerrada con venta generada, 3 En proceso, 2 Abierta, 1 Cancelada), 10 Compras (6 Contado, 4 Cuenta corriente), 10 Pagos.';
+PRINT 'Datos de ejemplo cargados: 10 Clientes, 10 Vehículos, 10 Proveedores, 20 Productos (10 Servicios y 10 Insumos), 10 Turnos, 10 Órdenes de trabajo (4 Cerrada con venta generada, 3 En proceso, 2 Abierta, 1 Cancelada), 10 Compras (6 Contado, 4 Cuenta corriente), 10 Pagos.';
 
 SELECT 'Clientes' AS tabla, COUNT(*) AS filas FROM Cliente
 UNION ALL SELECT 'Vehiculos', COUNT(*) FROM Vehiculo
 UNION ALL SELECT 'Proveedores', COUNT(*) FROM Proveedor
+UNION ALL SELECT 'Productos', COUNT(*) FROM Producto
 UNION ALL SELECT 'Servicios', COUNT(*) FROM Servicio
 UNION ALL SELECT 'Insumos', COUNT(*) FROM Insumo
 UNION ALL SELECT 'Turnos', COUNT(*) FROM Turno
@@ -708,10 +792,19 @@ UNION ALL SELECT 'CuentaCorrienteProveedor', COUNT(*) FROM CuentaCorrienteProvee
 /* Invariante de kardex: el stock actual de cada insumo tiene que coincidir
    exactamente con la suma de sus movimientos (entrada - salida). No debería
    devolver ninguna fila. */
-SELECT i.idInsumo, i.nombre, i.stockActual, SUM(m.entrada) - SUM(m.salida) AS calculado
+SELECT i.idInsumo, p.nombre, i.stockActual, SUM(m.entrada) - SUM(m.salida) AS calculado
 FROM Insumo i
+JOIN Producto p ON p.idProducto = i.idInsumo
 JOIN MovimientoStock m ON m.idInsumo = i.idInsumo
-GROUP BY i.idInsumo, i.nombre, i.stockActual
+GROUP BY i.idInsumo, p.nombre, i.stockActual
 HAVING i.stockActual <> SUM(m.entrada) - SUM(m.salida);
+
+/* Invariante de ventas: el total es la suma de las líneas, y neto + IVA = total.
+   Tampoco debería devolver filas. */
+SELECT v.idVenta, v.total, v.subtotal, v.impuestos, SUM(d.subtotal) AS sumaLineas
+FROM ComprobanteVenta v
+JOIN DetalleComprobanteVenta d ON d.idVenta = v.idVenta
+GROUP BY v.idVenta, v.total, v.subtotal, v.impuestos
+HAVING v.total <> SUM(d.subtotal) OR v.subtotal + v.impuestos <> v.total;
 
 GO

@@ -30,6 +30,20 @@ namespace BIZ.Modelo
         // Del JOIN; solo para mostrar, no se guardan.
         public string NombreCliente { get; set; }
         public string RazonSocial { get; set; }
+        public string NombreUsuario { get; set; }
+
+        // Número de la venta o compra a la que se imputó; null si quedó a cuenta.
+        public string NumeroComprobante { get; set; }
+
+        public string Titular
+        {
+            get { return Tipo == TipoCliente ? NombreCliente : RazonSocial; }
+        }
+
+        public string TipoDescripcion
+        {
+            get { return Tipo == TipoCliente ? "Cliente" : "Proveedor"; }
+        }
 
         // Valida los campos propios. La existencia del comprobante puntual (si vino) y que su
         // saldoPendiente alcance necesitan ir a la base — quedan en PagoDAL.

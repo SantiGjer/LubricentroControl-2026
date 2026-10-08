@@ -7,7 +7,7 @@ namespace BIZ.Data
     public static class CuentaCorrienteClienteDAL
     {
         private const string SelectBase = @"
-            SELECT m.idMovimiento, m.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente,
+            SELECT m.idMovimiento, m.idCliente, c.denominacion AS nombreCliente,
                    m.fecha, m.tipoMovimiento, m.idVenta, m.idPago, m.debe, m.haber, m.saldo,
                    m.descripcion, m.idUsuario, u.nombre + ' ' + u.apellido AS nombreUsuario
             FROM CuentaCorrienteCliente m
@@ -62,7 +62,7 @@ namespace BIZ.Data
         public static List<CuentaCorrienteCliente> ListarSaldos()
         {
             const string sql = @"
-                SELECT c.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente, u.saldo, u.fecha
+                SELECT c.idCliente, c.denominacion AS nombreCliente, u.saldo, u.fecha
                 FROM Cliente c
                 CROSS APPLY (
                     SELECT TOP 1 saldo, fecha FROM CuentaCorrienteCliente

@@ -17,6 +17,9 @@ namespace LubricentroControl_2026
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
 
+        /// <summary>Control rptRolesFiltro.</summary>
+        protected global::System.Web.UI.WebControls.Repeater rptRolesFiltro;
+
         /// <summary>Control gvUsuarios.</summary>
         protected global::System.Web.UI.WebControls.GridView gvUsuarios;
 

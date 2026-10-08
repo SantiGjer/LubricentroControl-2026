@@ -14,9 +14,6 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control ddlFiltroEstado.</summary>
-        protected global::System.Web.UI.WebControls.DropDownList ddlFiltroEstado;
-
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
 

@@ -41,6 +41,9 @@ namespace LubricentroControl_2026
         /// <summary>Control hdnVhTipoCombustible.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnVhTipoCombustible;
 
+        /// <summary>Control hdnVhCambioDueno.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnVhCambioDueno;
+
         /// <summary>Control hdnVieneDeOrden.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnVieneDeOrden;
 
@@ -55,9 +58,6 @@ namespace LubricentroControl_2026
 
         /// <summary>Control hdnVieneDeCuentaCorriente.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnVieneDeCuentaCorriente;
-
-        /// <summary>Control chkIncluirInactivos.</summary>
-        protected global::System.Web.UI.WebControls.CheckBox chkIncluirInactivos;
 
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
@@ -80,6 +80,9 @@ namespace LubricentroControl_2026
         /// <summary>Control pnlVieneDeVehiculo.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlVieneDeVehiculo;
 
+        /// <summary>Control litVieneDeVehiculo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVieneDeVehiculo;
+
         /// <summary>Control btnVolverAVehiculos.</summary>
         protected global::System.Web.UI.WebControls.Button btnVolverAVehiculos;
 
@@ -101,14 +104,29 @@ namespace LubricentroControl_2026
         /// <summary>Control hdnActivo.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnActivo;
 
+        /// <summary>Control rblTipoCliente.</summary>
+        protected global::System.Web.UI.WebControls.RadioButtonList rblTipoCliente;
+
         /// <summary>Control txtNombre.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtNombre;
 
         /// <summary>Control txtApellido.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtApellido;
 
-        /// <summary>Control txtDni.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtDni;
+        /// <summary>Control txtRazonSocial.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtRazonSocial;
+
+        /// <summary>Control ddlTipoDocumento.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlTipoDocumento;
+
+        /// <summary>Control txtNumeroDocumento.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtNumeroDocumento;
+
+        /// <summary>Control valNumeroDocumento.</summary>
+        protected global::System.Web.UI.WebControls.CustomValidator valNumeroDocumento;
+
+        /// <summary>Control ddlCondicionIva.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlCondicionIva;
 
         /// <summary>Control txtTelefono.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtTelefono;
@@ -118,6 +136,15 @@ namespace LubricentroControl_2026
 
         /// <summary>Control txtDireccion.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtDireccion;
+
+        /// <summary>Control txtCodigoPostal.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtCodigoPostal;
+
+        /// <summary>Control txtLocalidad.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtLocalidad;
+
+        /// <summary>Control ddlProvincia.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlProvincia;
 
         /// <summary>Control chkCuentaCorriente.</summary>
         protected global::System.Web.UI.HtmlControls.HtmlInputCheckBox chkCuentaCorriente;

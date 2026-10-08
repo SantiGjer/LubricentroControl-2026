@@ -33,14 +33,12 @@ namespace BIZ.Data
             };
         }
 
-        public static List<ComprobanteCompra> Listar(bool soloConSaldoPendiente = false)
+        // Todas, de la más nueva a la más vieja: "con saldo pendiente" lo filtra la tabla en el
+        // navegador (opciones de Compras.aspx).
+        public static List<ComprobanteCompra> Listar()
         {
-            var sql = SelectBase +
-                      (soloConSaldoPendiente ? " WHERE c.saldoPendiente > 0" : "") +
-                      " ORDER BY c.fecha DESC";
-
             var lista = new List<ComprobanteCompra>();
-            foreach (DataRow fila in AccesoDatos.Consultar(sql).Rows)
+            foreach (DataRow fila in AccesoDatos.Consultar(SelectBase + " ORDER BY c.fecha DESC").Rows)
                 lista.Add(Mapear(fila));
             return lista;
         }
@@ -94,8 +92,8 @@ namespace BIZ.Data
                 if (linea.PrecioUnitario < 0)
                     return ResultadoOperacion.Error("El precio unitario no puede ser negativo.");
 
-                var insumo = InsumoDAL.ObtenerPorId(linea.IdInsumo);
-                if (insumo == null)
+                var insumo = ProductoDAL.ObtenerPorId(linea.IdInsumo);
+                if (insumo == null || !insumo.EsInsumo)
                     return ResultadoOperacion.Error("Uno de los insumos de la compra no existe.");
                 if (!insumo.Activo)
                     return ResultadoOperacion.Error("Uno de los insumos de la compra está dado de baja.");

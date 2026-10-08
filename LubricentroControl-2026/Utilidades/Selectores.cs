@@ -10,10 +10,10 @@ namespace LubricentroControl_2026.Utilidades
     // texto de cada opción es el mismo que se muestra una vez elegida.
     public static class Selectores
     {
-        // Con el DNI, para distinguir a los clientes que se llaman igual.
+        // Con el documento, para distinguir a los clientes que se llaman igual.
         public static string TextoCliente(Cliente cliente)
         {
-            return cliente.NombreCompleto + " — DNI " + cliente.Dni;
+            return cliente.Denominacion + " — " + cliente.Documento;
         }
 
         public static string TextoProveedor(Proveedor proveedor)

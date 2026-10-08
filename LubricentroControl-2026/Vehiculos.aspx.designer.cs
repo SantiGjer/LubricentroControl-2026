@@ -26,9 +26,6 @@ namespace LubricentroControl_2026
         /// <summary>Control hdnOrIdTurno.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnOrIdTurno;
 
-        /// <summary>Control chkIncluirInactivos.</summary>
-        protected global::System.Web.UI.WebControls.CheckBox chkIncluirInactivos;
-
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
 
@@ -59,6 +56,9 @@ namespace LubricentroControl_2026
         /// <summary>Control hdnActivo.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnActivo;
 
+        /// <summary>Control pnlDuenoSeleccion.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlDuenoSeleccion;
+
         /// <summary>Control txtCliente.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtCliente;
 
@@ -67,6 +67,15 @@ namespace LubricentroControl_2026
 
         /// <summary>Control btnNuevoCliente.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevoCliente;
+
+        /// <summary>Control pnlDuenoFijo.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlDuenoFijo;
+
+        /// <summary>Control litDuenoActual.</summary>
+        protected global::System.Web.UI.WebControls.Literal litDuenoActual;
+
+        /// <summary>Control btnCambiarDueno.</summary>
+        protected global::System.Web.UI.WebControls.Button btnCambiarDueno;
 
         /// <summary>Control txtPatente.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtPatente;
@@ -94,5 +103,38 @@ namespace LubricentroControl_2026
 
         /// <summary>Control btnGuardar.</summary>
         protected global::System.Web.UI.WebControls.Button btnGuardar;
+
+        /// <summary>Control pnlCambioDueno.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlCambioDueno;
+
+        /// <summary>Control litTituloCambioDueno.</summary>
+        protected global::System.Web.UI.WebControls.Literal litTituloCambioDueno;
+
+        /// <summary>Control pnlErrorCambioDueno.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlErrorCambioDueno;
+
+        /// <summary>Control litErrorCambioDueno.</summary>
+        protected global::System.Web.UI.WebControls.Literal litErrorCambioDueno;
+
+        /// <summary>Control hdnIdVehiculoDueno.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdVehiculoDueno;
+
+        /// <summary>Control litVehiculoCambio.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVehiculoCambio;
+
+        /// <summary>Control litDuenoAnterior.</summary>
+        protected global::System.Web.UI.WebControls.Literal litDuenoAnterior;
+
+        /// <summary>Control txtNuevoDueno.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtNuevoDueno;
+
+        /// <summary>Control hdnIdNuevoDueno.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdNuevoDueno;
+
+        /// <summary>Control btnNuevoClienteDueno.</summary>
+        protected global::System.Web.UI.WebControls.Button btnNuevoClienteDueno;
+
+        /// <summary>Control btnConfirmarCambioDueno.</summary>
+        protected global::System.Web.UI.WebControls.Button btnConfirmarCambioDueno;
     }
 }

@@ -14,14 +14,56 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control ddlFiltroEstado.</summary>
-        protected global::System.Web.UI.WebControls.DropDownList ddlFiltroEstado;
-
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
 
         /// <summary>Control gvOrdenes.</summary>
         protected global::System.Web.UI.WebControls.GridView gvOrdenes;
+
+        /// <summary>Control litTituloVer.</summary>
+        protected global::System.Web.UI.WebControls.Literal litTituloVer;
+
+        /// <summary>Control litVerCliente.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerCliente;
+
+        /// <summary>Control litVerVehiculo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerVehiculo;
+
+        /// <summary>Control litVerTurno.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerTurno;
+
+        /// <summary>Control litVerFecha.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerFecha;
+
+        /// <summary>Control litVerKilometraje.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerKilometraje;
+
+        /// <summary>Control litVerEstado.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerEstado;
+
+        /// <summary>Control litVerUsuario.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerUsuario;
+
+        /// <summary>Control litVerVenta.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerVenta;
+
+        /// <summary>Control litVerObservaciones.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerObservaciones;
+
+        /// <summary>Control gvVerServicios.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvVerServicios;
+
+        /// <summary>Control gvVerInsumos.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvVerInsumos;
+
+        /// <summary>Control litVerTotal.</summary>
+        protected global::System.Web.UI.WebControls.Literal litVerTotal;
+
+        /// <summary>Control btnEditarDesdeVer.</summary>
+        protected global::System.Web.UI.WebControls.Button btnEditarDesdeVer;
+
+        /// <summary>Control hdnIdOrdenVer.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdOrdenVer;
 
         /// <summary>Control pnlDialogo.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlDialogo;
@@ -125,11 +167,23 @@ namespace LubricentroControl_2026
         /// <summary>Control gvInsumosOrden.</summary>
         protected global::System.Web.UI.WebControls.GridView gvInsumosOrden;
 
+        /// <summary>Control litTotalOrden.</summary>
+        protected global::System.Web.UI.WebControls.Literal litTotalOrden;
+
+        /// <summary>Control litConfirmarCierre.</summary>
+        protected global::System.Web.UI.WebControls.Literal litConfirmarCierre;
+
+        /// <summary>Control btnCerrarACuenta.</summary>
+        protected global::System.Web.UI.WebControls.Button btnCerrarACuenta;
+
+        /// <summary>Control btnCerrarYCobrar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnCerrarYCobrar;
+
         /// <summary>Control btnCancelarOrden.</summary>
         protected global::System.Web.UI.WebControls.Button btnCancelarOrden;
 
-        /// <summary>Control btnCerrarOrden.</summary>
-        protected global::System.Web.UI.WebControls.Button btnCerrarOrden;
+        /// <summary>Control phCerrarOrden.</summary>
+        protected global::System.Web.UI.WebControls.PlaceHolder phCerrarOrden;
 
         /// <summary>Control btnGuardar.</summary>
         protected global::System.Web.UI.WebControls.Button btnGuardar;

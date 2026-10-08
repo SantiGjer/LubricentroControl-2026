@@ -7,10 +7,10 @@ namespace BIZ.Data
     public static class DetalleCompraDAL
     {
         private const string SelectBase = @"
-            SELECT d.idDetalle, d.idCompra, d.idInsumo, i.nombre AS nombreInsumo,
+            SELECT d.idDetalle, d.idCompra, d.idInsumo, p.nombre AS nombreInsumo,
                    d.cantidad, d.precioUnitario
             FROM DetalleCompra d
-            INNER JOIN Insumo i ON i.idInsumo = d.idInsumo";
+            INNER JOIN Producto p ON p.idProducto = d.idInsumo";
 
         private static DetalleCompra Mapear(DataRow fila)
         {

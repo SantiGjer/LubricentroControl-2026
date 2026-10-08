@@ -11,7 +11,7 @@ namespace BIZ.Data
         public static List<ItemMenu> ListarPorNivel(int idNivel)
         {
             const string sql = @"
-                SELECT m.idMenu, m.texto, m.idUrl, u.path, m.idMenuPadre, m.orden, mn.soloLectura
+                SELECT m.idMenu, m.texto, m.idUrl, u.path, m.idMenuPadre, m.orden, m.icono, mn.soloLectura
                 FROM Menu m
                 INNER JOIN MenuNivel mn ON mn.idMenu = m.idMenu AND mn.idNivel = @idNivel
                 LEFT JOIN Url u ON u.idUrl = m.idUrl
@@ -29,6 +29,7 @@ namespace BIZ.Data
                     Path = AccesoDatos.LeerString(fila, "path"),
                     IdMenuPadre = AccesoDatos.LeerIntNullable(fila, "idMenuPadre"),
                     Orden = AccesoDatos.LeerInt(fila, "orden"),
+                    Icono = AccesoDatos.LeerString(fila, "icono"),
                     SoloLectura = AccesoDatos.LeerBool(fila, "soloLectura")
                 });
             }
@@ -69,6 +70,41 @@ namespace BIZ.Data
                 Orden = AccesoDatos.LeerInt(fila, "orden"),
                 SoloLectura = AccesoDatos.LeerBool(fila, "soloLectura")
             };
+        }
+
+        // Todas las pantallas del menú (las hojas, con el texto de su grupo) y el acceso que tiene
+        // un rol a cada una: sin fila en MenuNivel = sin acceso; soloLectura = consulta; si no,
+        // completo. Es la matriz de la pantalla de Roles; con idNivel 0 (rol nuevo) todo queda
+        // sin acceso. En el mismo orden que el menú.
+        public static List<PermisoPantalla> ListarPermisos(int idNivel)
+        {
+            const string sql = @"
+                SELECT m.idMenu, ISNULL(g.texto, '') AS grupo, m.texto AS pantalla, u.path,
+                       mn.idNivel AS conAcceso, mn.soloLectura
+                FROM Menu m
+                INNER JOIN Url u ON u.idUrl = m.idUrl
+                LEFT JOIN Menu g ON g.idMenu = m.idMenuPadre
+                LEFT JOIN MenuNivel mn ON mn.idMenu = m.idMenu AND mn.idNivel = @idNivel
+                WHERE m.activo = 1
+                ORDER BY ISNULL(g.orden, m.orden), m.orden";
+
+            var lista = new List<PermisoPantalla>();
+            foreach (DataRow fila in AccesoDatos.Consultar(sql, AccesoDatos.Param("@idNivel", idNivel)).Rows)
+            {
+                var acceso = fila.IsNull("conAcceso")
+                    ? PermisoPantalla.SinAcceso
+                    : AccesoDatos.LeerBool(fila, "soloLectura") ? PermisoPantalla.Consulta : PermisoPantalla.Completo;
+
+                lista.Add(new PermisoPantalla
+                {
+                    IdMenu = AccesoDatos.LeerInt(fila, "idMenu"),
+                    Grupo = AccesoDatos.LeerString(fila, "grupo"),
+                    Pantalla = AccesoDatos.LeerString(fila, "pantalla"),
+                    Path = AccesoDatos.LeerString(fila, "path"),
+                    Acceso = acceso
+                });
+            }
+            return lista;
         }
 
         // True si la pantalla está registrada en Url (esté o no permitida para el rol).

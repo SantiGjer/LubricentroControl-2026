@@ -12,38 +12,56 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroUsuarios" class="filtro-tabla-texto"
-            placeholder="Filtrar por nombre, mail o rol" aria-label="Filtrar usuarios" />
+            placeholder="Buscar por nombre, mail o rol" aria-label="Buscar usuarios" />
         <span class="acciones-barra">
             <asp:Button ID="btnNuevo" runat="server" CssClass="boton-rojo" Text="Nuevo usuario"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
         </span>
     </div>
 
+    <div class="opciones-tabla" id="opcionesUsuarios">
+        <div class="grupo-opciones" data-columna="Estado" data-inicial="Activo">
+            <span class="titulo-opciones">Estado</span>
+            <button type="button" class="opcion" data-valor="Activo">Activos</button>
+            <button type="button" class="opcion" data-valor="Inactivo">Inactivos</button>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+        </div>
+        <div class="grupo-opciones" data-columna="Rol">
+            <span class="titulo-opciones">Rol</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <asp:Repeater ID="rptRolesFiltro" runat="server">
+                <ItemTemplate><button type="button" class="opcion" data-valor="<%#: Eval("Nombre") %>"><%#: Eval("Nombre") %></button></ItemTemplate>
+            </asp:Repeater>
+        </div>
+    </div>
+
     <asp:GridView ID="gvUsuarios" runat="server" CssClass="tabla-abm" data-filtro="filtroUsuarios"
+        data-opciones-tabla="opcionesUsuarios" data-titulo-detalle="Usuario"
         AutoGenerateColumns="false" DataKeyNames="IdUsuario" GridLines="None"
         OnRowCommand="gvUsuarios_RowCommand" EmptyDataText="No hay usuarios cargados.">
         <Columns>
-            <asp:BoundField DataField="Apellido" HeaderText="Apellido" />
+            <asp:BoundField DataField="Apellido" HeaderText="Apellido" ItemStyle-CssClass="celda-titulo" />
             <asp:BoundField DataField="Nombre" HeaderText="Nombre" />
             <asp:BoundField DataField="Email" HeaderText="Mail" />
             <asp:BoundField DataField="NombreNivel" HeaderText="Rol" />
+            <asp:BoundField DataField="FechaAlta" HeaderText="Alta" DataFormatString="{0:dd/MM/yyyy}"
+                HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:TemplateField HeaderText="Estado">
-                <ItemTemplate>
-                    <%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %>
-                </ItemTemplate>
+                <ItemTemplate><%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <a href="#" class="accion-ver" data-ver-detalle>Ver</a>
+                    <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir %>'
                         CommandName="Editar" CommandArgument='<%# Eval("IdUsuario") %>'
                         CausesValidation="false">Editar</asp:LinkButton>
-                    <asp:LinkButton runat="server"
+                    <asp:LinkButton runat="server" Visible='<%# PuedeEscribir %>'
                         CommandName="Blanquear" CommandArgument='<%# Eval("IdUsuario") %>'
                         CausesValidation="false"
                         OnClientClick="return confirm('¿Restablecer la contraseña de este usuario?');">Blanquear clave</asp:LinkButton>
                     <asp:LinkButton runat="server"
                         CommandName="Desactivar" CommandArgument='<%# Eval("IdUsuario") %>'
-                        CausesValidation="false" Visible='<%# (bool)Eval("Activo") %>'
+                        CausesValidation="false" Visible='<%# PuedeEscribir && (bool)Eval("Activo") %>'
                         OnClientClick="return confirm('¿Desactivar este usuario?');">Desactivar</asp:LinkButton>
                 </ItemTemplate>
             </asp:TemplateField>

@@ -34,10 +34,23 @@ namespace BIZ.Modelo
         public string Observaciones { get; set; }
         public string Estado { get; set; }
 
-        // Del JOIN con Cliente/Vehiculo; solo para mostrar en la grilla/formulario.
+        // Del JOIN con Cliente/Vehiculo/Usuario; solo para mostrar en la grilla/formulario.
         public string NombreCliente { get; set; }
-        public string Dni { get; set; }
+        public string TipoDocumento { get; set; }
+        public string NumeroDocumento { get; set; }
+        public bool ClienteConCuentaCorriente { get; set; }
         public string Patente { get; set; }
+        public string NombreUsuario { get; set; }
+
+        public string Documento
+        {
+            get { return Cliente.FormatearDocumento(TipoDocumento, NumeroDocumento); }
+        }
+
+        public bool EsEditable
+        {
+            get { return Array.IndexOf(EstadosEditables, Estado) >= 0; }
+        }
 
         // Valida los campos obligatorios. No valida existencia/estado de cliente, vehículo ni
         // turno: eso necesita ir a la base, queda en OrdenDeTrabajoDAL (mismo criterio que Turno).

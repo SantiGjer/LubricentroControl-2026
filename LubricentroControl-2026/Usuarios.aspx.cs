@@ -8,9 +8,11 @@ using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
-    // ABM de usuarios y asignación de rol. En el menú solo la ve Admin;
-    // PaginaSegura vuelve a chequearlo por si se entra escribiendo la URL.
-    // El formulario de alta/edición se abre en un modal sobre la lista.
+    // ABM de usuarios y asignación de rol. Por defecto solo la ve Admin; PaginaSegura vuelve a
+    // chequearlo por si se entra escribiendo la URL. Como los permisos se editan en Roles, otro rol
+    // puede recibirla en solo consulta: entonces ve la lista y "Ver", sin alta, edición, blanqueo
+    // ni baja (y cada método de escritura corta al principio, por las dudas). El formulario de
+    // alta/edición se abre en un modal sobre la lista.
     public partial class Usuarios : PaginaSegura
     {
         private const string IdModal = "modalUsuario";
@@ -24,16 +26,29 @@ namespace LubricentroControl_2026
 
             if (IsPostBack) return;
 
+            if (EsSoloLectura)
+            {
+                btnNuevo.Visible = false;
+                pnlFormulario.Visible = false;
+            }
+
             CargarNiveles();
             CargarGrilla();
         }
 
+        // Los roles salen de la base (se crean en Roles): el desplegable del formulario y las
+        // opciones de filtro por rol.
         private void CargarNiveles()
         {
-            ddlNivel.DataSource = NivelDAL.Listar();
+            var niveles = NivelDAL.Listar();
+
+            ddlNivel.DataSource = niveles;
             ddlNivel.DataTextField = "Nombre";
             ddlNivel.DataValueField = "IdNivel";
             ddlNivel.DataBind();
+
+            rptRolesFiltro.DataSource = niveles;
+            rptRolesFiltro.DataBind();
         }
 
         private void CargarGrilla()
@@ -44,12 +59,15 @@ namespace LubricentroControl_2026
 
         protected void btnNuevo_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             LimpiarFormulario();
             MostrarFormulario();
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
             if (!Page.IsValid)
             {
                 MostrarFormulario();
@@ -94,6 +112,8 @@ namespace LubricentroControl_2026
 
         protected void btnReactivar_Click(object sender, EventArgs e)
         {
+            if (EsSoloLectura) return;
+
             int idUsuario;
             int.TryParse(hdnIdUsuario.Value, out idUsuario);
 
@@ -111,6 +131,8 @@ namespace LubricentroControl_2026
 
         protected void gvUsuarios_RowCommand(object sender, GridViewCommandEventArgs e)
         {
+            if (EsSoloLectura) return;
+
             int idUsuario;
             if (!int.TryParse(Convert.ToString(e.CommandArgument), out idUsuario)) return;
 

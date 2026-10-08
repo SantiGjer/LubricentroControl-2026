@@ -10,28 +10,39 @@ namespace BIZ.Data
     public static class ComprobanteVentaDAL
     {
         private const string SelectBase = @"
-            SELECT v.idVenta, v.idOrden, v.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente,
-                   ve.patente, v.numeroComprobante, v.fecha, v.subtotal, v.impuestos, v.total, v.saldoPendiente
+            SELECT v.idVenta, v.idOrden, v.idCliente, c.denominacion AS nombreCliente,
+                   c.tipoDocumento, c.numeroDocumento,
+                   ve.patente, v.numeroComprobante, v.fecha, v.subtotal, v.impuestos, v.total, v.saldoPendiente,
+                   f.tipo AS tipoFactura, f.puntoVenta, f.numero AS numeroFactura
             FROM ComprobanteVenta v
             INNER JOIN Cliente c ON c.idCliente = v.idCliente
             INNER JOIN OrdenDeTrabajo o ON o.idOrden = v.idOrden
-            INNER JOIN Vehiculo ve ON ve.idVehiculo = o.idVehiculo";
+            INNER JOIN Vehiculo ve ON ve.idVehiculo = o.idVehiculo
+            LEFT JOIN Factura f ON f.idVenta = v.idVenta";
 
         private static ComprobanteVenta Mapear(DataRow fila)
         {
+            var tipoFactura = AccesoDatos.LeerString(fila, "tipoFactura");
+
             return new ComprobanteVenta
             {
                 IdVenta = AccesoDatos.LeerInt(fila, "idVenta"),
                 IdOrden = AccesoDatos.LeerInt(fila, "idOrden"),
                 IdCliente = AccesoDatos.LeerInt(fila, "idCliente"),
                 NombreCliente = AccesoDatos.LeerString(fila, "nombreCliente"),
+                TipoDocumentoCliente = AccesoDatos.LeerString(fila, "tipoDocumento"),
+                NumeroDocumentoCliente = AccesoDatos.LeerString(fila, "numeroDocumento"),
                 Patente = AccesoDatos.LeerString(fila, "patente"),
                 NumeroComprobante = AccesoDatos.LeerString(fila, "numeroComprobante"),
                 Fecha = AccesoDatos.LeerFecha(fila, "fecha"),
                 Subtotal = AccesoDatos.LeerDecimal(fila, "subtotal"),
                 Impuestos = AccesoDatos.LeerDecimal(fila, "impuestos"),
                 Total = AccesoDatos.LeerDecimal(fila, "total"),
-                SaldoPendiente = AccesoDatos.LeerDecimal(fila, "saldoPendiente")
+                SaldoPendiente = AccesoDatos.LeerDecimal(fila, "saldoPendiente"),
+                NumeroFactura = tipoFactura == null
+                    ? null
+                    : Factura.FormatearNumero(tipoFactura, AccesoDatos.LeerInt(fila, "puntoVenta"),
+                                              AccesoDatos.LeerInt(fila, "numeroFactura"))
             };
         }
 
@@ -61,8 +72,8 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Ventas de un cliente con saldo pendiente — para el desplegable "comprobante a pagar"
-        // de Pagos.aspx.
+        // Ventas de un cliente con saldo pendiente, la más vieja primero — PagoDAL.Registrar las
+        // cancela en ese orden.
         public static List<ComprobanteVenta> ListarPendientesPorCliente(int idCliente)
         {
             var lista = new List<ComprobanteVenta>();
@@ -88,11 +99,35 @@ namespace BIZ.Data
             return lista;
         }
 
+        // Una línea de la venta a generar, armada desde un servicio o un insumo de la orden.
+        private class LineaVenta
+        {
+            public string TipoItem;
+            public int IdProducto;
+            public string Descripcion;
+            public decimal Cantidad;
+            public decimal Precio;
+            public string TipoIva;
+            public decimal AlicuotaIva;
+
+            public decimal Subtotal
+            {
+                get { return Cantidad * Precio; }
+            }
+
+            public decimal ImporteIva
+            {
+                get { return Iva.Contenido(Subtotal, TipoIva, AlicuotaIva); }
+            }
+        }
+
         // Se llama desde OrdenDeTrabajoDAL.Cerrar, nunca directo desde la pantalla de Ventas —
         // el comprobante no se carga a mano (Requerimientos §6.6). Copia las líneas ya cargadas
         // en la orden (servicios e insumos, con el precio que ya tenían aplicado, sin volver a
         // mirar el catálogo) y genera el movimiento de cuenta corriente del cliente, todo en un
-        // solo batch atómico — mismo mecanismo que ComprobanteCompraDAL.Crear.
+        // solo batch atómico — mismo mecanismo que ComprobanteCompraDAL.Crear. Cada línea guarda el
+        // IVA del producto de ese momento y el IVA que contiene su precio final (§9.10): la venta
+        // suma el neto en subtotal y el IVA en impuestos, y el total no cambia.
         public static ResultadoOperacion GenerarDesdeOrden(int idOrden)
         {
             if (ObtenerPorOrden(idOrden) != null)
@@ -113,12 +148,29 @@ namespace BIZ.Data
                     "La orden no tiene servicios ni insumos cargados, así que no se puede cerrar. " +
                     "Cargá al menos uno, o cancelá la orden si no corresponde cobrar nada.");
 
-            decimal subtotal = 0;
-            foreach (var linea in servicios) subtotal += linea.Cantidad * linea.PrecioAplicado;
-            foreach (var linea in insumos) subtotal += linea.Cantidad * linea.PrecioUnitario;
+            var lineas = new List<LineaVenta>();
+            foreach (var linea in servicios)
+                lineas.Add(new LineaVenta
+                {
+                    TipoItem = DetalleComprobanteVenta.TipoServicio, IdProducto = linea.IdServicio,
+                    Descripcion = linea.NombreServicio, Cantidad = linea.Cantidad, Precio = linea.PrecioAplicado,
+                    TipoIva = linea.TipoIva, AlicuotaIva = linea.AlicuotaIva
+                });
+            foreach (var linea in insumos)
+                lineas.Add(new LineaVenta
+                {
+                    TipoItem = DetalleComprobanteVenta.TipoInsumo, IdProducto = linea.IdInsumo,
+                    Descripcion = linea.NombreInsumo, Cantidad = linea.Cantidad, Precio = linea.PrecioUnitario,
+                    TipoIva = linea.TipoIva, AlicuotaIva = linea.AlicuotaIva
+                });
 
-            const decimal impuestos = 0; // Sin tasa definida en los Requerimientos — ver §9.5.
-            var total = subtotal + impuestos;
+            decimal total = 0, impuestos = 0;
+            foreach (var linea in lineas)
+            {
+                total += linea.Subtotal;
+                impuestos += linea.ImporteIva;
+            }
+            var subtotal = total - impuestos;
 
             // Si el cliente tiene saldo a favor (cuenta corriente negativa, por un pago de más),
             // se aplica a esta venta: nace con saldoPendiente = total - crédito aplicado. No hace
@@ -149,39 +201,30 @@ namespace BIZ.Data
             parametros.Add(AccesoDatos.Param("@total", total));
             parametros.Add(AccesoDatos.Param("@saldoPendiente", saldoPendiente));
 
-            var indice = 0;
-            foreach (var linea in servicios)
+            for (var i = 0; i < lineas.Count; i++)
             {
-                var suf = indice.ToString();
-                sql.Append(@"
-                    INSERT INTO DetalleComprobanteVenta
-                        (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal)
-                    VALUES (@idVenta, 'S', @idServicio" + suf + @", NULL, @descripcion" + suf + @",
-                            @cantidad" + suf + @", @precio" + suf + @", @detSubtotal" + suf + @");
-                ");
-                parametros.Add(AccesoDatos.Param("@idServicio" + suf, linea.IdServicio));
-                parametros.Add(AccesoDatos.Param("@descripcion" + suf, linea.NombreServicio));
-                parametros.Add(AccesoDatos.Param("@cantidad" + suf, linea.Cantidad));
-                parametros.Add(AccesoDatos.Param("@precio" + suf, linea.PrecioAplicado));
-                parametros.Add(AccesoDatos.Param("@detSubtotal" + suf, linea.Cantidad * linea.PrecioAplicado));
-                indice++;
-            }
+                var linea = lineas[i];
+                var suf = i.ToString();
+                var esServicio = linea.TipoItem == DetalleComprobanteVenta.TipoServicio;
 
-            foreach (var linea in insumos)
-            {
-                var suf = indice.ToString();
                 sql.Append(@"
                     INSERT INTO DetalleComprobanteVenta
-                        (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal)
-                    VALUES (@idVenta, 'I', NULL, @idInsumo" + suf + @", @descripcion" + suf + @",
-                            @cantidad" + suf + @", @precio" + suf + @", @detSubtotal" + suf + @");
+                        (idVenta, tipoItem, idServicio, idInsumo, descripcion, cantidad, precioUnitario, subtotal,
+                         tipoIva, alicuotaIva, importeIva)
+                    VALUES (@idVenta, @tipoItem" + suf + @", @idServicio" + suf + @", @idInsumo" + suf + @",
+                            @descripcion" + suf + @", @cantidad" + suf + @", @precio" + suf + @", @detSubtotal" + suf + @",
+                            @tipoIva" + suf + @", @alicuotaIva" + suf + @", @importeIva" + suf + @");
                 ");
-                parametros.Add(AccesoDatos.Param("@idInsumo" + suf, linea.IdInsumo));
-                parametros.Add(AccesoDatos.Param("@descripcion" + suf, linea.NombreInsumo));
+                parametros.Add(AccesoDatos.Param("@tipoItem" + suf, linea.TipoItem));
+                parametros.Add(AccesoDatos.Param("@idServicio" + suf, esServicio ? (int?)linea.IdProducto : null));
+                parametros.Add(AccesoDatos.Param("@idInsumo" + suf, esServicio ? null : (int?)linea.IdProducto));
+                parametros.Add(AccesoDatos.Param("@descripcion" + suf, linea.Descripcion));
                 parametros.Add(AccesoDatos.Param("@cantidad" + suf, linea.Cantidad));
-                parametros.Add(AccesoDatos.Param("@precio" + suf, linea.PrecioUnitario));
-                parametros.Add(AccesoDatos.Param("@detSubtotal" + suf, linea.Cantidad * linea.PrecioUnitario));
-                indice++;
+                parametros.Add(AccesoDatos.Param("@precio" + suf, linea.Precio));
+                parametros.Add(AccesoDatos.Param("@detSubtotal" + suf, linea.Subtotal));
+                parametros.Add(AccesoDatos.Param("@tipoIva" + suf, linea.TipoIva));
+                parametros.Add(AccesoDatos.Param("@alicuotaIva" + suf, linea.AlicuotaIva));
+                parametros.Add(AccesoDatos.Param("@importeIva" + suf, linea.ImporteIva));
             }
 
             sql.Append(@"

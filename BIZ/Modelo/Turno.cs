@@ -25,8 +25,25 @@ namespace BIZ.Modelo
 
         // Del JOIN con Cliente/Vehiculo; solo para mostrar en la grilla, no se guardan.
         public string NombreCliente { get; set; }
-        public string Dni { get; set; }
+        public string TipoDocumento { get; set; }
+        public string NumeroDocumento { get; set; }
         public string Patente { get; set; }
+
+        public string Documento
+        {
+            get { return Cliente.FormatearDocumento(TipoDocumento, NumeroDocumento); }
+        }
+
+        // Para ordenar y filtrar la agenda: "Hoy", "Próximo" o "Pasado".
+        public string Cuando
+        {
+            get
+            {
+                var hoy = DateTime.Today;
+                if (FechaHoraAsignada.Date == hoy) return "Hoy";
+                return FechaHoraAsignada.Date > hoy ? "Próximo" : "Pasado";
+            }
+        }
 
         // Valida los campos obligatorios y le saca los espacios a observaciones.
         // No valida existencia/estado de cliente y vehículo: eso necesita ir a la base,

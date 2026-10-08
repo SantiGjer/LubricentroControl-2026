@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Web.UI.WebControls;
 using BIZ.Data;
+using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
 using LubricentroControl_2026.Utilidades;
 
@@ -9,11 +12,15 @@ namespace LubricentroControl_2026
     // Cuenta corriente de clientes (Fase 4). Calco de CuentaCorrienteProveedores.aspx: Admin y
     // Encargado pueden ver el historial y registrar ajustes manuales; Empleado, solo consulta
     // (Requerimientos §5) — "solo consulta" acá no esconde toda la pantalla, solo el ajuste y el
-    // botón "Editar cliente". La lista trae por defecto solo a los clientes con la cuenta corriente
-    // habilitada (Cliente.CuentaCorriente); "Editar cliente" lleva a Clientes.aspx para cambiarla.
+    // botón "Editar cliente". La lista arranca mostrando solo a los clientes con la cuenta corriente
+    // habilitada (Cliente.CuentaCorriente, opción "Cuenta corriente"); "Editar cliente" lleva a
+    // Clientes.aspx para cambiarla.
     public partial class CuentaCorrienteClientes : PaginaSegura
     {
         private const string IdModal = "modalCuenta";
+
+        // Saldo actual de cada cliente con movimientos de saldo distinto de cero (el resto, 0).
+        private Dictionary<int, decimal> saldos = new Dictionary<int, decimal>();
 
         // Quien puede escribir acá y en Clientes ve el botón "Editar cliente" (el interruptor
         // de cuenta corriente de Clientes.aspx sigue el mismo permiso).
@@ -38,24 +45,32 @@ namespace LubricentroControl_2026
             return "~/Clientes?editar=" + idCliente + "&volver=ctacte";
         }
 
-        // Sin la casilla, solo los clientes con cuenta corriente habilitada. El filtro por texto
-        // lo hace la tabla en el navegador (Lubricentro.js).
+        // Todos los clientes con su saldo: el texto y las opciones (cuenta habilitada o no, saldo)
+        // los filtra la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            var clientes = ClienteDAL.Listar(incluirInactivos: true);
-            if (!chkIncluirSinCuenta.Checked)
-                clientes = clientes.Where(c => c.CuentaCorriente).ToList();
+            saldos = CuentaCorrienteClienteDAL.ListarSaldos().ToDictionary(s => s.IdCliente, s => s.Saldo);
 
-            gvClientes.DataSource = clientes;
+            gvClientes.DataSource = ClienteDAL.Listar(incluirInactivos: true);
             gvClientes.DataBind();
         }
 
-        protected void chkIncluirSinCuenta_CheckedChanged(object sender, EventArgs e)
+        protected decimal SaldoDe(int idCliente)
         {
-            CargarGrilla();
+            decimal saldo;
+            return saldos.TryGetValue(idCliente, out saldo) ? saldo : 0m;
         }
 
-        protected void gvClientes_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
+        // data-saldo para la opción "Saldo": positivo = el cliente debe, negativo = a su favor.
+        protected void gvClientes_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            var saldo = SaldoDe(((Cliente)e.Row.DataItem).IdCliente);
+            e.Row.Attributes["data-saldo"] = saldo > 0 ? "debe" : saldo < 0 ? "a-favor" : "cero";
+        }
+
+        protected void gvClientes_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName != "Ver") return;
 
@@ -80,7 +95,7 @@ namespace LubricentroControl_2026
             lnkEditarCliente.Visible = PuedeEditarCliente;
             lnkEditarCliente.NavigateUrl = UrlEditarCliente(idCliente);
 
-            litClienteSeleccionado.Text = "Cuenta corriente: " + Server.HtmlEncode(cliente.NombreCompleto);
+            litClienteSeleccionado.Text = "Cuenta corriente: " + Server.HtmlEncode(cliente.Denominacion);
             litSaldoActual.Text = CuentaCorrienteClienteDAL.ObtenerSaldoActual(idCliente).ToString("N2");
 
             gvHistorial.DataSource = CuentaCorrienteClienteDAL.ListarPorCliente(idCliente);
@@ -116,6 +131,7 @@ namespace LubricentroControl_2026
             {
                 txtMontoAjuste.Text = string.Empty;
                 txtMotivoAjuste.Text = string.Empty;
+                CargarGrilla();
                 Seleccionar(idCliente);
             }
             else

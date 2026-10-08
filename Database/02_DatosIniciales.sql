@@ -1,21 +1,26 @@
 ﻿/* ============================================================================
    LubricentroControl 2026 — Datos iniciales
 
-   Carga los 3 roles, el árbol de menú con sus permisos por rol, y el usuario
+   Carga los 4 roles, el árbol de menú con sus permisos por rol, y el usuario
    administrador inicial. Correr DESPUÉS de 01_Esquema.sql.
 
-     sqlcmd -S "(localdb)\MSSQLLocalDB" -i Database\02_DatosIniciales.sql
+     sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i Database\02_DatosIniciales.sql
 
    Usuario inicial:  admin@lubricentro.com  /  Admin123!
    >>> Cambiar esa contraseña después del primer login. <<<
    ============================================================================ */
+
+SET QUOTED_IDENTIFIER ON;
+GO
 
 USE LubricentroControl;
 GO
 
 SET NOCOUNT ON;
 
-/* --- Roles --------------------------------------------------------------- */
+/* --- Roles ----------------------------------------------------------------
+   Admin (1) y Lectura (4) quedan fijos: el código los busca por id (Nivel.Admin,
+   Nivel.Lectura). Encargado y Empleado se pueden editar o borrar desde Roles. */
 INSERT INTO Nivel (nombre, jerarquia) VALUES
     ('Admin', 1),
     ('Encargado', 2),
@@ -39,72 +44,74 @@ VALUES ('Administrador', 'del Sistema', 'admin@lubricentro.com',
 /* --- Pantallas del sistema ----------------------------------------------
    El path va sin extensión: FriendlyUrls está activo.                      */
 INSERT INTO Url (descripcion, path) VALUES
-    ('Inicio',                      '~/Default'),
-    ('Clientes',                    '~/Clientes'),
-    ('Vehículos',                   '~/Vehiculos'),
-    ('Turnos',                      '~/Turnos'),
-    ('Órdenes de trabajo',          '~/OrdenesDeTrabajo'),
-    ('Servicios',                   '~/Servicios'),
-    ('Proveedores',                 '~/Proveedores'),
-    ('Insumos',                     '~/Insumos'),
-    ('Compras',                     '~/Compras'),
-    ('Ventas',                      '~/Ventas'),
-    ('Pagos',                       '~/Pagos'),
-    ('Cuenta corriente clientes',   '~/CuentaCorrienteClientes'),
-    ('Cuenta corriente proveedores','~/CuentaCorrienteProveedores'),
-    ('Reporte de stock bajo',       '~/Reportes/StockBajo'),
-    ('Reporte de ventas por período','~/Reportes/VentasPorPeriodo'),
-    ('Reporte de cuentas corrientes','~/Reportes/CuentasCorrientes'),
-    ('Usuarios',                    '~/Usuarios');
+    (N'Inicio',                      '~/Default'),
+    (N'Clientes',                    '~/Clientes'),
+    (N'Vehículos',                   '~/Vehiculos'),
+    (N'Turnos',                      '~/Turnos'),
+    (N'Órdenes de trabajo',          '~/OrdenesDeTrabajo'),
+    (N'Productos',                   '~/Productos'),
+    (N'Proveedores',                 '~/Proveedores'),
+    (N'Compras',                     '~/Compras'),
+    (N'Ventas',                      '~/Ventas'),
+    (N'Pagos',                       '~/Pagos'),
+    (N'Cuenta corriente clientes',   '~/CuentaCorrienteClientes'),
+    (N'Cuenta corriente proveedores','~/CuentaCorrienteProveedores'),
+    (N'Reporte de stock bajo',       '~/Reportes/StockBajo'),
+    (N'Reporte de ventas por período','~/Reportes/VentasPorPeriodo'),
+    (N'Reporte de cuentas corrientes','~/Reportes/CuentasCorrientes'),
+    (N'Usuarios',                    '~/Usuarios'),
+    (N'Roles y permisos',            '~/Roles');
 
 /* --- Árbol de menú -------------------------------------------------------
-   idUrl NULL = grupo desplegable.                                          */
+   idUrl NULL = grupo desplegable. El ícono solo lo usan las opciones de
+   primer nivel de la barra lateral (ver Site.Master.cs, Iconos).           */
 DECLARE @idMenu INT;
 
 /* Nivel raíz: Inicio (link directo) */
-INSERT INTO Menu (texto, idUrl, idMenuPadre, orden)
-    VALUES ('Inicio', (SELECT idUrl FROM Url WHERE path = '~/Default'), NULL, 1);
+INSERT INTO Menu (texto, idUrl, idMenuPadre, orden, icono)
+    VALUES (N'Inicio', (SELECT idUrl FROM Url WHERE path = '~/Default'), NULL, 1, 'inicio');
 DECLARE @mInicio INT = SCOPE_IDENTITY();
 
 /* Grupos */
-INSERT INTO Menu (texto, idUrl, idMenuPadre, orden) VALUES ('Clientes', NULL, NULL, 2);
+INSERT INTO Menu (texto, idUrl, idMenuPadre, orden, icono) VALUES (N'Clientes', NULL, NULL, 2, 'clientes');
 DECLARE @gClientes INT = SCOPE_IDENTITY();
-INSERT INTO Menu (texto, idUrl, idMenuPadre, orden) VALUES ('Operación', NULL, NULL, 3);
+INSERT INTO Menu (texto, idUrl, idMenuPadre, orden, icono) VALUES (N'Operación', NULL, NULL, 3, 'operacion');
 DECLARE @gOperacion INT = SCOPE_IDENTITY();
-INSERT INTO Menu (texto, idUrl, idMenuPadre, orden) VALUES ('Compras', NULL, NULL, 4);
+INSERT INTO Menu (texto, idUrl, idMenuPadre, orden, icono) VALUES (N'Compras', NULL, NULL, 4, 'compras');
 DECLARE @gCompras INT = SCOPE_IDENTITY();
-INSERT INTO Menu (texto, idUrl, idMenuPadre, orden) VALUES ('Ventas y cobros', NULL, NULL, 5);
+INSERT INTO Menu (texto, idUrl, idMenuPadre, orden, icono) VALUES (N'Ventas y cobros', NULL, NULL, 5, 'ventas');
 DECLARE @gVentas INT = SCOPE_IDENTITY();
-INSERT INTO Menu (texto, idUrl, idMenuPadre, orden) VALUES ('Reportes', NULL, NULL, 6);
+INSERT INTO Menu (texto, idUrl, idMenuPadre, orden, icono) VALUES (N'Reportes', NULL, NULL, 6, 'reportes');
 DECLARE @gReportes INT = SCOPE_IDENTITY();
-INSERT INTO Menu (texto, idUrl, idMenuPadre, orden) VALUES ('Administración', NULL, NULL, 7);
+INSERT INTO Menu (texto, idUrl, idMenuPadre, orden, icono) VALUES (N'Administración', NULL, NULL, 7, 'administracion');
 DECLARE @gAdmin INT = SCOPE_IDENTITY();
 
 /* Hojas */
 INSERT INTO Menu (texto, idUrl, idMenuPadre, orden)
 SELECT v.texto, u.idUrl, v.padre, v.orden
 FROM (VALUES
-    ('Clientes',                     '~/Clientes',                     @gClientes,  1),
-    ('Vehículos',                    '~/Vehiculos',                    @gClientes,  2),
-    ('Turnos',                       '~/Turnos',                       @gOperacion, 1),
-    ('Órdenes de trabajo',           '~/OrdenesDeTrabajo',             @gOperacion, 2),
-    ('Servicios',                    '~/Servicios',                    @gOperacion, 3),
-    ('Proveedores',                  '~/Proveedores',                  @gCompras,   1),
-    ('Insumos',                      '~/Insumos',                      @gCompras,   2),
-    ('Compras',                      '~/Compras',                      @gCompras,   3),
-    ('Ventas',                       '~/Ventas',                       @gVentas,    1),
-    ('Pagos',                        '~/Pagos',                        @gVentas,    2),
-    ('Cta. cte. clientes',           '~/CuentaCorrienteClientes',      @gVentas,    3),
-    ('Cta. cte. proveedores',        '~/CuentaCorrienteProveedores',   @gVentas,    4),
-    ('Stock bajo',                   '~/Reportes/StockBajo',           @gReportes,  1),
-    ('Ventas por período',           '~/Reportes/VentasPorPeriodo',    @gReportes,  2),
-    ('Cuentas corrientes',           '~/Reportes/CuentasCorrientes',   @gReportes,  3),
-    ('Usuarios',                     '~/Usuarios',                     @gAdmin,     1)
+    (N'Clientes',                     '~/Clientes',                     @gClientes,  1),
+    (N'Vehículos',                    '~/Vehiculos',                    @gClientes,  2),
+    (N'Turnos',                       '~/Turnos',                       @gOperacion, 1),
+    (N'Órdenes de trabajo',           '~/OrdenesDeTrabajo',             @gOperacion, 2),
+    (N'Productos',                    '~/Productos',                    @gOperacion, 3),
+    (N'Proveedores',                  '~/Proveedores',                  @gCompras,   1),
+    (N'Compras',                      '~/Compras',                      @gCompras,   2),
+    (N'Ventas',                       '~/Ventas',                       @gVentas,    1),
+    (N'Pagos',                        '~/Pagos',                        @gVentas,    2),
+    (N'Cta. cte. clientes',           '~/CuentaCorrienteClientes',      @gVentas,    3),
+    (N'Cta. cte. proveedores',        '~/CuentaCorrienteProveedores',   @gVentas,    4),
+    (N'Stock bajo',                   '~/Reportes/StockBajo',           @gReportes,  1),
+    (N'Ventas por período',           '~/Reportes/VentasPorPeriodo',    @gReportes,  2),
+    (N'Cuentas corrientes',           '~/Reportes/CuentasCorrientes',   @gReportes,  3),
+    (N'Usuarios',                     '~/Usuarios',                     @gAdmin,     1),
+    (N'Roles y permisos',             '~/Roles',                        @gAdmin,     2)
 ) AS v(texto, path, padre, orden)
 JOIN Url u ON u.path = v.path;
 
 /* --- Permisos de menú por rol -------------------------------------------
-   Refleja la matriz de permisos de los requerimientos (§5).
+   Refleja la matriz de permisos de los requerimientos (§5). Después se edita
+   desde la pantalla de Roles (MenuNivel guarda los grupos además de las hojas).
    soloLectura = 1 son los casos "👁️ Solo consulta" del rol Empleado, y
    absolutamente todo para el rol Lectura (ver bloque más abajo).          */
 
@@ -112,16 +119,16 @@ JOIN Url u ON u.path = v.path;
 INSERT INTO MenuNivel (idMenu, idNivel, soloLectura)
 SELECT idMenu, @admin, 0 FROM Menu;
 
-/* Encargado: todo menos Administración (gestión de usuarios). */
+/* Encargado: todo menos Administración (usuarios y roles). */
 INSERT INTO MenuNivel (idMenu, idNivel, soloLectura)
 SELECT idMenu, @encargado, 0
 FROM Menu
 WHERE idMenu <> @gAdmin AND ISNULL(idMenuPadre, 0) <> @gAdmin;
 
-/* Empleado: sin Administración ni Reportes; consulta en compras y ctas. ctes. */
+/* Empleado: sin Administración ni Reportes; consulta en productos, compras y ctas. ctes. */
 INSERT INTO MenuNivel (idMenu, idNivel, soloLectura)
 SELECT m.idMenu, @empleado,
-       CASE WHEN u.path IN ('~/Proveedores', '~/Insumos', '~/Compras', '~/Servicios',
+       CASE WHEN u.path IN ('~/Proveedores', '~/Productos', '~/Compras',
                             '~/CuentaCorrienteClientes', '~/CuentaCorrienteProveedores')
             THEN 1 ELSE 0 END
 FROM Menu m

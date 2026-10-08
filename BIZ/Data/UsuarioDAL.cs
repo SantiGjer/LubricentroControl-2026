@@ -108,7 +108,7 @@ namespace BIZ.Data
 
             usuario.IdUsuario = Insertar(usuario);
 
-            ServicioMail.Enviar(usuario.Email, "Tu cuenta en LubricentroControl",
+            ServicioMail.Enviar(usuario.Email, "Tu cuenta en Lubricentro Control",
                 ServicioMail.ArmarCuerpoAltaUsuario(usuario.NombreCompleto, usuario.Email, passwordTemporal));
 
             return ResultadoOperacion.Ok("Usuario creado.");
@@ -246,7 +246,7 @@ namespace BIZ.Data
             passwordTemporal = PasswordHasher.GenerarPasswordTemporal();
             EstablecerPassword(idUsuario, passwordTemporal);
 
-            ServicioMail.Enviar(usuario.Email, "Tu contraseña de LubricentroControl fue restablecida",
+            ServicioMail.Enviar(usuario.Email, "Tu contraseña de Lubricentro Control fue restablecida",
                 ServicioMail.ArmarCuerpoAltaUsuario(usuario.NombreCompleto, usuario.Email, passwordTemporal));
 
             return ResultadoOperacion.Ok("Contraseña restablecida.");

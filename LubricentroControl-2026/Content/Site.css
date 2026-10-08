@@ -1,22 +1,393 @@
-﻿/* Wrapping element */
-/* Set some basic padding to keep content from hitting the edges */
-.body-content {
-    margin-top: 15px;
-    padding-left: 15px;
-    padding-right: 15px;
-}
-
-/* Set widths on the form inputs since otherwise they're 100% wide */
+﻿/* Set widths on the form inputs since otherwise they're 100% wide */
 input,
 select,
 textarea {
     max-width: 280px;
 }
 
-/* Responsive: Portrait tablets and up */
-@media screen and (min-width: 768px) {
-    .body-content {
-        padding: 0;
+/* ===== Estructura de la página =====
+   Con usuario logueado (body.con-menu) va la barra lateral fija a la izquierda y el contenido a
+   su derecha; en pantallas angostas la barra lateral se esconde y se abre desde la barra
+   superior. Sin usuario (body.sin-menu: Login, Registro, Recuperar/Restablecer clave) el
+   contenido ocupa toda la página. Paleta: rojo #c0272d, negro #16191c/#212529 y grises. */
+
+:root {
+    --ancho-barra-lateral: 264px;
+    --rojo: #c0272d;
+    --rojo-oscuro: #a11f24;
+    --negro-lateral: #16191c;
+}
+
+body {
+    background: #cdd0d4;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.area-principal {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.contenido-principal {
+    flex: 1 0 auto;
+    width: 100%;
+    max-width: 1680px;
+    margin: 0 auto;
+    padding: 1.75rem 2.25rem 1rem;
+}
+
+.pie-pagina {
+    padding: 0.9rem 2.25rem 1.25rem;
+    font-size: 0.82rem;
+    color: #5b6168;
+}
+
+body.sin-menu .contenido-principal {
+    padding: 0 1rem;
+}
+
+body.sin-menu .pie-pagina {
+    text-align: center;
+}
+
+/* --- Marca: isotipo (la gota de aceite del ingreso) + "Lubricentro Control" --- */
+.marca {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #fff;
+    text-decoration: none;
+}
+
+.marca:hover {
+    color: #fff;
+}
+
+.marca-isotipo {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #0d0f11;
+    box-shadow: 0 0 0 2px rgba(192, 39, 45, 0.85), 0 6px 14px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.marca-isotipo svg {
+    width: 22px;
+    height: 22px;
+}
+
+.marca-texto {
+    font-size: 1.12rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.15;
+}
+
+.marca-texto strong {
+    color: #e5484e;
+    font-weight: 800;
+}
+
+.marca-chica .marca-isotipo {
+    width: 34px;
+    height: 34px;
+}
+
+.marca-chica .marca-isotipo svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* --- Barra lateral --- */
+.barra-lateral-panel {
+    --bs-offcanvas-width: 280px;
+    --bs-offcanvas-bg: var(--negro-lateral);
+    --bs-offcanvas-color: #e9ecef;
+    display: flex;
+    flex-direction: column;
+    color: #e9ecef;
+}
+
+.barra-lateral-encabezado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 1.35rem 1.25rem 1.15rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.menu-lateral {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 0.85rem 0.75rem 1rem;
+}
+
+.menu-lateral::-webkit-scrollbar {
+    width: 6px;
+}
+
+.menu-lateral::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.menu-lista,
+.menu-sublista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.menu-item + .menu-item {
+    margin-top: 0.15rem;
+}
+
+.menu-enlace {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #c9ced3;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.menu-enlace:hover,
+.menu-enlace:focus-visible {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    outline: none;
+}
+
+.menu-icono {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    color: #8b939b;
+    transition: color 0.15s ease;
+}
+
+.menu-enlace:hover .menu-icono,
+.menu-enlace.activo .menu-icono,
+.menu-grupo.contiene-activo > .menu-grupo-boton .menu-icono {
+    color: #e5484e;
+}
+
+.menu-enlace.activo {
+    background: rgba(192, 39, 45, 0.2);
+    color: #fff;
+    box-shadow: inset 3px 0 0 var(--rojo);
+}
+
+.menu-grupo.contiene-activo > .menu-grupo-boton {
+    color: #fff;
+}
+
+.menu-texto {
+    flex: 1 1 auto;
+}
+
+/* Flecha del grupo: apunta abajo cuando está abierto. */
+.menu-flecha {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    margin: -0.2rem 0.25rem 0 0;
+    opacity: 0.6;
+    transition: transform 0.2s ease;
+}
+
+.menu-grupo-boton.collapsed .menu-flecha {
+    transform: rotate(-45deg);
+    margin-top: 0;
+}
+
+.menu-sublista {
+    margin: 0.15rem 0 0.4rem 1.6rem;
+    padding-left: 0.85rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-subenlace {
+    display: block;
+    padding: 0.42rem 0.75rem;
+    border-radius: 6px;
+    color: #aab1b8;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.menu-subenlace:hover,
+.menu-subenlace:focus-visible {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    outline: none;
+}
+
+.menu-subenlace.activo {
+    background: rgba(192, 39, 45, 0.2);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--rojo);
+}
+
+/* Usuario logueado, abajo de todo. */
+.barra-lateral-usuario {
+    padding: 1rem 1.15rem 1.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.usuario-datos {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.usuario-avatar {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--rojo);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.usuario-texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.usuario-nombre {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.usuario-rol {
+    color: #8b939b;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.usuario-acciones {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+}
+
+.usuario-acciones a {
+    flex: 1 1 auto;
+    text-align: center;
+    white-space: nowrap;
+    padding: 0.4rem 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 6px;
+    color: #c9ced3;
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.usuario-acciones a:hover {
+    background: var(--rojo);
+    border-color: var(--rojo);
+    color: #fff;
+}
+
+/* --- Barra superior: solo en pantallas angostas --- */
+.barra-superior {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    body.con-menu .barra-superior {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        position: sticky;
+        top: 0;
+        z-index: 1020;
+        padding: 0.65rem 1rem;
+        background: var(--negro-lateral);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+    }
+
+    .barra-superior-boton {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        width: 40px;
+        height: 40px;
+        padding: 0 9px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: transparent;
+    }
+
+    .barra-superior-boton span {
+        display: block;
+        height: 2px;
+        border-radius: 1px;
+        background: #e9ecef;
+    }
+
+    .contenido-principal {
+        padding: 1.25rem 1rem 1rem;
+    }
+
+    .pie-pagina {
+        padding: 0.75rem 1rem 1rem;
+    }
+}
+
+@media (min-width: 992px) {
+    body.con-menu .barra-lateral {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1030;
+        width: var(--ancho-barra-lateral);
+        background: var(--negro-lateral);
+        box-shadow: 4px 0 18px rgba(13, 15, 17, 0.18);
+    }
+
+    body.con-menu .barra-lateral-panel {
+        height: 100%;
+    }
+
+    body.con-menu .area-principal {
+        margin-left: var(--ancho-barra-lateral);
     }
 }
 
@@ -24,19 +395,12 @@ textarea {
    Tarjeta clara sobre el mismo gris que el resto de las pantallas, con la paleta de las
    pantallas de gestión: rojo para la acción principal y los enlaces, negro para los títulos. */
 
-html:has(.login-page),
-body:has(.login-page) {
-    background: #cdd0d4;
-    min-height: 100vh;
-}
-
 .login-page {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: calc(100vh - 60px);
-    margin-top: -1.5rem;
-    padding: 2.5rem 1rem;
+    padding: 2.5rem 0;
     box-sizing: border-box;
 }
 
@@ -225,25 +589,16 @@ body:has(.login-page) {
    Sin bordes entre filas/campos, relleno general, tabla con aire para leer y
    paleta rojo / negro / gris. */
 
-/* Fondo gris de toda la página cuando está una pantalla de gestión. */
-html:has(.pantalla-abm),
-body:has(.pantalla-abm) {
-    background: #cdd0d4;
-    min-height: 100vh;
-}
-
 .pantalla-abm {
-    padding: 1rem 0 2rem;
+    padding: 0 0 1.5rem;
     color: #212529;
-    background: #cdd0d4;
 }
 
 .pantalla-abm h1 {
-    font-size: 2.4rem;
+    font-size: 2.2rem;
     font-weight: 800;
     color: #0d0f11;
-    margin-bottom: 1.5rem;
-    padding-left: 1.5rem;
+    margin-bottom: 1.35rem;
 }
 
 .pantalla-abm h2 {
@@ -271,44 +626,43 @@ body:has(.pantalla-abm) {
 }
 
 /* --- Barra de herramientas arriba de cada lista ---
-   Filtro de la tabla a la izquierda, opciones en el medio y el botón "Nuevo ..." a la derecha. */
+   El buscador a la izquierda, "Columnas" y el botón "Nuevo ..." a la derecha. Las opciones de
+   filtro van aparte, en .opciones-tabla, justo debajo. */
 .pantalla-abm .barra-herramientas {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem 1.25rem;
+    gap: 0.75rem;
     background: #e6e8ea;
-    border-radius: 10px;
+    border-radius: 10px 10px 0 0;
     padding: 0.9rem 1rem;
-    margin: 0 0 1.25rem;
+    margin: 0;
+}
+
+/* Sin opciones debajo, la barra va con las cuatro esquinas redondeadas. */
+.pantalla-abm .barra-herramientas:not(:has(+ .opciones-tabla)) {
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
 }
 
 .pantalla-abm .barra-herramientas .filtro-tabla-texto {
     flex: 1 1 260px;
-    max-width: 440px;
+    max-width: 520px;
 }
 
-.pantalla-abm .barra-herramientas .opcion-barra {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-size: 0.9rem;
-    color: #343a40;
-}
-
-.pantalla-abm .barra-herramientas .opcion-barra label {
-    margin: 0;
-    font-weight: 600;
-    color: #495057;
-}
-
-.pantalla-abm .barra-herramientas .opcion-barra select {
-    width: auto;
-}
-
-/* El botón principal se va a la derecha, separado del filtro y de las opciones. */
+/* El botón principal se va a la derecha, separado del buscador. */
 .pantalla-abm .barra-herramientas .acciones-barra {
+    display: flex;
+    gap: 0.5rem;
     margin-left: auto;
+}
+
+.pantalla-abm .barra-herramientas .selector-columnas {
+    margin-left: auto;
+}
+
+.pantalla-abm .barra-herramientas .selector-columnas + .acciones-barra {
+    margin-left: 0;
 }
 
 .pantalla-abm .barra-herramientas .boton-rojo,
@@ -316,14 +670,80 @@ body:has(.pantalla-abm) {
     margin: 0;
 }
 
-/* --- Filtro de tabla (con lupa) --- */
-.pantalla-abm input.filtro-tabla-texto {
-    padding-left: 2.2rem;
-    background: #f2f3f4 url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3e%3c/svg%3e") no-repeat 0.75rem center / 0.95rem;
+/* --- Opciones de filtro: grupos de botones debajo de la barra de herramientas --- */
+.pantalla-abm .opciones-tabla {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1.75rem;
+    background: #dcdfe2;
+    border-top: 1px solid #c9cdd1;
+    border-radius: 0 0 10px 10px;
+    padding: 0.7rem 1rem 0.75rem;
+    margin: 0 0 1.25rem;
 }
+
+.pantalla-abm .grupo-opciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.pantalla-abm .titulo-opciones {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #5b6168;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 0.3rem;
+}
+
+.pantalla-abm .opcion {
+    border: 1px solid #b8bcc1;
+    border-radius: 999px;
+    background: #f2f3f4;
+    color: #343a40;
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 0.22rem 0.8rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pantalla-abm .opcion:hover {
+    border-color: #c0272d;
+    color: #c0272d;
+}
+
+.pantalla-abm .opcion.activa {
+    background: #c0272d;
+    border-color: #c0272d;
+    color: #fff;
+}
+
+.pantalla-abm .opcion:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(192, 39, 45, 0.25);
+}
+
+.pantalla-abm .contador-tabla {
+    margin-left: auto;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #5b6168;
+}
+
+/* --- Buscador (con lupa) ---
+   Va después de las reglas generales de los campos de texto: con la misma especificidad, la
+   regla general (padding: 0.5rem 0.7rem) le ganaba y el texto quedaba encima de la lupa. */
 
 /* Filtro que Lubricentro.js agrega arriba de las tablas que no tienen barra propia. */
 .pantalla-abm .filtro-tabla {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
     margin: 0 0 0.75rem;
 }
 
@@ -347,6 +767,13 @@ body:has(.pantalla-abm) {
     border: 1px solid #c4c8cc;
     border-radius: 6px;
     color: #212529;
+}
+
+.pantalla-abm input.filtro-tabla-texto,
+.pantalla-abm .barra-herramientas input.filtro-tabla-texto {
+    padding: 0.55rem 0.8rem 0.55rem 2.45rem;
+    background: #fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3e%3cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85zm-5.242.656a5 5 0 1 1 0-10 5 5 0 0 1 0 10z'/%3e%3c/svg%3e") no-repeat 0.85rem center / 0.95rem;
+    border-radius: 8px;
 }
 
 .pantalla-abm input[type="text"]:focus,
@@ -391,6 +818,105 @@ body:has(.pantalla-abm) {
 }
 
 .pantalla-abm hr {
+    display: none;
+}
+
+/* --- Elegir columnas --- */
+.pantalla-abm .selector-columnas {
+    position: relative;
+}
+
+.pantalla-abm .boton-columnas {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid #b8bcc1;
+    border-radius: 6px;
+    background: #f2f3f4;
+    color: #343a40;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.48rem 0.9rem;
+    cursor: pointer;
+}
+
+.pantalla-abm .boton-columnas svg {
+    width: 16px;
+    height: 16px;
+}
+
+.pantalla-abm .boton-columnas:hover,
+.pantalla-abm .boton-columnas[aria-expanded="true"] {
+    border-color: #c0272d;
+    color: #c0272d;
+}
+
+.pantalla-abm .panel-columnas {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 1070;
+    min-width: 230px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding: 0.6rem 0.4rem 0.5rem;
+    background: #fff;
+    border: 1px solid #c4c8cc;
+    border-radius: 8px;
+    box-shadow: 0 14px 32px rgba(13, 15, 17, 0.22);
+}
+
+.pantalla-abm .filtro-tabla .panel-columnas {
+    left: 0;
+    right: auto;
+}
+
+.pantalla-abm .panel-columnas-titulo {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0 0.6rem 0.4rem;
+}
+
+.pantalla-abm .panel-columnas label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.32rem 0.6rem;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    color: #212529;
+    cursor: pointer;
+}
+
+.pantalla-abm .panel-columnas label:hover {
+    background: #f1e0e1;
+}
+
+.pantalla-abm .panel-columnas input {
+    accent-color: #c0272d;
+}
+
+.pantalla-abm .panel-columnas-restaurar {
+    display: block;
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.4rem 0.6rem 0.2rem;
+    border: 0;
+    border-top: 1px solid #e2e5e8;
+    background: transparent;
+    color: #c0272d;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+/* Columnas escondidas: las que el usuario sacó y, antes de que arranque Lubricentro.js, las
+   que vienen escondidas de entrada (clase "oculta"), para que no aparezcan un instante. */
+.pantalla-abm .tabla-abm .columna-oculta,
+.pantalla-abm .tabla-abm:not([data-tabla-iniciada]) .oculta {
     display: none;
 }
 
@@ -449,10 +975,36 @@ body:has(.pantalla-abm) {
     width: 100%;
 }
 
+/* Título de un grupo de campos dentro de un formulario (Datos fiscales, Domicilio…). */
+.pantalla-abm .subtitulo-formulario {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    border-bottom: 1px solid #c4c8cc;
+    padding-bottom: 0.3rem;
+    margin: 0.4rem 0 0;
+}
+
 /* Texto fijo en lugar de un campo (lo que ya no se puede cambiar al editar). */
 .pantalla-abm .valor-fijo {
     padding: 0.5rem 0;
     font-weight: 600;
+}
+
+.pantalla-abm .valor-fijo-con-boton {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.pantalla-abm .valor-fijo-con-boton .boton-gris,
+.pantalla-abm .valor-fijo-con-boton .boton-borde-rojo {
+    margin: 0;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.88rem;
 }
 
 .pantalla-abm .texto-ayuda {
@@ -466,6 +1018,48 @@ body:has(.pantalla-abm) {
     display: inline !important;
     font-weight: 400 !important;
     margin: 0 0 0 0.25rem !important;
+}
+
+/* Opciones excluyentes en línea (tipo de cliente, tipo de producto): botones segmentados. */
+.pantalla-abm .opciones-radio {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid #b8bcc1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f2f3f4;
+}
+
+.pantalla-abm .opciones-radio input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.pantalla-abm .opciones-radio label,
+.pantalla-abm .campo .opciones-radio label {
+    display: block;
+    margin: 0;
+    padding: 0.45rem 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #343a40;
+    cursor: pointer;
+    border-right: 1px solid #b8bcc1;
+}
+
+.pantalla-abm .opciones-radio label:last-of-type {
+    border-right: 0;
+}
+
+.pantalla-abm .opciones-radio input:checked + label {
+    background: #c0272d;
+    color: #fff;
+}
+
+.pantalla-abm .opciones-radio input:focus-visible + label {
+    box-shadow: inset 0 0 0 2px rgba(192, 39, 45, 0.45);
 }
 
 /* Interruptor (form-switch de Bootstrap) con el rojo de la paleta. */
@@ -509,7 +1103,7 @@ body:has(.pantalla-abm) {
     color: #343a40;
 }
 
-/* Datos de solo lectura en dos columnas (detalle de una compra o de una venta). */
+/* Datos de solo lectura en dos columnas (detalle de una compra o de una venta, "Ver"). */
 .pantalla-abm .datos-resumen {
     display: grid;
     grid-template-columns: max-content 1fr;
@@ -524,6 +1118,46 @@ body:has(.pantalla-abm) {
 
 .pantalla-abm .datos-resumen dd {
     margin: 0;
+}
+
+/* Ventana "Ver" de una fila: los datos en dos pares de columnas en pantallas anchas. */
+.pantalla-abm .datos-detalle {
+    gap: 0;
+    background: #f2f3f4;
+    border: 1px solid #c9cdd1;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 0;
+}
+
+.pantalla-abm .datos-detalle dt,
+.pantalla-abm .datos-detalle dd {
+    padding: 0.55rem 0.9rem;
+    border-bottom: 1px solid #dcdfe2;
+}
+
+.pantalla-abm .datos-detalle dt {
+    background: #e6e8ea;
+    font-size: 0.85rem;
+}
+
+.pantalla-abm .datos-detalle dd {
+    word-break: break-word;
+}
+
+/* Resumen numérico al pie de un detalle (total de una orden). */
+.pantalla-abm .total-detalle {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    font-size: 1.05rem;
+}
+
+.pantalla-abm .total-detalle strong {
+    font-size: 1.35rem;
+    color: #0d0f11;
 }
 
 /* --- Modales (formularios de alta y edición, detalles) --- */
@@ -593,6 +1227,32 @@ body:has(.pantalla-abm) {
 .pantalla-abm .separador-modal {
     border-top: 1px solid #c4c8cc;
     margin: 1.5rem 0 1.25rem;
+}
+
+/* Confirmación en línea dentro de un modal (cerrar una orden: a cuenta corriente o cobrar). */
+.pantalla-abm .confirmacion-modal {
+    margin-top: 1.25rem;
+    padding: 1rem 1.15rem;
+    background: #fff;
+    border: 1px solid #e3a2a5;
+    border-left: 4px solid #c0272d;
+    border-radius: 8px;
+}
+
+.pantalla-abm .confirmacion-modal p {
+    margin: 0 0 0.75rem;
+}
+
+.pantalla-abm .confirmacion-modal .botones-confirmacion {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.pantalla-abm .confirmacion-modal .boton-rojo,
+.pantalla-abm .confirmacion-modal .boton-gris,
+.pantalla-abm .confirmacion-modal .boton-borde-rojo {
+    margin: 0;
 }
 
 /* --- Selector con búsqueda (dueño, cliente, proveedor) ---
@@ -674,6 +1334,12 @@ body:has(.pantalla-abm) {
     flex: 1 1 auto;
 }
 
+/* Un desplegable con textos largos (servicio con su precio) se achica en vez de empujar el botón. */
+.pantalla-abm .selector-con-boton select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .pantalla-abm .selector-con-boton .boton-gris,
 .pantalla-abm .selector-con-boton .boton-rojo {
     margin: 0;
@@ -727,12 +1393,19 @@ body:has(.pantalla-abm) {
 
 /* Los botones de los avisos no necesitan el margen superior grande. */
 .pantalla-abm .barra-busqueda .boton-rojo,
-.pantalla-abm .alert .boton-gris {
+.pantalla-abm .alert .boton-gris,
+.pantalla-abm .alert .boton-rojo {
     margin-top: 0;
 }
 
-.pantalla-abm .alert .boton-gris {
+.pantalla-abm .alert .boton-gris,
+.pantalla-abm .alert .boton-rojo {
     margin-left: 0.75rem;
+}
+
+.pantalla-abm .alert a.enlace-boton {
+    margin: 0 0 0 0.75rem;
+    padding: 0.3rem 0.9rem;
 }
 
 /* Botones chicos en línea con un campo (p. ej. "Nuevo cliente" junto al selector de dueño). */
@@ -795,9 +1468,23 @@ body:has(.pantalla-abm) {
     text-decoration: underline;
 }
 
-/* Acciones con varios enlaces (Usuarios, Cuenta corriente): separados entre sí. */
+/* El nombre (o el número) de cada fila abre "Ver": se ve como texto común hasta pasar el mouse. */
+.pantalla-abm .tabla-abm a.enlace-titulo {
+    color: inherit;
+    font-weight: 600;
+}
+
+.pantalla-abm .tabla-abm a.enlace-titulo:hover {
+    color: #c0272d;
+}
+
+/* Acciones con varios enlaces: separados entre sí. */
 .pantalla-abm .tabla-abm a + a {
     margin-left: 0.75rem;
+}
+
+.pantalla-abm .tabla-abm td:last-child:has(.accion-ver) {
+    white-space: nowrap;
 }
 
 /* Filas con fondo propio puesto desde el código (stock bajo, saldo pendiente) conservan ese fondo. */
@@ -805,7 +1492,47 @@ body:has(.pantalla-abm) {
     background: transparent;
 }
 
-/* Grillas con muchas columnas (Insumos): menos relleno para que no se corten. */
+/* Turnos de hoy: marcados con una franja roja a la izquierda y la etiqueta "Hoy" junto a la
+   fecha. La etiqueta va como ::after para que no forme parte del texto de la celda (con el que
+   Lubricentro.js ordena y filtra). */
+.pantalla-abm .tabla-abm tr.fila-hoy td:first-child {
+    box-shadow: inset 4px 0 0 #c0272d;
+    font-weight: 700;
+}
+
+.pantalla-abm .tabla-abm tr.fila-hoy td.celda-fecha::after {
+    content: "Hoy";
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: #c0272d;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    vertical-align: 0.1em;
+}
+
+/* Etiqueta chica dentro de una celda ("Hoy", "Facturada"). */
+.pantalla-abm .etiqueta {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: #c0272d;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    vertical-align: 0.1em;
+}
+
+.pantalla-abm .etiqueta-gris {
+    background: #6c757d;
+}
+
+/* Grillas con muchas columnas (Productos): menos relleno para que no se corten. */
 .pantalla-abm .tabla-compacta th,
 .pantalla-abm .tabla-compacta td {
     padding: 0.6rem 0.5rem;
@@ -851,7 +1578,7 @@ body:has(.pantalla-abm) {
     background: #e6e8ea;
 }
 
-/* Paginado de las tablas largas (Insumos, reportes). */
+/* Paginado de las tablas largas (Productos, reportes). */
 .pantalla-abm .paginador-tabla {
     display: flex;
     justify-content: center;
@@ -882,6 +1609,45 @@ body:has(.pantalla-abm) {
 .pantalla-abm .paginador-texto {
     font-weight: 600;
     color: #343a40;
+}
+
+/* --- Matriz de permisos (Roles) --- */
+.pantalla-abm .matriz-permisos td,
+.pantalla-abm .matriz-permisos th {
+    vertical-align: middle;
+}
+
+.pantalla-abm .matriz-permisos .grupo-permiso td {
+    background: #cfd3d7;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #343a40;
+    padding: 0.45rem 0.75rem;
+}
+
+.pantalla-abm .matriz-permisos .opciones-radio label {
+    padding: 0.28rem 0.75rem;
+    font-size: 0.84rem;
+}
+
+.pantalla-abm .matriz-permisos .opciones-radio input:checked + label.acceso-sin {
+    background: #6c757d;
+}
+
+.pantalla-abm .matriz-permisos .opciones-radio input:checked + label.acceso-consulta {
+    background: #495057;
+}
+
+.pantalla-abm .accesos-rapidos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    color: #495057;
 }
 
 /* --- Filtros de los reportes --- */
@@ -917,13 +1683,18 @@ body:has(.pantalla-abm) {
 }
 
 .pantalla-abm .texto-nota {
-    padding-left: 1.5rem;
     color: #343a40;
     margin-bottom: 1rem;
 }
 
-.pantalla-abm .titulo-seccion {
-    padding-left: 1.5rem;
+.pantalla-abm .texto-nota a {
+    color: #c0272d;
+    font-weight: 600;
+}
+
+/* Celdas que no conviene partir en dos renglones (documento, teléfono). */
+.pantalla-abm .tabla-abm td.sin-corte {
+    white-space: nowrap;
 }
 
 /* --- Inicio (tablero) ---
@@ -970,6 +1741,201 @@ body:has(.pantalla-abm) {
 .pantalla-abm .texto-inicio {
     font-size: 1.1rem;
     color: #343a40;
-    padding-left: 1.5rem;
     margin-bottom: 1.5rem;
+}
+
+/* ===== Factura (Ventas) =====
+   Hoja blanca con el formato de una factura argentina: emisor a la izquierda, letra en el
+   centro, número y fecha a la derecha, receptor, líneas y totales. Se imprime sola (ver
+   @media print al final). */
+.factura-hoja {
+    background: #fff;
+    color: #111;
+    border: 1px solid #b8bcc1;
+    border-radius: 4px;
+    padding: 1.5rem 1.75rem;
+    font-size: 0.88rem;
+}
+
+.factura-cabecera {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    border: 1px solid #111;
+    position: relative;
+}
+
+.factura-emisor,
+.factura-comprobante {
+    padding: 0.9rem 1rem;
+}
+
+.factura-emisor-nombre {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 0.35rem;
+}
+
+.factura-letra {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0.5rem;
+    border-left: 1px solid #111;
+    border-right: 1px solid #111;
+    border-bottom: 1px solid #111;
+    align-self: start;
+    background: #fff;
+}
+
+.factura-letra strong {
+    font-size: 2.6rem;
+    line-height: 1.1;
+}
+
+.factura-letra span {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding-bottom: 0.3rem;
+}
+
+.factura-comprobante-titulo {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.35rem;
+}
+
+.factura-datos p,
+.factura-emisor p,
+.factura-comprobante p {
+    margin: 0 0 0.15rem;
+}
+
+.factura-receptor {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem 1.5rem;
+    border: 1px solid #111;
+    border-top: 0;
+    padding: 0.75rem 1rem;
+}
+
+.factura-receptor p {
+    margin: 0;
+}
+
+.factura-lineas {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.factura-lineas th {
+    background: #e6e8ea;
+    border: 1px solid #111;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.8rem;
+    text-align: left;
+}
+
+.factura-lineas td {
+    border-left: 1px solid #111;
+    border-right: 1px solid #111;
+    padding: 0.35rem 0.55rem;
+}
+
+.factura-lineas tr:last-child td {
+    border-bottom: 1px solid #111;
+}
+
+.factura-lineas .numero {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.factura-totales {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.factura-totales dl {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.2rem 0;
+    min-width: 300px;
+    margin: 0;
+    border: 1px solid #111;
+    padding: 0.75rem 1rem;
+}
+
+.factura-totales dt {
+    font-weight: 600;
+}
+
+/* Sin espacio entre columnas (va como relleno del importe): así la línea del total es una sola. */
+.factura-totales dd {
+    margin: 0;
+    padding-left: 1.5rem;
+    text-align: right;
+}
+
+.factura-totales .factura-total {
+    font-size: 1.1rem;
+    font-weight: 800;
+    border-top: 1px solid #111;
+    padding-top: 0.35rem;
+}
+
+.factura-leyenda {
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    color: #333;
+}
+
+.factura-leyenda p {
+    margin: 0 0 0.25rem;
+}
+
+.factura-transparencia {
+    border: 1px dashed #555;
+    padding: 0.5rem 0.75rem;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+}
+
+@page {
+    size: A4;
+    margin: 12mm;
+}
+
+/* Al imprimir desde Ventas sale solo la factura, sin el menú, la lista ni el modal. */
+@media print {
+    body {
+        background: #fff !important;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    .factura-hoja,
+    .factura-hoja * {
+        visibility: visible;
+    }
+
+    .factura-hoja {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: 0;
+        padding: 0;
+        font-size: 10pt;
+    }
+
+    .modal-backdrop {
+        display: none !important;
+    }
 }

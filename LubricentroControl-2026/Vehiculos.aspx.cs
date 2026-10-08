@@ -9,20 +9,20 @@ namespace LubricentroControl_2026
 {
     // ABM de vehículos. Acceso completo para Admin, Encargado y Empleado (Requerimientos §5);
     // Lectura, solo consulta. El formulario se abre en un modal sobre la lista. El dueño se elige
-    // con un selector con búsqueda: la lista desplegable trae todos los clientes activos y el
-    // mismo campo filtra mientras se escribe (Scripts\Lubricentro.js, .selector-busqueda).
+    // con un selector con búsqueda (Scripts\Lubricentro.js, .selector-busqueda) en el alta; después
+    // se cambia con "Cambiar dueño" (VehiculoDAL.CambiarDueno, Requerimientos §9.12), que tiene su
+    // propio modal y su propio atajo "Nuevo cliente".
     public partial class Vehiculos : PaginaSegura
     {
-        // Índice de la columna "Acciones" en gvVehiculos.Columns.
-        private const int ColumnaAcciones = 6;
-
         private const string IdModal = "modalVehiculo";
+        private const string IdModalCambioDueno = "modalCambioDueno";
 
         protected void Page_Load(object sender, EventArgs e)
         {
             // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
             pnlMensaje.Visible = false;
             pnlErrorFormulario.Visible = false;
+            pnlErrorCambioDueno.Visible = false;
 
             // El rango del año sale del modelo (Vehiculo.AnioMinimo/AnioMaximo); se fija en cada
             // request porque el máximo depende de la fecha.
@@ -38,7 +38,7 @@ namespace LubricentroControl_2026
             {
                 btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
-                gvVehiculos.Columns[ColumnaAcciones].Visible = false;
+                pnlCambioDueno.Visible = false;
             }
 
             CargarTiposCombustible();
@@ -46,8 +46,16 @@ namespace LubricentroControl_2026
 
             if (EsSoloLectura) return;
 
+            // Vuelta de "Nuevo cliente" en Clientes.aspx: al alta de un vehículo, o al cambio de
+            // dueño de uno existente (cambioDueno=1), con el cliente recién creado ya elegido.
             if (Request.QueryString["idClienteNuevo"] != null)
-                RehidratarDesdeRetorno();
+            {
+                if (Request.QueryString["cambioDueno"] == "1")
+                    PrepararCambioDueno(LeerIdOculto(Request.QueryString["idVehiculo"]),
+                                        LeerIdOculto(Request.QueryString["idClienteNuevo"]));
+                else
+                    RehidratarDesdeRetorno();
+            }
 
             // Se llegó con "Nuevo vehículo" desde OrdenesDeTrabajo.aspx (origen "orden"):
             // guardamos los datos sueltos de la orden en curso para devolverlos intactos, y
@@ -69,20 +77,19 @@ namespace LubricentroControl_2026
             }
         }
 
-        // Opciones del selector de dueño (los clientes activos). Se evalúa al dibujar el modal
-        // (data-opciones en el .aspx).
+        // Opciones de los selectores de dueño (los clientes activos). Se evalúa al dibujar los
+        // modales (data-opciones en el .aspx).
         protected string OpcionesClientes
         {
             get { return Selectores.OpcionesClientes(); }
         }
 
-        // Vuelta de "Nuevo cliente" en Clientes.aspx (ver Clientes.aspx.cs, ArmarUrlVuelta):
-        // repone los datos del vehículo que estaba en curso y deja seleccionado el cliente
-        // que se creó (o el que ya estaba elegido, si solo se volvió sin crear ninguno).
+        // Vuelta de "Nuevo cliente" en Clientes.aspx (ver Clientes.aspx.cs, ArmarUrlVuelta) durante
+        // el alta de un vehículo: repone los datos que estaban en curso y deja seleccionado el
+        // cliente que se creó (o el que ya estaba elegido, si solo se volvió sin crear ninguno).
         private void RehidratarDesdeRetorno()
         {
-            hdnIdVehiculo.Value = Request.QueryString["idVehiculo"];
-            hdnActivo.Value = Request.QueryString["activo"];
+            LimpiarFormulario();
             txtPatente.Text = Request.QueryString["patente"];
             txtMarca.Text = Request.QueryString["marca"];
             txtModelo.Text = Request.QueryString["modelo"];
@@ -93,19 +100,13 @@ namespace LubricentroControl_2026
                 ddlTipoCombustible.SelectedValue = tipoCombustible;
 
             SeleccionarCliente(LeerIdOculto(Request.QueryString["idClienteNuevo"]));
-
-            var esEdicion = LeerIdOculto(hdnIdVehiculo.Value) > 0;
-            var activo = ActivoDesdeHidden();
-            btnBorrar.Visible = esEdicion && activo;
-            btnReactivar.Visible = esEdicion && !activo;
-            litTituloFormulario.Text = esEdicion ? "Editar vehículo" : "Nuevo vehículo";
             MostrarFormulario();
         }
 
-        // "Nuevo cliente" al lado del selector: manda a Clientes.aspx los datos del
-        // vehículo en curso por query string (no PostBackUrl/PreviousPage — esos rompen
-        // acá porque FriendlyUrls no publica un archivo físico en la ruta amigable, y
-        // PreviousPage necesita reconstruir la página de origen a partir de esa ruta).
+        // "Nuevo cliente" al lado del selector de dueño del alta: manda a Clientes.aspx los datos
+        // del vehículo en curso por query string (no PostBackUrl/PreviousPage — esos rompen acá
+        // porque FriendlyUrls no publica un archivo físico en la ruta amigable, y PreviousPage
+        // necesita reconstruir la página de origen a partir de esa ruta).
         protected void btnNuevoCliente_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
@@ -122,6 +123,25 @@ namespace LubricentroControl_2026
                 + "&tipoCombustible=" + Server.UrlEncode(ddlTipoCombustible.SelectedValue);
 
             Response.Redirect(url);
+        }
+
+        // Mismo atajo desde "Cambiar dueño": el cliente nuevo vuelve elegido en ese modal.
+        protected void btnNuevoClienteDueno_Click(object sender, EventArgs e)
+        {
+            if (EsSoloLectura) return;
+
+            var vehiculo = VehiculoDAL.ObtenerPorId(LeerIdOculto(hdnIdVehiculoDueno.Value));
+            if (vehiculo == null)
+            {
+                MostrarMensaje("El vehículo no existe.", false);
+                return;
+            }
+
+            Response.Redirect("~/Clientes"
+                + "?origen=vehiculo&cambioDueno=1"
+                + "&idVehiculo=" + vehiculo.IdVehiculo
+                + "&idClienteActual=" + vehiculo.IdCliente
+                + "&patente=" + Server.UrlEncode(vehiculo.Patente));
         }
 
         protected void btnVolverAOrdenes_Click(object sender, EventArgs e)
@@ -153,20 +173,16 @@ namespace LubricentroControl_2026
                 ddlTipoCombustible.Items.Add(new ListItem(tipo, tipo));
         }
 
-        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
+        // Todos los vehículos, activos e inactivos: el filtro por texto y las opciones (estado,
+        // combustible) los aplica la tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            gvVehiculos.DataSource = VehiculoDAL.Listar(chkIncluirInactivos.Checked);
+            gvVehiculos.DataSource = VehiculoDAL.Listar(incluirInactivos: true);
             gvVehiculos.DataBind();
         }
 
-        protected void chkIncluirInactivos_CheckedChanged(object sender, EventArgs e)
-        {
-            CargarGrilla();
-        }
-
-        // Deja elegido un dueño desde el servidor (vuelta de Clientes/Órdenes, edición). Cuando
-        // lo elige el usuario, el selector con búsqueda completa hdnIdCliente en el navegador.
+        // Deja elegido un dueño desde el servidor (vuelta de Clientes/Órdenes). Cuando lo elige
+        // el usuario, el selector con búsqueda completa hdnIdCliente en el navegador.
         private void SeleccionarCliente(int idCliente)
         {
             var cliente = ClienteDAL.ObtenerPorId(idCliente);
@@ -177,9 +193,10 @@ namespace LubricentroControl_2026
         }
 
         // No usa ControlToValidate: valida la selección guardada en el hidden, no un TextBox.
+        // Editando, el dueño no se elige acá (queda el que ya tenía).
         protected void valCliente_ServerValidate(object source, ServerValidateEventArgs args)
         {
-            args.IsValid = LeerIdOculto(hdnIdCliente.Value) > 0;
+            args.IsValid = LeerIdOculto(hdnIdVehiculo.Value) > 0 || LeerIdOculto(hdnIdCliente.Value) > 0;
         }
 
         protected void valPatente_ServerValidate(object source, ServerValidateEventArgs args)
@@ -280,9 +297,12 @@ namespace LubricentroControl_2026
         protected void gvVehiculos_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (EsSoloLectura) return;
-            if (e.CommandName != "Editar") return;
 
-            Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
+            var idVehiculo = LeerIdOculto(Convert.ToString(e.CommandArgument));
+            if (e.CommandName == "Editar")
+                Seleccionar(idVehiculo);
+            else if (e.CommandName == "CambiarDueno")
+                PrepararCambioDueno(idVehiculo, 0);
         }
 
         private void Seleccionar(int idVehiculo)
@@ -297,7 +317,11 @@ namespace LubricentroControl_2026
 
             hdnIdVehiculo.Value = vehiculo.IdVehiculo.ToString();
             hdnActivo.Value = vehiculo.Activo.ToString();
-            SeleccionarCliente(vehiculo.IdCliente);
+            hdnIdCliente.Value = vehiculo.IdCliente.ToString();
+            pnlDuenoSeleccion.Visible = false;
+            pnlDuenoFijo.Visible = true;
+            litDuenoActual.Text = Server.HtmlEncode(vehiculo.NombreCliente + " — " + vehiculo.DocumentoCliente);
+            btnCambiarDueno.Visible = vehiculo.Activo;
             txtPatente.Text = vehiculo.Patente;
             txtMarca.Text = vehiculo.Marca;
             txtModelo.Text = vehiculo.Modelo;
@@ -308,6 +332,74 @@ namespace LubricentroControl_2026
 
             litTituloFormulario.Text = vehiculo.Activo ? "Editar vehículo" : "Editar vehículo (inactivo)";
             MostrarFormulario();
+        }
+
+        // --- Cambio de dueño ----------------------------------------------------------------
+
+        protected void btnCambiarDueno_Click(object sender, EventArgs e)
+        {
+            if (EsSoloLectura) return;
+
+            PrepararCambioDueno(LeerIdOculto(hdnIdVehiculo.Value), 0);
+        }
+
+        // Abre el modal de cambio de dueño de un vehículo; idClienteElegido > 0 lo deja elegido
+        // (vuelta de "Nuevo cliente").
+        private void PrepararCambioDueno(int idVehiculo, int idClienteElegido)
+        {
+            var vehiculo = VehiculoDAL.ObtenerPorId(idVehiculo);
+            if (vehiculo == null)
+            {
+                MostrarMensaje("El vehículo no existe.", false);
+                return;
+            }
+
+            hdnIdVehiculoDueno.Value = vehiculo.IdVehiculo.ToString();
+            litTituloCambioDueno.Text = "Cambiar dueño — " + Server.HtmlEncode(vehiculo.Patente);
+            litVehiculoCambio.Text = Server.HtmlEncode(
+                (vehiculo.Patente + " · " + vehiculo.Marca + " " + vehiculo.Modelo).Trim(' ', '·'));
+            litDuenoAnterior.Text = Server.HtmlEncode(vehiculo.NombreCliente + " — " + vehiculo.DocumentoCliente);
+
+            hdnIdNuevoDueno.Value = string.Empty;
+            txtNuevoDueno.Text = string.Empty;
+            var cliente = idClienteElegido > 0 ? ClienteDAL.ObtenerPorId(idClienteElegido) : null;
+            if (cliente != null)
+            {
+                hdnIdNuevoDueno.Value = cliente.IdCliente.ToString();
+                txtNuevoDueno.Text = Selectores.TextoCliente(cliente);
+            }
+
+            Interfaz.AbrirModal(this, IdModalCambioDueno);
+        }
+
+        protected void valNuevoDueno_ServerValidate(object source, ServerValidateEventArgs args)
+        {
+            args.IsValid = LeerIdOculto(hdnIdNuevoDueno.Value) > 0;
+        }
+
+        protected void btnConfirmarCambioDueno_Click(object sender, EventArgs e)
+        {
+            if (EsSoloLectura) return;
+            if (!Page.IsValid)
+            {
+                Interfaz.AbrirModal(this, IdModalCambioDueno);
+                return;
+            }
+
+            var resultado = VehiculoDAL.CambiarDueno(
+                LeerIdOculto(hdnIdVehiculoDueno.Value), LeerIdOculto(hdnIdNuevoDueno.Value));
+
+            if (!resultado.Exito)
+            {
+                // El mensaje trae nombres de clientes: se escapa (los demás avisos ya vienen armados).
+                litErrorCambioDueno.Text = Server.HtmlEncode(resultado.Mensaje);
+                pnlErrorCambioDueno.Visible = true;
+                Interfaz.AbrirModal(this, IdModalCambioDueno);
+                return;
+            }
+
+            MostrarMensaje(Server.HtmlEncode(resultado.Mensaje), true);
+            CargarGrilla();
         }
 
         // Por defecto activo si el campo oculto llegara vacío o manipulado
@@ -332,6 +424,8 @@ namespace LubricentroControl_2026
             hdnActivo.Value = bool.TrueString;
             hdnIdCliente.Value = string.Empty;
             txtCliente.Text = string.Empty;
+            pnlDuenoSeleccion.Visible = true;
+            pnlDuenoFijo.Visible = false;
             txtPatente.Text = string.Empty;
             txtMarca.Text = string.Empty;
             txtModelo.Text = string.Empty;

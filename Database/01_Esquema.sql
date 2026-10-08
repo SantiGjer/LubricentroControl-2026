@@ -1,15 +1,22 @@
 ﻿/* ============================================================================
    LubricentroControl 2026 — Esquema de base de datos
-   Las 21 entidades del diagrama E/R (16 de negocio + 5 de seguridad) más
-   MovimientoStock, agregada en Fase 2 (kardex de stock, no está en el
-   diagrama original — ver Docs/Lubricentro_Requerimientos.md §8 y §9.3).
+   Las 21 entidades del diagrama E/R (16 de negocio + 5 de seguridad) más tres
+   agregadas después: MovimientoStock (kardex de stock, Fase 2 — ver
+   Docs/Lubricentro_Requerimientos.md §8 y §9.3), Producto (supertipo de
+   Servicio e Insumo, §9.9) y Factura (§9.10).
 
    Idempotente: se puede correr varias veces. Borra y recrea todas las tablas,
    por lo que PIERDE LOS DATOS. Correr 02_DatosIniciales.sql a continuación.
 
    Uso:
-     sqlcmd -S "(localdb)\MSSQLLocalDB" -i Database\01_Esquema.sql
+     sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i Database\01_Esquema.sql
    ============================================================================ */
+
+/* Los índices filtrados de Producto (SKU y código de barras únicos cuando
+   vienen cargados) exigen QUOTED_IDENTIFIER ON, y sqlcmd lo trae apagado. */
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_NULLS ON;
+GO
 
 IF DB_ID('LubricentroControl') IS NULL
     CREATE DATABASE LubricentroControl;
@@ -23,6 +30,7 @@ DROP TABLE IF EXISTS MovimientoStock;
 DROP TABLE IF EXISTS CuentaCorrienteProveedor;
 DROP TABLE IF EXISTS CuentaCorrienteCliente;
 DROP TABLE IF EXISTS Pago;
+DROP TABLE IF EXISTS Factura;
 DROP TABLE IF EXISTS DetalleComprobanteVenta;
 DROP TABLE IF EXISTS ComprobanteVenta;
 DROP TABLE IF EXISTS DetalleCompra;
@@ -35,6 +43,7 @@ DROP TABLE IF EXISTS Vehiculo;
 DROP TABLE IF EXISTS Cliente;
 DROP TABLE IF EXISTS Insumo;
 DROP TABLE IF EXISTS Servicio;
+DROP TABLE IF EXISTS Producto;
 DROP TABLE IF EXISTS Proveedor;
 DROP TABLE IF EXISTS RecuperacionClave;
 DROP TABLE IF EXISTS MenuNivel;
@@ -48,10 +57,13 @@ GO
    SEGURIDAD / LOGIN / MENÚ
    ========================================================================== */
 
+/* Rol de usuario. Admin (1) y Lectura (4) son fijos: Admin tiene siempre acceso
+   completo y Lectura es el rol de las cuentas creadas desde ~/Registro. El resto
+   se crea, renombra y borra desde la pantalla de Roles (§9.11). */
 CREATE TABLE Nivel (
     idNivel     INT IDENTITY(1,1) NOT NULL,
     nombre      NVARCHAR(50)      NOT NULL,
-    /* Menor jerarquía = más permisos. Admin=1 > Encargado=2 > Empleado=3 > Lectura=4 */
+    /* Orden en que se listan los roles: menor = más permisos. */
     jerarquia   INT               NOT NULL,
     CONSTRAINT PK_Nivel PRIMARY KEY (idNivel),
     CONSTRAINT UQ_Nivel_nombre UNIQUE (nombre)
@@ -91,6 +103,9 @@ CREATE TABLE Menu (
     idUrl       INT               NULL,
     idMenuPadre INT               NULL,
     orden       INT               NOT NULL,
+    /* Ícono de la barra lateral (nombre que entiende Site.Master.cs). Solo lo usan
+       las opciones de primer nivel; NULL = ícono genérico. */
+    icono       NVARCHAR(30)      NULL,
     activo      BIT               NOT NULL CONSTRAINT DF_Menu_activo DEFAULT (1),
     CONSTRAINT PK_Menu PRIMARY KEY (idMenu),
     CONSTRAINT FK_Menu_Url FOREIGN KEY (idUrl) REFERENCES Url(idUrl),
@@ -99,7 +114,8 @@ CREATE TABLE Menu (
 GO
 
 /* Qué opción de menú ve cada rol. soloLectura marca los casos "👁️ consulta"
-   de la matriz de permisos (§5 de los requerimientos). */
+   de la matriz de permisos (§5 de los requerimientos). Sin fila = sin acceso.
+   Se edita desde la pantalla de Roles. */
 CREATE TABLE MenuNivel (
     idMenu      INT NOT NULL,
     idNivel     INT NOT NULL,
@@ -128,21 +144,46 @@ GO
    MAESTROS DE NEGOCIO
    ========================================================================== */
 
+/* Datos fiscales agregados el 2026-10-07 (§9.8): tipo de cliente, documento con
+   su tipo, condición frente al IVA y domicilio completo. */
 CREATE TABLE Cliente (
-    idCliente INT IDENTITY(1,1) NOT NULL,
-    nombre    NVARCHAR(50)      NOT NULL,
-    apellido  NVARCHAR(50)      NOT NULL,
-    dni       NVARCHAR(15)      NOT NULL,
-    telefono  NVARCHAR(30)      NULL,
-    email     NVARCHAR(150)     NULL,
-    direccion NVARCHAR(200)     NULL,
+    idCliente       INT IDENTITY(1,1) NOT NULL,
+    /* Persona física (se nombra por nombre y apellido) | Empresa (por razón social) */
+    tipoCliente     NVARCHAR(20)      NOT NULL CONSTRAINT DF_Cliente_tipoCliente DEFAULT (N'Persona física'),
+    nombre          NVARCHAR(50)      NULL,
+    apellido        NVARCHAR(50)      NULL,
+    razonSocial     NVARCHAR(150)     NULL,
+    /* DNI | CUIT | CUIL | LE | LC | Pasaporte. Los numéricos se guardan sin puntos ni guiones. */
+    tipoDocumento   NVARCHAR(10)      NOT NULL CONSTRAINT DF_Cliente_tipoDocumento DEFAULT ('DNI'),
+    numeroDocumento NVARCHAR(20)      NOT NULL,
+    /* Consumidor Final | Responsable Inscripto | Monotributista | Exento — define la letra de la factura */
+    condicionIva    NVARCHAR(30)      NOT NULL CONSTRAINT DF_Cliente_condicionIva DEFAULT ('Consumidor Final'),
+    telefono        NVARCHAR(30)      NULL,
+    email           NVARCHAR(150)     NULL,
+    direccion       NVARCHAR(200)     NULL,
+    localidad       NVARCHAR(100)     NULL,
+    provincia       NVARCHAR(60)      NULL,
+    codigoPostal    NVARCHAR(10)      NULL,
     /* 1 = puede quedar debiendo (fiado). 0 = paga al cerrar la orden: la pantalla de Órdenes
        lo lleva directo a Pagos. Agregada el 2026-10-07, no estaba en el diagrama original. */
-    cuentaCorriente BIT         NOT NULL CONSTRAINT DF_Cliente_cuentaCorriente DEFAULT (0),
-    activo    BIT               NOT NULL CONSTRAINT DF_Cliente_activo DEFAULT (1),
-    fechaAlta DATETIME          NOT NULL CONSTRAINT DF_Cliente_fechaAlta DEFAULT (GETDATE()),
+    cuentaCorriente BIT               NOT NULL CONSTRAINT DF_Cliente_cuentaCorriente DEFAULT (0),
+    activo          BIT               NOT NULL CONSTRAINT DF_Cliente_activo DEFAULT (1),
+    fechaAlta       DATETIME          NOT NULL CONSTRAINT DF_Cliente_fechaAlta DEFAULT (GETDATE()),
+    /* Cómo se lo nombra en todas las pantallas: la razón social de una empresa, o
+       "Nombre Apellido" de una persona. Calculada: los DAL la leen como nombreCliente. */
+    denominacion    AS (CASE WHEN tipoCliente = N'Empresa' THEN razonSocial ELSE nombre + N' ' + apellido END),
     CONSTRAINT PK_Cliente PRIMARY KEY (idCliente),
-    CONSTRAINT UQ_Cliente_dni UNIQUE (dni)
+    CONSTRAINT UQ_Cliente_documento UNIQUE (tipoDocumento, numeroDocumento),
+    CONSTRAINT CK_Cliente_tipoCliente CHECK (tipoCliente IN (N'Persona física', N'Empresa')),
+    CONSTRAINT CK_Cliente_nombre CHECK (
+        (tipoCliente = N'Persona física' AND nombre IS NOT NULL AND apellido IS NOT NULL) OR
+        (tipoCliente = N'Empresa' AND razonSocial IS NOT NULL)),
+    CONSTRAINT CK_Cliente_tipoDocumento CHECK (tipoDocumento IN ('DNI','CUIT','CUIL','LE','LC','Pasaporte')),
+    CONSTRAINT CK_Cliente_condicionIva CHECK (
+        condicionIva IN ('Consumidor Final','Responsable Inscripto','Monotributista','Exento')),
+    /* Una empresa, y cualquiera que no sea consumidor final, se identifica con CUIT. */
+    CONSTRAINT CK_Cliente_cuit CHECK (
+        tipoDocumento = 'CUIT' OR (tipoCliente = N'Persona física' AND condicionIva = 'Consumidor Final'))
 );
 GO
 
@@ -174,28 +215,62 @@ CREATE TABLE Proveedor (
 );
 GO
 
-CREATE TABLE Servicio (
-    idServicio  INT IDENTITY(1,1) NOT NULL,
-    nombre      NVARCHAR(100)     NOT NULL,
-    descripcion NVARCHAR(300)     NULL,
-    precioBase  DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Servicio_precioBase DEFAULT (0),
-    activo      BIT               NOT NULL CONSTRAINT DF_Servicio_activo DEFAULT (1),
-    CONSTRAINT PK_Servicio PRIMARY KEY (idServicio),
-    CONSTRAINT CK_Servicio_precioBase CHECK (precioBase >= 0)
+/* Supertipo de Servicio e Insumo (§9.9): lo común a todo lo que se vende. Cada
+   producto es exactamente una de las dos subcategorías — la fila hija vive en
+   Servicio o en Insumo con el mismo id, y la FK compuesta (id, tipo) de cada
+   subtipo impide colgar un servicio de un producto de tipo Insumo o al revés. */
+CREATE TABLE Producto (
+    idProducto   INT IDENTITY(1,1) NOT NULL,
+    /* Servicio | Insumo — fijo desde el alta */
+    tipo         NVARCHAR(20)      NOT NULL,
+    nombre       NVARCHAR(100)     NOT NULL,
+    descripcion  NVARCHAR(300)     NULL,
+    sku          NVARCHAR(50)      NULL,
+    codigoBarras NVARCHAR(50)      NULL,
+    /* Precio final al público, con el IVA incluido. */
+    precio       DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Producto_precio DEFAULT (0),
+    /* Gravado | Exento | No gravado. Solo un producto gravado lleva alícuota. */
+    tipoIva      NVARCHAR(20)      NOT NULL CONSTRAINT DF_Producto_tipoIva DEFAULT ('Gravado'),
+    alicuotaIva  DECIMAL(5,2)      NOT NULL CONSTRAINT DF_Producto_alicuotaIva DEFAULT (21),
+    activo       BIT               NOT NULL CONSTRAINT DF_Producto_activo DEFAULT (1),
+    CONSTRAINT PK_Producto PRIMARY KEY (idProducto),
+    CONSTRAINT UQ_Producto_idTipo UNIQUE (idProducto, tipo),
+    CONSTRAINT CK_Producto_tipo CHECK (tipo IN ('Servicio','Insumo')),
+    CONSTRAINT CK_Producto_precio CHECK (precio >= 0),
+    CONSTRAINT CK_Producto_iva CHECK (
+        (tipoIva = 'Gravado' AND alicuotaIva IN (2.5, 5, 10.5, 21, 27)) OR
+        (tipoIva IN ('Exento','No gravado') AND alicuotaIva = 0))
 );
 GO
 
+/* SKU y código de barras: opcionales, pero no se repiten entre productos. */
+CREATE UNIQUE INDEX UX_Producto_sku ON Producto(sku) WHERE sku IS NOT NULL;
+CREATE UNIQUE INDEX UX_Producto_codigoBarras ON Producto(codigoBarras) WHERE codigoBarras IS NOT NULL;
+GO
+
+/* Subtipo Servicio: sin atributos propios por ahora, pero es el que referencian
+   las líneas de servicio de las órdenes y de las ventas. */
+CREATE TABLE Servicio (
+    idServicio  INT               NOT NULL,
+    tipo        NVARCHAR(20)      NOT NULL CONSTRAINT DF_Servicio_tipo DEFAULT ('Servicio'),
+    CONSTRAINT PK_Servicio PRIMARY KEY (idServicio),
+    CONSTRAINT CK_Servicio_tipo CHECK (tipo = 'Servicio'),
+    CONSTRAINT FK_Servicio_Producto FOREIGN KEY (idServicio, tipo) REFERENCES Producto(idProducto, tipo)
+);
+GO
+
+/* Subtipo Insumo: lo que tiene stock. stockActual solo cambia a través del kardex
+   (MovimientoStock). */
 CREATE TABLE Insumo (
-    idInsumo      INT IDENTITY(1,1) NOT NULL,
-    nombre        NVARCHAR(100)     NOT NULL,
+    idInsumo      INT               NOT NULL,
+    tipo          NVARCHAR(20)      NOT NULL CONSTRAINT DF_Insumo_tipo DEFAULT ('Insumo'),
     marca         NVARCHAR(50)      NULL,
     unidadMedida  NVARCHAR(20)      NULL,
     stockActual   DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Insumo_stockActual DEFAULT (0),
     stockMinimo   DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Insumo_stockMinimo DEFAULT (0),
-    precioVenta   DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Insumo_precioVenta DEFAULT (0),
-    activo        BIT               NOT NULL CONSTRAINT DF_Insumo_activo DEFAULT (1),
     CONSTRAINT PK_Insumo PRIMARY KEY (idInsumo),
-    CONSTRAINT CK_Insumo_precioVenta CHECK (precioVenta >= 0),
+    CONSTRAINT CK_Insumo_tipo CHECK (tipo = 'Insumo'),
+    CONSTRAINT FK_Insumo_Producto FOREIGN KEY (idInsumo, tipo) REFERENCES Producto(idProducto, tipo),
     CONSTRAINT CK_Insumo_stockActual CHECK (stockActual >= 0),
     CONSTRAINT CK_Insumo_stockMinimo CHECK (stockMinimo >= 0)
 );
@@ -310,7 +385,8 @@ CREATE TABLE DetalleCompra (
 GO
 
 /* Nace automáticamente al cerrar una orden de trabajo — no se carga a mano.
-   Comprobante interno, sin validez fiscal. */
+   Comprobante interno, sin validez fiscal. total = precios finales con IVA;
+   subtotal = neto (sin IVA) e impuestos = IVA contenido, sumados de sus líneas. */
 CREATE TABLE ComprobanteVenta (
     idVenta           INT IDENTITY(1,1) NOT NULL,
     idOrden           INT               NOT NULL,
@@ -337,13 +413,61 @@ CREATE TABLE DetalleComprobanteVenta (
     idInsumo       INT               NULL,
     descripcion    NVARCHAR(200)     NOT NULL,
     cantidad       DECIMAL(12,2)     NOT NULL,
+    /* Precio final (con IVA) y subtotal = cantidad × precio. */
     precioUnitario DECIMAL(12,2)     NOT NULL,
     subtotal       DECIMAL(12,2)     NOT NULL,
+    /* IVA del producto al momento de la venta (§9.10): la venta no cambia si después se
+       cambia el IVA del producto. importeIva es el IVA contenido en el subtotal. */
+    tipoIva        NVARCHAR(20)      NOT NULL,
+    alicuotaIva    DECIMAL(5,2)      NOT NULL,
+    importeIva     DECIMAL(12,2)     NOT NULL,
     CONSTRAINT PK_DetalleComprobanteVenta PRIMARY KEY (idDetalle),
     CONSTRAINT FK_DetVenta_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
     CONSTRAINT FK_DetVenta_Servicio FOREIGN KEY (idServicio) REFERENCES Servicio(idServicio),
     CONSTRAINT FK_DetVenta_Insumo FOREIGN KEY (idInsumo) REFERENCES Insumo(idInsumo),
-    CONSTRAINT CK_DetVenta_tipoItem CHECK (tipoItem IN ('S','I'))
+    CONSTRAINT CK_DetVenta_tipoItem CHECK (tipoItem IN ('S','I')),
+    CONSTRAINT CK_DetVenta_iva CHECK (
+        (tipoIva = 'Gravado' AND alicuotaIva > 0) OR
+        (tipoIva IN ('Exento','No gravado') AND alicuotaIva = 0 AND importeIva = 0))
+);
+GO
+
+/* Factura de una venta (§9.10), generada a pedido desde la pantalla de Ventas.
+   Comprobante sin validez fiscal (no hay CAE de ARCA): la letra sale de la
+   condición frente al IVA del comercio y del cliente, y la numeración es
+   correlativa por letra y punto de venta. Guarda los datos del comercio y del
+   cliente del momento en que se emitió: la factura no cambia si después se
+   editan. Las líneas y los importes son los de la venta, que no se modifica. */
+CREATE TABLE Factura (
+    idFactura                INT IDENTITY(1,1) NOT NULL,
+    idVenta                  INT               NOT NULL,
+    /* A | B | C */
+    tipo                     CHAR(1)           NOT NULL,
+    puntoVenta               INT               NOT NULL,
+    numero                   INT               NOT NULL,
+    fecha                    DATETIME          NOT NULL CONSTRAINT DF_Factura_fecha DEFAULT (GETDATE()),
+    idUsuario                INT               NOT NULL,
+    /* Contado | Cuenta corriente */
+    condicionVenta           NVARCHAR(30)      NOT NULL,
+    emisorRazonSocial        NVARCHAR(150)     NOT NULL,
+    emisorCuit               NVARCHAR(20)      NOT NULL,
+    emisorCondicionIva       NVARCHAR(30)      NOT NULL,
+    emisorDomicilio          NVARCHAR(300)     NULL,
+    emisorIngresosBrutos     NVARCHAR(30)      NULL,
+    emisorInicioActividades  NVARCHAR(20)      NULL,
+    receptorNombre           NVARCHAR(150)     NOT NULL,
+    receptorTipoDocumento    NVARCHAR(10)      NOT NULL,
+    receptorNumeroDocumento  NVARCHAR(20)      NOT NULL,
+    receptorCondicionIva     NVARCHAR(30)      NOT NULL,
+    receptorDomicilio        NVARCHAR(400)     NULL,
+    CONSTRAINT PK_Factura PRIMARY KEY (idFactura),
+    CONSTRAINT UQ_Factura_venta UNIQUE (idVenta),
+    CONSTRAINT UQ_Factura_numero UNIQUE (tipo, puntoVenta, numero),
+    CONSTRAINT FK_Factura_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
+    CONSTRAINT FK_Factura_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
+    CONSTRAINT CK_Factura_tipo CHECK (tipo IN ('A','B','C')),
+    CONSTRAINT CK_Factura_puntoVenta CHECK (puntoVenta BETWEEN 1 AND 99999),
+    CONSTRAINT CK_Factura_numero CHECK (numero > 0)
 );
 GO
 
@@ -463,7 +587,9 @@ GO
 /* --- Índices de apoyo a las búsquedas más frecuentes --------------------- */
 CREATE INDEX IX_Vehiculo_idCliente        ON Vehiculo(idCliente);
 CREATE INDEX IX_Turno_fechaHoraAsignada   ON Turno(fechaHoraAsignada);
+CREATE INDEX IX_Turno_idVehiculo          ON Turno(idVehiculo);
 CREATE INDEX IX_Orden_idCliente           ON OrdenDeTrabajo(idCliente);
+CREATE INDEX IX_Orden_idVehiculo          ON OrdenDeTrabajo(idVehiculo);
 CREATE INDEX IX_Orden_fecha               ON OrdenDeTrabajo(fecha);
 CREATE INDEX IX_Venta_fecha               ON ComprobanteVenta(fecha);
 CREATE INDEX IX_CCCli_idCliente           ON CuentaCorrienteCliente(idCliente);

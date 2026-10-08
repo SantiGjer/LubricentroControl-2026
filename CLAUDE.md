@@ -13,7 +13,8 @@ pulido — primer frente arrancado el 27/09: pruebas de flujo completo, ver Hist
 más abajo). Andan el login, la
 recuperación de contraseña por mail, el ABM de usuarios, el menú dinámico por rol, la capa
 `BIZ/Data` de punta a punta contra SQL Server, los 5 ABM de Fase 2 (**Clientes**, **Vehículos**,
-**Proveedores**, **Insumos** con kardex de stock, y **Servicios**), las 2 pantallas de Fase 3
+**Proveedores**, **Insumos** con kardex de stock, y **Servicios** — estos dos, fusionados en
+**Productos** desde el 2026-10-07), las 2 pantallas de Fase 3
 (**Turnos** y **Órdenes de trabajo**), y las 5 de Fase 4: **Compras** (alta con líneas armadas en
 memoria y guardadas todas juntas, suma stock automáticamente, condición de pago Contado/Cuenta
 corriente), **Cuenta corriente de Proveedores** y **Cuenta corriente de Clientes** (historial +
@@ -21,12 +22,22 @@ saldo + ajuste manual, calcadas entre sí), **Ventas** (de solo lectura: el comp
 automáticamente al cerrar una orden de trabajo, botón nuevo `btnCerrarOrden` en Órdenes), y
 **Pagos** (de cliente o de proveedor, imputado a un comprobante puntual o "a cuenta general").
 Las 21 tablas del diagrama original ya existen (`Database\01_Esquema.sql`), más `MovimientoStock`
-(kardex de stock, agregada en Fase 2 — ver §9.3 de los Requerimientos) y dos columnas agregadas
+(kardex de stock, agregada en Fase 2 — ver §9.3 de los Requerimientos), `Producto` y `Factura`
+(2026-10-07, §9.9 y §9.10) y dos columnas agregadas
 en Fase 4 (`ComprobanteCompra.medioPago`, `CuentaCorrienteCliente`/`Proveedor.idUsuario` — ver
 §9.5). **Los tres reportes de Fase 5 ya están hechos**: Stock bajo, Ventas por período (sobre
 `ComprobanteVentaDAL.ListarPorPeriodo`) y Cuentas corrientes (sobre
 `CuentaCorrienteCliente`/`ProveedorDAL.ListarSaldos`, dos métodos nuevos) — ninguno de los tres
 necesitó cambio de esquema.
+
+**Segundo pedido del 2026-10-07 (13 puntos, ver Requerimientos §9.7 a §9.12):** barra lateral
+con el menú; opciones de filtro en botones, columnas elegibles y "Ver" en todas las listas;
+**Servicios e Insumos pasaron a ser subcategorías de `Producto`** (una sola pantalla,
+`~/Productos`), con SKU, código de barras e IVA; **datos fiscales del cliente** (persona o empresa,
+tipo de identificación, condición frente al IVA, domicilio completo); **factura imprimible** desde
+Ventas; **cambio de dueño** de un vehículo; los turnos de hoy primero; el cierre de una orden de un
+cliente con cuenta corriente pregunta si el saldo va a la cuenta o se cobra; y **roles y permisos
+editables** (`~/Roles`).
 
 Fuera de las 6 fases del Roadmap se agregó un **cuarto rol, Lectura** (`Nivel.Lectura = 4`,
 jerarquía por debajo de Empleado): solo consulta en absolutamente todas las pantallas de negocio
@@ -41,13 +52,14 @@ más abajo.
 Documentos de referencia (leer antes de diseñar algo del dominio):
 
 - `Docs/Lubricentro_Requerimientos.md` — alcance, matriz de permisos por rol, las 21 entidades
-  (+ `MovimientoStock`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
+  (+ `MovimientoStock`, `Producto` y `Factura`), reglas de negocio, qué quedó explícitamente fuera de alcance, y §9 con
   los supuestos/formatos ya confirmados en Fase 2/3/4 (DNI/CUIT/patente, diseño de
   Clientes/Vehículos, kardex de stock, estados de Turno/Orden, medio de pago de Compras) más el
-  rol Lectura y `~/Registro` en §9.6, fuera de las 6 fases.
+  rol Lectura y `~/Registro` en §9.6, fuera de las 6 fases, y §9.7 a §9.12 (cuenta corriente
+  opcional, datos fiscales, productos, IVA y factura, roles editables, cambio de dueño).
 - `Docs/Lubricentro_Roadmap.md` — 6 fases de ejecución. **Fase 5 terminada** (Reportes — §6.9: los tres hechos); **falta Fase 6** (integración, pruebas
   y pulido — sin empezar). Los ABM de Fase 2, las pantallas de Fase 3 y las
-  de Fase 4 quedan como referencia de patrón — Proveedores/Insumos/Servicios para el modo
+  de Fase 4 quedan como referencia de patrón — Proveedores/Productos para el modo
   solo-consulta, Clientes/Vehículos para la lista con formulario en modal y el selector con
   búsqueda (desde 2026-10-07, ver «Formularios en modales y listas en el navegador» más abajo),
   Turnos/Órdenes para pantallas con cliente/vehículo fijo post-alta y (en Órdenes) franja de
@@ -55,11 +67,12 @@ Documentos de referencia (leer antes de diseñar algo del dominio):
   guardadas todas juntas en un solo batch atómico, en vez de la franja progresiva de Órdenes —
   usarlo cuando la entidad se carga completa de una vez (como una factura), no progresivamente.
   Las dos Cuentas corrientes suman otro matiz de permisos: "solo consulta" para Empleado no
-  esconde toda la pantalla (a diferencia de Proveedores/Insumos/Compras), solo la franja de
+  esconde toda la pantalla (a diferencia de Proveedores/Productos/Compras), solo la franja de
   escritura — porque la pantalla ya es de consulta para todos los roles, lo único que cambia es
-  si además puede escribir un ajuste. Ventas es la primera pantalla puramente de solo lectura del
-  proyecto (sin alta, sin `EsSoloLectura` que manejar) y la primera vez que una pantalla de Fase 4
-  modifica código de una fase ya entregada (Órdenes de trabajo). Pagos usa los mismos selectores
+  si además puede escribir un ajuste. Ventas fue la primera pantalla puramente de solo lectura del
+  proyecto y la primera vez que una pantalla de Fase 4 modificó código de una fase ya entregada
+  (Órdenes de trabajo); desde el 2026-10-07 tiene una escritura, "Facturar", que sí respeta
+  `EsSoloLectura`. Pagos usa los mismos selectores
   con búsqueda de cliente y de proveedor que el resto (`Utilidades/Selectores.cs`).
 
 ## Restricciones del stack (no negociables)
@@ -107,6 +120,7 @@ opcional — ver «Codificación» más abajo:
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\01_Esquema.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\02_DatosIniciales.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\03_UsuariosDePrueba.sql"   # opcional
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\04_DatosDemo.sql"          # opcional, datos de ejemplo
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -115,6 +129,42 @@ acá (es `packages.config`) y `nuget.exe` no está instalado en esta máquina.
 **No hay proyecto de tests** ni framework de testing configurado en la solución. No inventar un
 comando de tests: la verificación es compilar, correr `aspnet_compiler` y probar la pantalla
 levantando IIS Express.
+
+## Al levantar el proyecto en otra máquina
+
+Lo que clonar el repo no resuelve solo (relevado el 2026-10-08). Las decisiones que siguen
+abiertas están en `Docs/EstadoActual.md`, sección 4.
+
+- **Recrear la base con `01` a `04`.** El esquema cambió el 2026-10-07 (ver «Base de datos»): con
+  una base anterior la app falla apenas se inicia sesión, porque el menú lee `Menu.icono`. `01`
+  borra los datos; `03` y `04` son opcionales (`04` usa al admin si faltan los usuarios de `03`).
+- **Los datos de ejemplo se fechan al correr `04`.** Turnos, órdenes, compras y pagos salen de
+  `GETDATE()`, y dos turnos quedan para ese mismo día (10:30 y 17:00). Con la base recreada otro
+  día, "hoy" sale vacío en Turnos y en el Inicio: no es un bug, se vuelven a correr `01` a `04`.
+- **Mails: el `Web.config` commiteado trae `MailModoDesarrollo=false`** (envío real por Gmail),
+  pero las credenciales van en `Web.MailSettings.config`, que está gitignoreado y no viene con el
+  repo. Sin ese archivo el envío falla sin romper la pantalla: `ServicioMail.Enviar` devuelve el
+  error, pero quien lo llama no lo muestra. El alta y el blanqueo de usuarios igual muestran la
+  clave temporal en pantalla; el mail de recuperación de clave, en cambio, no sale y nadie se
+  entera. Para que ande, copiar `Web.MailSettings.config.example` como `Web.MailSettings.config`,
+  completarlo y poner la misma cuenta en `MailRemitente`; para probar sin correo,
+  `MailModoDesarrollo=true` (los mails quedan en `App_Data\MailsEnviados`) sin commitearlo.
+- **Los datos del comercio para la factura (`Emisor.*` en `Web.config`) son de ejemplo**: razón
+  social, CUIT, domicilio, ingresos brutos e inicio de actividades inventados. Reemplazarlos por
+  los reales antes de imprimir una factura. `Emisor.CondicionIva` define la letra (Responsable
+  Inscripto emite A o B; Monotributista o Exento, C), y cada letra numera por separado en cada
+  `Emisor.PuntoVenta`.
+- **La factura no tiene validez fiscal:** no lleva CAE ni se conecta con AFIP/ARCA, que quedó
+  fuera de alcance (ver «Reglas de negocio que cruzan módulos»). No es algo a medio hacer.
+- **Los números dependen de la configuración regional de Windows.** `<globalization>` no fija
+  `culture`, así que cada máquina muestra y lee los importes con la suya: en inglés `3,500.00`,
+  en español de Argentina `3.500,00`. En una misma máquina es coherente (lo que se carga al
+  editar se vuelve a leer bien, y `Lubricentro.js` ordena con los separadores que le pasa
+  `Site.Master`). Lo que se tipea en el formato de la otra configuración lo rechaza el
+  `CompareValidator Type="Currency"` de cada campo, salvo en las líneas de Compras (cantidad y
+  precio unitario), que no tienen validador: en una máquina en inglés `1500,50` se guarda como
+  `150050`, sin aviso. Fijar `culture="es-AR" uiCulture="es-AR"` lo dejaría igual en todas las
+  máquinas; está pendiente de decidir.
 
 ## Arquitectura
 
@@ -128,13 +178,16 @@ Dos proyectos en la solución:
 Dentro de `BIZ` hay tres carpetas, **no proyectos aparte** (decisión explícita de los
 requerimientos §4 — no partir `BIZ`):
 
-- `Modelo/` — entidades (`Usuario`, `Nivel`, `Url`, `ItemMenu`, `RecuperacionClave`,
-  `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`, `Insumo`, `MovimientoStock`, `Servicio`,
-  `Turno`, `OrdenDeTrabajo`, `DetalleOrdenServicio`, `DetalleOrdenInsumo`).
+- `Modelo/` — entidades (`Usuario`, `Nivel` + `PermisoPantalla`, `Url`, `ItemMenu`,
+  `RecuperacionClave`, `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`, `Producto`,
+  `MovimientoStock`, `Turno`, `OrdenDeTrabajo`, `DetalleOrdenServicio`, `DetalleOrdenInsumo`,
+  `ComprobanteVenta`, `Factura` + `TotalesFactura` + `DatosEmisor`, etc.) y dos clases estáticas de
+  reglas de formato: `FormatoTelefono` e `Iva` (tipos, alícuotas, condiciones frente al IVA y el
+  cálculo del IVA contenido).
 - `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
-  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `ClienteDAL`, `VehiculoDAL`, `ProveedorDAL`,
-  `InsumoDAL`, `MovimientoStockDAL`, `ServicioDAL`, `TurnoDAL`, `OrdenDeTrabajoDAL`,
-  `DetalleOrdenServicioDAL`, `DetalleOrdenInsumoDAL`). Todo pasa por
+  `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `NivelDAL`, `ClienteDAL`, `VehiculoDAL`,
+  `ProveedorDAL`, `ProductoDAL`, `MovimientoStockDAL`, `TurnoDAL`, `OrdenDeTrabajoDAL`,
+  `DetalleOrdenServicioDAL`, `DetalleOrdenInsumoDAL`, `ComprobanteVentaDAL`, `FacturaDAL`). Todo pasa por
   `AccesoDatos.cs`, que centraliza
   la cadena de conexión y expone `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`,
   `LeerInt`, etc. para mapear `DataRow`. **Nunca concatenar SQL**: siempre
@@ -158,14 +211,15 @@ Reglas transversales de la capa web:
   igual exigen login heredan de `PaginaConSesion`; `Login`, `RecuperarClave` y `RestablecerClave`
   son `Page` común.
 - `PaginaSegura` expone `EsSoloLectura` para los casos "👁️ Solo consulta" de la matriz de permisos.
-  **Una pantalla nueva debe deshabilitar sus acciones de escritura cuando vale true.** Patrón ya
-  implementado en `Proveedores.aspx` (primera pantalla real que lo necesita, aplica igual a
-  Insumos y Servicios): esconder el botón "Nuevo …" de la barra, el `Panel` del formulario entero
-  (`pnlFormulario.Visible = !EsSoloLectura`, que es el contenido del modal) y la columna
-  "Acciones" de la grilla (`gvX.Columns[n].Visible = false`), no solo deshabilitar botones — y
-  además cada método de escritura (`Guardar`/`Borrar`/`Reactivar`/`RowCommand`) chequea
-  `EsSoloLectura` y corta al principio, por si alguien fuerza el request aunque el control esté
-  escondido.
+  **Una pantalla nueva debe deshabilitar sus acciones de escritura cuando vale true** — y desde que
+  los permisos se editan en Roles (2026-10-07), **cualquier pantalla** puede quedar en consulta
+  para cualquier rol, también las que hoy solo ve Admin. Patrón (ej. `Proveedores.aspx`): esconder
+  el botón "Nuevo …" de la barra y el `Panel` del formulario entero
+  (`pnlFormulario.Visible = !EsSoloLectura`, que es el contenido del modal), y en la grilla solo
+  los enlaces de escritura (`Visible='<%# PuedeEscribir %>'`, propiedad de `PaginaSegura`): la
+  columna "Acciones" queda porque "Ver" es para todos. Además cada método de escritura
+  (`Guardar`/`Borrar`/`Reactivar`/`RowCommand`) chequea `EsSoloLectura` y corta al principio, por
+  si alguien fuerza el request aunque el control esté escondido.
 - **Formularios en modales y listas en el navegador (desde 2026-10-07).** Cada pantalla de gestión
   es una lista a todo el ancho con una `barra-herramientas` arriba (filtro, opciones, botón
   "Nuevo …"); alta, edición y detalle van en un modal de Bootstrap. Reglas del patrón:
@@ -182,19 +236,42 @@ Reglas transversales de la capa web:
     `table.tabla-abm`: el servidor trae la lista completa (sin `Buscar` en el DAL ni
     `AllowPaging` en el GridView). Atributos: `data-filtro="idInput"` en el GridView para usar el
     filtro de la barra, `data-sin-filtro` para grillas chicas, `data-filas-por-pagina="N"`,
-    `data-buscar` en la fila (desde `RowDataBound`) para lo que se busca pero no es columna, y
-    `HeaderStyle-CssClass="sin-orden"` en la columna de Acciones. El estado sobrevive a los
-    postbacks en `hdnEstadoTablas` (Site.Master).
+    `data-buscar` en la fila (desde `RowDataBound`) para lo que se busca pero no es columna,
+    `HeaderStyle-CssClass="sin-orden"` en la columna de Acciones y `data-estatica` para una tabla
+    con el estilo pero sin orden (la matriz de Roles). El estado sobrevive a los postbacks en
+    `hdnEstadoTablas` (Site.Master).
+  - **Opciones de filtro (desde 2026-10-07):** un `<div class="opciones-tabla" id="opcionesX">`
+    justo debajo de la barra, con grupos `.grupo-opciones` de botones `.opcion data-valor="…"`
+    (`""` = todos, `"A|B"` = cualquiera de los dos), y `data-opciones-tabla="opcionesX"` en el
+    GridView. Cada grupo filtra por una columna (`data-columna="Estado"`, por el texto del
+    encabezado) o por un atributo de la fila (`data-atributo="saldo"` lee `data-saldo`, puesto en
+    `RowDataBound`); `data-inicial` elige con qué arranca. Reemplazan a las casillas que
+    filtraban en el servidor: no agregar filtros nuevos al DAL.
+  - **Columnas y "Ver":** cada grilla trae todas las columnas útiles; las secundarias van con
+    `HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta"` (escondidas de entrada; el botón
+    "Columnas" las muestra y se recuerda en el navegador). "Ver" es `<a href="#" class="accion-ver"
+    data-ver-detalle>Ver</a>` en Acciones: abre una ventana con todas las columnas de la fila;
+    los enlaces de la fila con `CssClass="accion-detalle"` (Editar…) salen en su pie, y
+    `ItemStyle-CssClass="celda-titulo"` hace clicable el nombre. Si el detalle necesita más que la
+    fila (líneas de una orden o una venta), "Ver" es un `LinkButton` con `CssClass="accion-ver"`
+    que abre un modal del servidor.
+  - **Campos que dependen de otra elección:** `data-mostrar-si="idControl=Valor"` (o
+    `"Valor1|Valor2"`) muestra el elemento solo con ese valor en el desplegable o
+    `RadioButtonList` `idControl` (con `ClientIDMode="Static"`). Solo esconde: el servidor valida
+    igual (ej. `CustomValidator` con `ValidateEmptyText` que mira la otra elección).
   - Para elegir cliente, dueño o proveedor: `.selector-busqueda` (TextBox `selector-texto` +
     botón + HiddenField con el id), con las opciones en `data-opciones="<%: OpcionesClientes %>"`
     (`Utilidades/Selectores.cs`). Con `data-postback="true"` elegir dispara el `OnValueChanged`
     del HiddenField (va adentro de un `UpdatePanel`).
 - La sesión se toca solo a través de `Seguridad/SesionUsuario.cs`, nunca `Session["..."]` directo.
-- El menú se arma en `Site.Master.cs` desde `MenuDAL.ObtenerArbol(idNivel)` (que a su vez arma el
-  árbol con `ItemMenu.ArmarArbol`, en `Modelo/`, a partir de la lista plana de
-  `MenuDAL.ListarPorNivel`). Para agregar una
-  pantalla al menú hay que insertar filas en `Url`, `Menu` y `MenuNivel` — ver el patrón en
-  `Database\02_DatosIniciales.sql`. Una pantalla sin fila en `MenuNivel` es inaccesible para ese rol.
+- El menú es una **barra lateral** (desde 2026-10-07) que arma `Site.Master.cs` desde
+  `MenuDAL.ObtenerArbol(idNivel)` (que a su vez arma el árbol con `ItemMenu.ArmarArbol`, en
+  `Modelo/`, a partir de la lista plana de `MenuDAL.ListarPorNivel`). Las opciones de primer nivel
+  llevan ícono (`Menu.icono`, dibujado en `Site.Master.cs`). Para agregar una pantalla al menú hay
+  que insertar filas en `Url`, `Menu` y `MenuNivel` — ver el patrón en
+  `Database\02_DatosIniciales.sql`, con los permisos de los roles de base; después se ajustan
+  desde `~/Roles`, que reescribe `MenuNivel` del rol (pantallas **y** sus grupos: sin la fila del
+  grupo, la pantalla no aparece). Una pantalla sin fila en `MenuNivel` es inaccesible para ese rol.
 - **FriendlyUrls está activo** (`App_Start/RouteConfig.cs`): los links y los `path` de la tabla
   `Url` van sin extensión — `~/Clientes`, no `~/Clientes.aspx`. Rompe el cross-page posting
   clásico de Web Forms (`PostBackUrl`/`PreviousPage`) — ver «Cross-page posting no funciona con
@@ -210,9 +287,20 @@ Reglas transversales de la capa web:
 
 Estas no se ven leyendo un solo archivo:
 
+- **Servicio e Insumo son subtipos de `Producto`** (desde 2026-10-07): el `idServicio`/`idInsumo`
+  de cada tabla es el `idProducto`, y las órdenes, compras, ventas y el kardex apuntan al subtipo.
+  Nombre, precio, SKU, código de barras e IVA se leen de `Producto` (`ProductoDAL`); marca, unidad y
+  stock, de `Insumo`. El tipo de un producto no cambia después del alta.
+- **Los precios son finales, con el IVA incluido.** Al generar la venta, cada línea copia el IVA
+  de su producto y guarda el IVA que contiene (`Iva.Contenido`); la venta guarda el neto en
+  `subtotal` y el IVA en `impuestos`, y el total no cambia. La factura (`FacturaDAL.Emitir`, desde
+  Ventas) toma la letra de la condición frente al IVA del comercio (`Web.config`, `Emisor.*`) y
+  del cliente, y es sin validez fiscal (sin CAE).
+- **Cambiar el dueño de un vehículo es `VehiculoDAL.CambiarDueno`**, no la edición (`Actualizar`
+  ya no toca `idCliente`): se rechaza con una orden en el taller o un turno pendiente del vehículo.
 - **Stock automático en los dos sentidos:** baja al agregar una línea de insumo a una orden de
   trabajo (`DetalleOrdenInsumoDAL.Agregar`, Fase 3, ya implementado), sube al registrar una compra
-  a proveedor (Fase 4, todavía sin implementar). **Cancelar una orden de trabajo repone el stock
+  a proveedor (`ComprobanteCompraDAL.Crear`, Fase 4). **Cancelar una orden de trabajo repone el stock
   de los insumos cargados** (`OrdenDeTrabajoDAL.Cancelar`, ya implementado). Cada cambio de stock
   (orden, cancelación de orden, ajuste manual, y compra cuando exista) queda registrado en
   `MovimientoStock` (kardex) con quién y por qué. `MovimientoStockDAL.Registrar` es el camino para
@@ -230,7 +318,8 @@ Estas no se ven leyendo un solo archivo:
 - **La cuenta corriente del cliente es opcional (`Cliente.cuentaCorriente`, desde 2026-10-07).**
   Sin ella, cerrar su orden en `OrdenesDeTrabajo.aspx` redirige a `~/Pagos?idVenta=N`, que abre
   el cobro con el cliente y el saldo de esa venta cargados (el monto se lee de la base, no del
-  query string). La venta y su movimiento de cuenta corriente se generan igual para todos: el
+  query string). Con ella, el cierre pregunta si el saldo queda en la cuenta o se cobra ahora
+  (mismo redirect). La venta y su movimiento de cuenta corriente se generan igual para todos: el
   flag no cambia el circuito de `BIZ`, solo adónde va la pantalla. El interruptor lo cambia quien
   escribe en `~/CuentaCorrienteClientes` (Admin/Encargado), con la guarda en el servidor
   (`Clientes.aspx.cs`, `CuentaCorrienteElegida`).
@@ -239,8 +328,10 @@ Estas no se ven leyendo un solo archivo:
   (`Abierta`/`En proceso`) — `DetalleOrdenServicioDAL.Agregar`/`Quitar` y
   `DetalleOrdenInsumoDAL.Agregar` lo chequean ellos mismos, no sólo la UI (ver «Historial de
   decisiones», entrada de Fase 6).
-- Roles jerárquicos **Admin > Encargado > Empleado > Lectura**. El menú se arma dinámicamente según
-  el nivel del usuario logueado (entidades `Menu`, `Url`, `Nivel`). El rol Empleado tiene acceso
+- Roles de base **Admin > Encargado > Empleado > Lectura**, editables desde `~/Roles` (desde
+  2026-10-07: se crean roles y se cambia el acceso por pantalla; Admin queda siempre completo y no
+  se edita, Lectura no se borra). El código solo conoce dos ids: `Nivel.Admin` y `Nivel.Lectura`.
+  El menú se arma dinámicamente según el rol del usuario logueado (entidades `Menu`, `Url`, `Nivel`). El rol Empleado tiene acceso
   restringido a compras y cuentas corrientes (solo consulta) y ninguno a reportes financieros ni a
   gestión de usuarios. El rol Lectura (agregado fuera del alcance original, ver §9.6) es solo
   consulta en **todo** lo que ve — mismas pantallas que Empleado, pero sin escritura en ninguna —
@@ -267,6 +358,15 @@ Fase 4 sumó dos columnas que tampoco estaban en el diagrama original (ver Reque
 `Cliente.cuentaCorriente` (`BIT NOT NULL`, default 0) se agregó el 2026-10-07: una base creada
 antes no la tiene y `ClienteDAL` falla hasta recrearla con `01` a `04`.
 
+El mismo día (segundo pedido) cambió más el esquema, así que **toda base anterior se recrea con
+`01` a `04`**: `Producto` (supertipo, con índices únicos filtrados de SKU y código de barras) y
+`Servicio`/`Insumo` como subtipos con FK compuesta `(id, tipo)`; `Cliente` con `tipoCliente`,
+`razonSocial`, `tipoDocumento` + `numeroDocumento` (reemplazan a `dni`), `condicionIva`,
+`localidad`, `provincia`, `codigoPostal` y la columna calculada `denominacion`;
+`DetalleComprobanteVenta` con `tipoIva`, `alicuotaIva` e `importeIva`; `Factura`; y `Menu.icono`.
+Los índices filtrados exigen `SET QUOTED_IDENTIFIER ON` (sqlcmd lo trae apagado): los scripts lo
+fijan al principio; un script nuevo que inserte en `Producto` tiene que hacer lo mismo.
+
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`). Para pasar al
 SQL Server del lubricentro por VPN Radmin alcanza con cambiar la cadena `LubricentroDB` en
 `Web.config`; los scripts corren igual.
@@ -286,7 +386,8 @@ en la suya.
 - Con `MailModoDesarrollo=true` en `Web.config` los mails **no salen por SMTP**: se escriben como
   `.txt` planos en `App_Data\MailsEnviados` (destinatario, asunto y cuerpo, sin codificar). Así se
   prueba el circuito de recuperación de clave sin servidor de correo ni cliente de mail — alcanza
-  con abrir el archivo con cualquier editor de texto.
+  con abrir el archivo con cualquier editor de texto. Ojo: el `Web.config` commiteado hoy lo trae
+  en `false` (ver «Al levantar el proyecto en otra máquina»).
 - La recuperación responde **el mismo mensaje genérico exista o no el mail**, y el login usa un
   único mensaje de error para usuario inexistente y contraseña incorrecta. Es a propósito: evita
   que el formulario sirva para averiguar qué cuentas existen. No "mejorar" esos mensajes.
@@ -337,16 +438,20 @@ en `Docs/EstadoActual.md`, no en la UI.
 
 **Estilo de las pantallas (desde 2026-10-06, ampliado el 2026-10-07).** Todas las pantallas con menú
 ponen su contenido dentro de `<div class="pantalla-abm">` y usan las clases de `Content\Site.css`
-(bloque "Pantallas de gestión (ABM)"): `barra-herramientas` (+ `filtro-tabla-texto`, `opcion-barra`,
-`acciones-barra`), `tabla-abm` (+ `tabla-compacta` si tiene muchas columnas), el modal (`modal-content`
-con `modal-header`/`modal-body`/`modal-footer` y `acciones-secundarias` a la izquierda del pie),
-`campos-formulario` + `campo` para la grilla de campos, `selector-busqueda`, `panel-gris`,
-`boton-rojo`/`boton-gris`/`boton-borde-rojo`. Sin bordes `border border-1`, sin las clases
-`table table-striped...` de Bootstrap en las grillas. El fondo gris de toda la página sale de
-`html:has(.pantalla-abm)`, así que una pantalla nueva solo necesita el contenedor. Las pantallas de
-ingreso (Login, Registro, Recuperar/Restablecer clave) tienen su tarjeta propia (`.login-card`, clara
-desde 2026-10-07). Las filas que el código resalta con un fondo en línea (stock bajo, saldo pendiente)
-conservan ese fondo.
+(bloque "Pantallas de gestión (ABM)"): `barra-herramientas` (+ `filtro-tabla-texto` y
+`acciones-barra`) seguida de `opciones-tabla` si hay opciones de filtro, `tabla-abm` (+
+`tabla-compacta` si tiene muchas columnas), el modal (`modal-content` con
+`modal-header`/`modal-body`/`modal-footer` y `acciones-secundarias` a la izquierda del pie),
+`campos-formulario` + `campo` para la grilla de campos (+ `subtitulo-formulario` para separar
+grupos de campos y `opciones-radio` para un `RadioButtonList` con forma de botones),
+`selector-busqueda`, `panel-gris`, `boton-rojo`/`boton-gris`/`boton-borde-rojo`. Sin bordes
+`border border-1`, sin las clases `table table-striped...` de Bootstrap en las grillas. El fondo gris
+es el del `body` y la barra lateral la pone el `Site.Master` (`body.con-menu`), así que una pantalla
+nueva solo necesita el contenedor. Las pantallas de ingreso (Login, Registro, Recuperar/Restablecer
+clave) tienen su tarjeta propia (`.login-card`, clara desde 2026-10-07) y van sin barra lateral
+(`body.sin-menu`). Las filas que el código resalta con un fondo en línea (stock bajo, saldo
+pendiente) conservan ese fondo. El nombre de la aplicación en pantalla es **"Lubricentro
+Control"**, separado (el proyecto, la base y el namespace siguen siendo `LubricentroControl`).
 
 ### Formato de DNI, CUIT y patente (Fase 2)
 
@@ -355,13 +460,17 @@ validadores de Cliente, Proveedor y Vehiculo:
 
 | Campo | Guardado | Regex | Ejemplo |
 |---|---|---|---|
-| `Cliente.dni` | tal cual, sin puntos | `^\d{7,8}$` | `12345678` |
+| `Cliente.numeroDocumento` (DNI, LE, LC) | solo dígitos | `^\d{7,8}$` | `12345678` |
+| `Cliente.numeroDocumento` (CUIT, CUIL) | solo dígitos | `^\d{11}$` | guarda `20253334445`, muestra `20-25333444-5` |
+| `Cliente.numeroDocumento` (Pasaporte) | mayúsculas | `^[A-Z0-9]{6,12}$` | `AAB123456` |
 | `Proveedor.cuit` | sin guiones | `^\d{11}$` | guarda `20123456786`, muestra `20-12345678-6` |
 | `Vehiculo.patente` | mayúsculas | `^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$` | `ABC123` o `AB123CD` |
 
-El CUIT es el único de los tres que necesita una función de formateo para mostrar (insertar los
-guiones en las posiciones 2 y 10 sobre los 11 dígitos guardados); DNI y patente se muestran igual
-que se guardan.
+Desde el 2026-10-07 el documento del cliente va con su tipo (`Cliente.tipoDocumento`) y se acepta
+con puntos o guiones (`Cliente.NormalizarNumeroDocumento` los saca); se muestra como
+`Cliente.FormatearDocumento` ("DNI 30111222", "CUIT 20-25333444-5"). El CUIT/CUIL es el único que
+necesita guiones para mostrar (posiciones 2 y 10 sobre los 11 dígitos); DNI y patente se muestran
+igual que se guardan.
 
 Desde 2026-10-07, además:
 
@@ -369,6 +478,10 @@ Desde 2026-10-07, además:
 |---|---|---|
 | `Cliente.telefono`, `Proveedor.telefono` | opcional; números, espacios, guiones, puntos, paréntesis y "+" inicial, 6 a 15 dígitos | `Modelo/FormatoTelefono.cs` (clase aparte: la propiedad `Telefono` de las entidades taparía el nombre) |
 | `Vehiculo.anio` | opcional; de 1900 al año que viene | `Vehiculo.AnioMinimo`/`AnioMaximo`; la pantalla usa un `RangeValidator` con esos límites puestos desde el código |
+| `Cliente.codigoPostal` | opcional; 4 dígitos o CPA (`C1406GZA`), en mayúsculas | `Cliente.EsCodigoPostalValido` |
+| `Cliente.provincia` | opcional; una de las 23 provincias o CABA | `Cliente.Provincias` (lista fija del desplegable) |
+| `Producto.sku`, `Producto.codigoBarras` | opcionales; letras, números y guiones; únicos; el SKU en mayúsculas | `Producto.EsCodigoValido` + `ProductoDAL` (unicidad) |
+| `Producto.alicuotaIva` | 21, 10,5, 27, 5 o 2,5 si es gravado; 0 si es exento o no gravado | `Iva.Alicuotas`; en un desplegable, el valor va en formato invariante `"0.##"` (la base la devuelve como `10.50`) |
 
 ### Patrón de validación de formularios (Fase 2)
 
@@ -700,3 +813,43 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   cuenta corriente se siguen generando igual para todos, y el cobro es el `PagoDAL.Registrar` de
   siempre. Que el interruptor lo maneje solo quien escribe en Cuenta corriente de clientes es
   criterio nuestro (aplica la matriz de §5), pendiente de confirmar con el usuario.
+
+- **Segundo pedido del 2026-10-07 (13 puntos): barra lateral, opciones, columnas y "Ver";
+  datos fiscales, productos, factura, roles editables y cambio de dueño.** Detalle en
+  `Docs/EstadoActual.md` y Requerimientos §9.7 a §9.12. Lo que deja precedente:
+
+  **Producto como supertipo, no una tabla única.** El usuario eligió entre supertipo + subtipos,
+  una sola tabla, o solo una pantalla común. Con el supertipo las FK de órdenes, compras, ventas
+  y kardex siguen apuntando a `Servicio`/`Insumo` (el id es el mismo que el del `Producto`) y no
+  hubo que tocarlas; la FK compuesta `(id, tipo)` de cada subtipo garantiza que sean excluyentes.
+  En C# es una sola clase plana (`Producto`, con los campos de stock vacíos en un servicio) para
+  poder listar las dos subcategorías en un mismo GridView.
+
+  **Precios finales con IVA.** El usuario dejó la decisión a criterio: no cambia ningún total y es
+  lo habitual al público. El IVA de cada línea se calcula una vez, al generar la venta, y queda
+  guardado: la factura no recalcula con el IVA actual del producto.
+
+  **Opciones de filtro y columnas en el navegador.** Mismo criterio que el filtro de texto de la
+  sesión anterior: el servidor manda todo y la tabla filtra. Las casillas "Incluir inactivos" y
+  los desplegables de estado que hacían postback se reemplazaron por opciones de la tabla, y los
+  parámetros de filtro de `TurnoDAL`/`OrdenDeTrabajoDAL`/`ComprobanteCompraDAL.Listar` se
+  borraron. La elección de columnas es preferencia de cada persona (localStorage).
+
+  **"Ver" deja visible la columna Acciones en modo consulta** (antes se escondía entera): se
+  esconden solo los enlaces de escritura. Por eso el patrón de `EsSoloLectura` cambió (ver
+  «Reglas transversales» arriba).
+
+  **Roles editables sobre `MenuNivel`.** No hizo falta tabla nueva: `NivelDAL.Guardar` reescribe
+  las filas del rol en un batch atómico (pantallas con acceso más sus grupos). Admin no se edita
+  para que nadie pueda dejar el sistema sin quien administre permisos; Lectura no se borra porque
+  la usa `~/Registro`. Con permisos editables, toda pantalla tiene que respetar `EsSoloLectura`:
+  Usuarios no lo hacía (solo la veía Admin) y se corrigió.
+
+  **Cambio de dueño: acción propia y bloqueada con trabajo en curso.** Antes se cambiaba desde
+  "Editar" sin ninguna validación, y un turno u orden en curso quedaba a nombre de alguien que ya
+  no era el dueño (después `TurnoDAL`/`OrdenDeTrabajoDAL.ValidarReferencias` rechazaban editarlos).
+
+  **Verificación de punta a punta en un navegador real.** Además de MSBuild y `aspnet_compiler`,
+  se manejó Chrome sin ventana con puppeteer-core contra IIS Express (pruebas en el scratchpad,
+  no commiteadas): recorrido de las 17 pantallas y los flujos de los 13 puntos con tres roles.
+  Encontró un bug real (la alícuota `10.50` de la base contra el `10.5` del desplegable).

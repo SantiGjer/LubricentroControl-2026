@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using BIZ.Modelo;
 
 namespace BIZ.Data
@@ -7,8 +8,9 @@ namespace BIZ.Data
     public static class ClienteDAL
     {
         private const string SelectBase = @"
-            SELECT idCliente, nombre, apellido, dni, telefono, email, direccion, cuentaCorriente,
-                   activo, fechaAlta
+            SELECT idCliente, tipoCliente, nombre, apellido, razonSocial, tipoDocumento, numeroDocumento,
+                   condicionIva, telefono, email, direccion, localidad, provincia, codigoPostal,
+                   cuentaCorriente, activo, fechaAlta
             FROM Cliente";
 
         private static Cliente Mapear(DataRow fila)
@@ -16,12 +18,19 @@ namespace BIZ.Data
             return new Cliente
             {
                 IdCliente = AccesoDatos.LeerInt(fila, "idCliente"),
+                TipoCliente = AccesoDatos.LeerString(fila, "tipoCliente"),
                 Nombre = AccesoDatos.LeerString(fila, "nombre"),
                 Apellido = AccesoDatos.LeerString(fila, "apellido"),
-                Dni = AccesoDatos.LeerString(fila, "dni"),
+                RazonSocial = AccesoDatos.LeerString(fila, "razonSocial"),
+                TipoDocumento = AccesoDatos.LeerString(fila, "tipoDocumento"),
+                NumeroDocumento = AccesoDatos.LeerString(fila, "numeroDocumento"),
+                CondicionIva = AccesoDatos.LeerString(fila, "condicionIva"),
                 Telefono = AccesoDatos.LeerString(fila, "telefono"),
                 Email = AccesoDatos.LeerString(fila, "email"),
                 Direccion = AccesoDatos.LeerString(fila, "direccion"),
+                Localidad = AccesoDatos.LeerString(fila, "localidad"),
+                Provincia = AccesoDatos.LeerString(fila, "provincia"),
+                CodigoPostal = AccesoDatos.LeerString(fila, "codigoPostal"),
                 CuentaCorriente = AccesoDatos.LeerBool(fila, "cuentaCorriente"),
                 Activo = AccesoDatos.LeerBool(fila, "activo"),
                 FechaAlta = AccesoDatos.LeerFecha(fila, "fechaAlta")
@@ -32,7 +41,7 @@ namespace BIZ.Data
         {
             var sql = SelectBase +
                       (incluirInactivos ? "" : " WHERE activo = 1") +
-                      " ORDER BY apellido, nombre";
+                      " ORDER BY denominacion";
 
             var lista = new List<Cliente>();
             foreach (DataRow fila in AccesoDatos.Consultar(sql).Rows)
@@ -49,33 +58,54 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        public static bool ExisteDni(string dni, int idClienteExcluido = 0)
+        // El mismo número con otro tipo no choca (un DNI y un pasaporte pueden coincidir): la
+        // unicidad es del par, igual que UQ_Cliente_documento.
+        public static bool ExisteDocumento(string tipoDocumento, string numeroDocumento, int idClienteExcluido = 0)
         {
             var cantidad = AccesoDatos.Escalar(
-                "SELECT COUNT(*) FROM Cliente WHERE dni = @dni AND idCliente <> @id",
-                AccesoDatos.Param("@dni", dni),
+                @"SELECT COUNT(*) FROM Cliente
+                  WHERE tipoDocumento = @tipo AND numeroDocumento = @numero AND idCliente <> @id",
+                AccesoDatos.Param("@tipo", tipoDocumento),
+                AccesoDatos.Param("@numero", numeroDocumento),
                 AccesoDatos.Param("@id", idClienteExcluido));
 
             return System.Convert.ToInt32(cantidad) > 0;
         }
 
-        private static int Insertar(Cliente cliente)
+        private static List<SqlParameter> ParametrosDe(Cliente cliente)
         {
-            const string sql = @"
-                INSERT INTO Cliente (nombre, apellido, dni, telefono, email, direccion, cuentaCorriente, activo)
-                VALUES (@nombre, @apellido, @dni, @telefono, @email, @direccion, @cuentaCorriente, @activo);
-                SELECT CAST(SCOPE_IDENTITY() AS INT);";
-
-            var id = AccesoDatos.Escalar(sql,
+            return new List<SqlParameter>
+            {
+                AccesoDatos.Param("@tipoCliente", cliente.TipoCliente),
                 AccesoDatos.Param("@nombre", cliente.Nombre),
                 AccesoDatos.Param("@apellido", cliente.Apellido),
-                AccesoDatos.Param("@dni", cliente.Dni),
+                AccesoDatos.Param("@razonSocial", cliente.RazonSocial),
+                AccesoDatos.Param("@tipoDocumento", cliente.TipoDocumento),
+                AccesoDatos.Param("@numeroDocumento", cliente.NumeroDocumento),
+                AccesoDatos.Param("@condicionIva", cliente.CondicionIva),
                 AccesoDatos.Param("@telefono", cliente.Telefono),
                 AccesoDatos.Param("@email", cliente.Email),
                 AccesoDatos.Param("@direccion", cliente.Direccion),
+                AccesoDatos.Param("@localidad", cliente.Localidad),
+                AccesoDatos.Param("@provincia", cliente.Provincia),
+                AccesoDatos.Param("@codigoPostal", cliente.CodigoPostal),
                 AccesoDatos.Param("@cuentaCorriente", cliente.CuentaCorriente),
-                AccesoDatos.Param("@activo", cliente.Activo));
+                AccesoDatos.Param("@activo", cliente.Activo)
+            };
+        }
 
+        private static int Insertar(Cliente cliente)
+        {
+            const string sql = @"
+                INSERT INTO Cliente (tipoCliente, nombre, apellido, razonSocial, tipoDocumento, numeroDocumento,
+                                     condicionIva, telefono, email, direccion, localidad, provincia, codigoPostal,
+                                     cuentaCorriente, activo)
+                VALUES (@tipoCliente, @nombre, @apellido, @razonSocial, @tipoDocumento, @numeroDocumento,
+                        @condicionIva, @telefono, @email, @direccion, @localidad, @provincia, @codigoPostal,
+                        @cuentaCorriente, @activo);
+                SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            var id = AccesoDatos.Escalar(sql, ParametrosDe(cliente).ToArray());
             return System.Convert.ToInt32(id);
         }
 
@@ -84,8 +114,8 @@ namespace BIZ.Data
             var validacion = cliente.Validar();
             if (!validacion.Exito) return validacion;
 
-            if (ExisteDni(cliente.Dni))
-                return ResultadoOperacion.Error("Ya existe un cliente con ese DNI.");
+            if (ExisteDocumento(cliente.TipoDocumento, cliente.NumeroDocumento))
+                return ResultadoOperacion.Error("Ya existe un cliente con ese " + cliente.TipoDocumento + ".");
 
             cliente.IdCliente = Insertar(cliente);
 
@@ -100,26 +130,21 @@ namespace BIZ.Data
             if (ObtenerPorId(cliente.IdCliente) == null)
                 return ResultadoOperacion.Error("El cliente no existe.");
 
-            if (ExisteDni(cliente.Dni, cliente.IdCliente))
-                return ResultadoOperacion.Error("Ya existe otro cliente con ese DNI.");
+            if (ExisteDocumento(cliente.TipoDocumento, cliente.NumeroDocumento, cliente.IdCliente))
+                return ResultadoOperacion.Error("Ya existe otro cliente con ese " + cliente.TipoDocumento + ".");
 
             const string sql = @"
                 UPDATE Cliente
-                SET nombre = @nombre, apellido = @apellido, dni = @dni, telefono = @telefono,
-                    email = @email, direccion = @direccion, cuentaCorriente = @cuentaCorriente,
+                SET tipoCliente = @tipoCliente, nombre = @nombre, apellido = @apellido, razonSocial = @razonSocial,
+                    tipoDocumento = @tipoDocumento, numeroDocumento = @numeroDocumento, condicionIva = @condicionIva,
+                    telefono = @telefono, email = @email, direccion = @direccion, localidad = @localidad,
+                    provincia = @provincia, codigoPostal = @codigoPostal, cuentaCorriente = @cuentaCorriente,
                     activo = @activo
                 WHERE idCliente = @idCliente";
 
-            AccesoDatos.Ejecutar(sql,
-                AccesoDatos.Param("@nombre", cliente.Nombre),
-                AccesoDatos.Param("@apellido", cliente.Apellido),
-                AccesoDatos.Param("@dni", cliente.Dni),
-                AccesoDatos.Param("@telefono", cliente.Telefono),
-                AccesoDatos.Param("@email", cliente.Email),
-                AccesoDatos.Param("@direccion", cliente.Direccion),
-                AccesoDatos.Param("@cuentaCorriente", cliente.CuentaCorriente),
-                AccesoDatos.Param("@activo", cliente.Activo),
-                AccesoDatos.Param("@idCliente", cliente.IdCliente));
+            var parametros = ParametrosDe(cliente);
+            parametros.Add(AccesoDatos.Param("@idCliente", cliente.IdCliente));
+            AccesoDatos.Ejecutar(sql, parametros.ToArray());
 
             return ResultadoOperacion.Ok("Cliente actualizado.");
         }

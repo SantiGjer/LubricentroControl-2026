@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.UI.WebControls;
 using BIZ.Data;
+using BIZ.Modelo;
 using LubricentroControl_2026.Seguridad;
 using LubricentroControl_2026.Utilidades;
 
@@ -7,12 +11,15 @@ namespace LubricentroControl_2026
 {
     // Cuenta corriente de proveedores (Fase 4). Admin y Encargado pueden ver el historial y
     // registrar ajustes manuales; Empleado, solo consulta (Requerimientos §5) — a diferencia de
-    // Proveedores/Insumos, acá "solo consulta" no esconde toda la pantalla: Empleado igual puede
+    // Proveedores/Productos, acá "solo consulta" no esconde toda la pantalla: Empleado igual puede
     // buscar un proveedor y ver su historial/saldo, solo se le esconde el ajuste. El detalle se
     // abre en un modal sobre la lista.
     public partial class CuentaCorrienteProveedores : PaginaSegura
     {
         private const string IdModal = "modalCuenta";
+
+        // Saldo actual de cada proveedor con saldo distinto de cero (el resto, 0).
+        private Dictionary<int, decimal> saldos = new Dictionary<int, decimal>();
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -25,14 +32,32 @@ namespace LubricentroControl_2026
             CargarGrilla();
         }
 
-        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
+        // El filtro por texto y la opción de saldo los aplica la tabla en el navegador
+        // (Lubricentro.js).
         private void CargarGrilla()
         {
+            saldos = CuentaCorrienteProveedorDAL.ListarSaldos().ToDictionary(s => s.IdProveedor, s => s.Saldo);
+
             gvProveedores.DataSource = ProveedorDAL.Listar(incluirInactivos: true);
             gvProveedores.DataBind();
         }
 
-        protected void gvProveedores_RowCommand(object sender, System.Web.UI.WebControls.GridViewCommandEventArgs e)
+        protected decimal SaldoDe(int idProveedor)
+        {
+            decimal saldo;
+            return saldos.TryGetValue(idProveedor, out saldo) ? saldo : 0m;
+        }
+
+        // data-saldo para la opción "Saldo": positivo = le debemos al proveedor, negativo = a favor nuestro.
+        protected void gvProveedores_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+            var saldo = SaldoDe(((Proveedor)e.Row.DataItem).IdProveedor);
+            e.Row.Attributes["data-saldo"] = saldo > 0 ? "debe" : saldo < 0 ? "a-favor" : "cero";
+        }
+
+        protected void gvProveedores_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (e.CommandName != "Ver") return;
 
@@ -89,6 +114,7 @@ namespace LubricentroControl_2026
             {
                 txtMontoAjuste.Text = string.Empty;
                 txtMotivoAjuste.Text = string.Empty;
+                CargarGrilla();
                 Seleccionar(idProveedor);
             }
             else

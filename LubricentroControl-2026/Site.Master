@@ -7,7 +7,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title><%: Page.Title %> - LubricentroControl</title>
+    <title><%: Page.Title %> - Lubricentro Control</title>
 
     <asp:PlaceHolder runat="server">
         <%: Scripts.Render("~/bundles/modernizr") %>
@@ -18,8 +18,10 @@
 
 </head>
 <%-- Los separadores del formato regional del servidor, para que Lubricentro.js ordene bien
-     las columnas con importes (N2 sale "1.234,50" o "1,234.50" según la cultura). --%>
-<body data-separador-decimal="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator %>"
+     las columnas con importes (N2 sale "1.234,50" o "1,234.50" según la cultura).
+     con-menu / sin-menu: con usuario logueado la página lleva la barra lateral. --%>
+<body class="<%: ClaseCuerpo %>"
+      data-separador-decimal="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator %>"
       data-separador-miles="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator %>">
     <form runat="server">
         <asp:ScriptManager runat="server">
@@ -52,50 +54,70 @@
              a los postbacks (un GET nuevo lo trae vacío y las tablas arrancan de cero). --%>
         <asp:HiddenField ID="hdnEstadoTablas" runat="server" ClientIDMode="Static" />
 
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark">
-            <div class="container">
-                <a class="navbar-brand" runat="server" href="~/">LubricentroControl</a>
+        <asp:PlaceHolder ID="phNavegacion" runat="server">
+            <%-- Barra superior: solo en pantallas angostas, donde la barra lateral queda escondida
+                 y se abre con este botón. --%>
+            <header class="barra-superior">
+                <button type="button" class="barra-superior-boton" data-bs-toggle="offcanvas"
+                    data-bs-target="#barraLateral" aria-controls="barraLateral" aria-label="Abrir el menú">
+                    <span></span><span></span><span></span>
+                </button>
+                <a href="<%: ResolveUrl("~/Default") %>" class="marca marca-chica">
+                    <span class="marca-isotipo" aria-hidden="true"><%= Isotipo %></span>
+                    <span class="marca-texto">Lubricentro <strong>Control</strong></span>
+                </a>
+            </header>
 
-                <asp:PlaceHolder ID="phNavegacion" runat="server">
-                    <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navPrincipal"
-                        title="Alternar navegación" aria-controls="navPrincipal" aria-expanded="false" aria-label="Alternar navegación">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="navPrincipal">
-                        <ul class="navbar-nav flex-grow-1">
-                            <asp:Literal ID="litMenu" runat="server" />
-                        </ul>
-                        <ul class="navbar-nav">
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <asp:Literal ID="litUsuario" runat="server" />
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" runat="server" href="~/CambiarClave">Cambiar contraseña</a></li>
-                                    <li><hr class="dropdown-divider" /></li>
-                                    <li>
-                                        <asp:LinkButton ID="lnkCerrarSesion" runat="server" CssClass="dropdown-item"
-                                            OnClick="lnkCerrarSesion_Click" CausesValidation="false">Cerrar sesión</asp:LinkButton>
-                                    </li>
-                                </ul>
-                            </li>
-                        </ul>
+            <%-- Barra lateral fija a la izquierda. En pantallas angostas el panel pasa a ser un
+                 offcanvas de Bootstrap (offcanvas-lg) que se abre desde la barra superior. --%>
+            <aside class="barra-lateral">
+                <div id="barraLateral" class="barra-lateral-panel offcanvas-lg offcanvas-start" tabindex="-1"
+                    aria-label="Menú principal">
+                    <div class="barra-lateral-encabezado">
+                        <a href="<%: ResolveUrl("~/Default") %>" class="marca">
+                            <span class="marca-isotipo" aria-hidden="true"><%= Isotipo %></span>
+                            <span class="marca-texto">Lubricentro <strong>Control</strong></span>
+                        </a>
+                        <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas"
+                            data-bs-target="#barraLateral" aria-label="Cerrar el menú"></button>
                     </div>
-                </asp:PlaceHolder>
-            </div>
-        </nav>
 
-        <div class="container body-content mt-4">
-            <asp:ContentPlaceHolder ID="MainContent" runat="server">
-            </asp:ContentPlaceHolder>
-            <hr />
-            <footer class="text-muted">
-                <p>&copy; <%: DateTime.Now.Year %> - LubricentroControl · Programación Avanzada 2026</p>
+                    <nav class="menu-lateral" aria-label="Secciones">
+                        <asp:Literal ID="litMenu" runat="server" />
+                    </nav>
+                    <%-- Abre los grupos que el usuario dejó abiertos, antes de que se vea el menú. --%>
+                    <script>if (window.Lubricentro) Lubricentro.restaurarMenu();</script>
+
+                    <div class="barra-lateral-usuario">
+                        <div class="usuario-datos">
+                            <span class="usuario-avatar" aria-hidden="true"><asp:Literal ID="litIniciales" runat="server" /></span>
+                            <span class="usuario-texto">
+                                <span class="usuario-nombre"><asp:Literal ID="litUsuario" runat="server" /></span>
+                                <span class="usuario-rol"><asp:Literal ID="litRol" runat="server" /></span>
+                            </span>
+                        </div>
+                        <div class="usuario-acciones">
+                            <a runat="server" href="~/CambiarClave">Cambiar contraseña</a>
+                            <asp:LinkButton ID="lnkCerrarSesion" runat="server"
+                                OnClick="lnkCerrarSesion_Click" CausesValidation="false">Cerrar sesión</asp:LinkButton>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </asp:PlaceHolder>
+
+        <div class="area-principal">
+            <main class="contenido-principal">
+                <asp:ContentPlaceHolder ID="MainContent" runat="server">
+                </asp:ContentPlaceHolder>
+            </main>
+            <footer class="pie-pagina">
+                &copy; <%: DateTime.Now.Year %> · Lubricentro Control · Programación Avanzada 2026
             </footer>
         </div>
     </form>
     <asp:PlaceHolder runat="server">
-        <%--bundle.js incluye Popper, necesario para los desplegables del menú--%>
+        <%--bundle.js incluye Popper, necesario para los desplegables--%>
         <%: Scripts.Render("~/Scripts/bootstrap.bundle.js") %>
     </asp:PlaceHolder>
 </body>

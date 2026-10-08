@@ -14,7 +14,7 @@
     <%-- Orden, filtro y paginado los hace la tabla en el navegador (Lubricentro.js). --%>
     <asp:GridView ID="gvStockBajo" runat="server" data-filas-por-pagina="30"
         CssClass="tabla-abm"
-        AutoGenerateColumns="false" DataKeyNames="IdInsumo" GridLines="None"
+        AutoGenerateColumns="false" DataKeyNames="IdProducto" GridLines="None"
         OnRowDataBound="gvStockBajo_RowDataBound"
         EmptyDataText="Ningún insumo activo está por debajo de su stock mínimo.">
         <Columns>
@@ -31,7 +31,7 @@
                     <%# ((decimal)Eval("StockMinimo") - (decimal)Eval("StockActual")).ToString("N2") %>
                 </ItemTemplate>
             </asp:TemplateField>
-            <asp:BoundField DataField="PrecioVenta" HeaderText="Precio venta" DataFormatString="{0:N2}"
+            <asp:BoundField DataField="Precio" HeaderText="Precio venta" DataFormatString="{0:N2}"
                 ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
         </Columns>
     </asp:GridView>

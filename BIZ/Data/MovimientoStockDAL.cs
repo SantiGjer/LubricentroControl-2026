@@ -32,7 +32,7 @@ namespace BIZ.Data
             };
         }
 
-        // Kardex de un insumo, más reciente primero. La usa la grilla de historial de Insumos.aspx.
+        // Kardex de un insumo, más reciente primero. La usa la grilla de historial de Productos.aspx.
         public static List<MovimientoStock> ListarPorInsumo(int idInsumo)
         {
             var sql = SelectBase + " WHERE m.idInsumo = @idInsumo ORDER BY m.fecha DESC, m.idMovimiento DESC";
@@ -50,8 +50,8 @@ namespace BIZ.Data
         public static ResultadoOperacion Registrar(int idInsumo, string tipoMovimiento,
             decimal entrada, decimal salida, int? idCompra, int? idOrden, int idUsuario, string descripcion)
         {
-            var insumo = InsumoDAL.ObtenerPorId(idInsumo);
-            if (insumo == null)
+            var insumo = ProductoDAL.ObtenerPorId(idInsumo);
+            if (insumo == null || !insumo.EsInsumo)
                 return ResultadoOperacion.Error("El insumo no existe.");
 
             var stockResultante = insumo.StockActual + entrada - salida;
@@ -86,7 +86,7 @@ namespace BIZ.Data
             return ResultadoOperacion.Ok("Stock actualizado.");
         }
 
-        // La usa el botón "Ajustar stock" de Insumos.aspx (y InsumoDAL.Crear, para el stock inicial).
+        // La usa el botón "Ajustar stock" de Productos.aspx (y ProductoDAL.Crear, para el stock inicial).
         public static ResultadoOperacion RegistrarAjusteManual(int idInsumo, decimal cantidad,
             bool esEntrada, string motivo, int idUsuario)
         {

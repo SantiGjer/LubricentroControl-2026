@@ -26,7 +26,7 @@ namespace LubricentroControl_2026.Reportes
             // El filtro (activo = 1 AND stockActual < stockMinimo) lo hace el DAL; el orden lo
             // decide el reporte, que es lo que cambia según para qué se mira: acá primero lo más
             // urgente de reponer, no alfabético como en el ABM.
-            var insumos = InsumoDAL.ListarStockBajo()
+            var insumos = ProductoDAL.ListarStockBajo()
                 .OrderByDescending(i => i.StockMinimo - i.StockActual)
                 .ThenBy(i => i.Nombre)
                 .ToList();
@@ -37,7 +37,7 @@ namespace LubricentroControl_2026.Reportes
             litResumen.Text = ArmarResumen(insumos);
         }
 
-        private static string ArmarResumen(List<Insumo> insumos)
+        private static string ArmarResumen(List<Producto> insumos)
         {
             if (insumos.Count == 0)
                 return "Ningún insumo activo está por debajo de su stock mínimo.";
@@ -61,7 +61,7 @@ namespace LubricentroControl_2026.Reportes
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-            var insumo = (Insumo)e.Row.DataItem;
+            var insumo = (Producto)e.Row.DataItem;
             if (insumo.StockActual <= 0)
                 e.Row.Style.Add("background-color", "#f8d7da");
         }

@@ -7,7 +7,7 @@ namespace BIZ.Data
     public static class TurnoDAL
     {
         private const string SelectBase = @"
-            SELECT t.idTurno, t.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente, c.dni,
+            SELECT t.idTurno, t.idCliente, c.denominacion AS nombreCliente, c.tipoDocumento, c.numeroDocumento,
                    t.idVehiculo, v.patente,
                    t.fechaSolicitud, t.fechaHoraAsignada, t.estado, t.observaciones
             FROM Turno t
@@ -21,7 +21,8 @@ namespace BIZ.Data
                 IdTurno = AccesoDatos.LeerInt(fila, "idTurno"),
                 IdCliente = AccesoDatos.LeerInt(fila, "idCliente"),
                 NombreCliente = AccesoDatos.LeerString(fila, "nombreCliente"),
-                Dni = AccesoDatos.LeerString(fila, "dni"),
+                TipoDocumento = AccesoDatos.LeerString(fila, "tipoDocumento"),
+                NumeroDocumento = AccesoDatos.LeerString(fila, "numeroDocumento"),
                 IdVehiculo = AccesoDatos.LeerIntNullable(fila, "idVehiculo"),
                 Patente = AccesoDatos.LeerString(fila, "patente"),
                 FechaSolicitud = AccesoDatos.LeerFecha(fila, "fechaSolicitud"),
@@ -31,20 +32,40 @@ namespace BIZ.Data
             };
         }
 
-        public static List<Turno> Listar(string estado = null)
+        // Todos los turnos, primero los de hoy (por hora), después los próximos (el más cercano
+        // primero) y al final los pasados (el más reciente primero). El estado y el "cuándo" los
+        // filtra la tabla en el navegador (opciones de Turnos.aspx).
+        public static List<Turno> Listar()
         {
-            var sql = SelectBase +
-                      (string.IsNullOrWhiteSpace(estado) ? "" : " WHERE t.estado = @estado") +
-                      " ORDER BY t.fechaHoraAsignada ASC";
+            const string sql = SelectBase + @"
+                ORDER BY
+                    CASE WHEN t.fechaHoraAsignada >= @hoy AND t.fechaHoraAsignada < @manana THEN 0
+                         WHEN t.fechaHoraAsignada >= @manana THEN 1
+                         ELSE 2 END,
+                    CASE WHEN t.fechaHoraAsignada >= @hoy THEN t.fechaHoraAsignada END ASC,
+                    t.fechaHoraAsignada DESC";
 
+            var hoy = System.DateTime.Today;
             var lista = new List<Turno>();
-            var tabla = string.IsNullOrWhiteSpace(estado)
-                ? AccesoDatos.Consultar(sql)
-                : AccesoDatos.Consultar(sql, AccesoDatos.Param("@estado", estado));
-
-            foreach (DataRow fila in tabla.Rows)
+            foreach (DataRow fila in AccesoDatos.Consultar(sql,
+                AccesoDatos.Param("@hoy", hoy),
+                AccesoDatos.Param("@manana", hoy.AddDays(1))).Rows)
                 lista.Add(Mapear(fila));
             return lista;
+        }
+
+        // Turnos todavía vigentes (Solicitado o Confirmado) de un vehículo: mientras haya alguno,
+        // no se le cambia el dueño (VehiculoDAL.CambiarDueno).
+        public static int ContarVigentesPorVehiculo(int idVehiculo)
+        {
+            var cantidad = AccesoDatos.Escalar(
+                @"SELECT COUNT(*) FROM Turno
+                  WHERE idVehiculo = @idVehiculo AND estado IN (@estadoSolicitado, @estadoConfirmado)",
+                AccesoDatos.Param("@idVehiculo", idVehiculo),
+                AccesoDatos.Param("@estadoSolicitado", Turno.EstadoSolicitado),
+                AccesoDatos.Param("@estadoConfirmado", Turno.EstadoConfirmado));
+
+            return System.Convert.ToInt32(cantidad);
         }
 
         // Turnos de un día que siguen vigentes (Solicitado o Confirmado), por hora. Para el

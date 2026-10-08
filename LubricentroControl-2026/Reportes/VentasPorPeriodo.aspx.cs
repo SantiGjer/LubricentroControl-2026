@@ -73,6 +73,9 @@ namespace LubricentroControl_2026.Reportes
             if (pendiente > 0)
                 texto += ", de las cuales <b>$" + pendiente.ToString("N2") + "</b> siguen pendientes de cobro";
 
+            // Los precios son finales: el total ya contiene el IVA (Requerimientos §9.10).
+            texto += ". IVA contenido: <b>$" + ventas.Sum(v => v.Impuestos).ToString("N2") + "</b>";
+
             return texto + ".";
         }
 

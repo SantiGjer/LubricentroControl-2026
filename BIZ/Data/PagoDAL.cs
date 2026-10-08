@@ -9,12 +9,17 @@ namespace BIZ.Data
     public static class PagoDAL
     {
         private const string SelectBase = @"
-            SELECT p.idPago, p.tipo, p.idCliente, cl.nombre + ' ' + cl.apellido AS nombreCliente,
+            SELECT p.idPago, p.tipo, p.idCliente, cl.denominacion AS nombreCliente,
                    p.idProveedor, pr.razonSocial, p.idVenta, p.idCompra, p.idUsuario,
+                   u.nombre + ' ' + u.apellido AS nombreUsuario,
+                   ISNULL(v.numeroComprobante, c.numeroComprobante) AS numeroComprobante,
                    p.fecha, p.medioPago, p.monto, p.observaciones
             FROM Pago p
+            INNER JOIN Usuario u ON u.idUsuario = p.idUsuario
             LEFT JOIN Cliente cl ON cl.idCliente = p.idCliente
-            LEFT JOIN Proveedor pr ON pr.idProveedor = p.idProveedor";
+            LEFT JOIN Proveedor pr ON pr.idProveedor = p.idProveedor
+            LEFT JOIN ComprobanteVenta v ON v.idVenta = p.idVenta
+            LEFT JOIN ComprobanteCompra c ON c.idCompra = p.idCompra";
 
         private static Pago Mapear(DataRow fila)
         {
@@ -29,6 +34,8 @@ namespace BIZ.Data
                 IdVenta = AccesoDatos.LeerIntNullable(fila, "idVenta"),
                 IdCompra = AccesoDatos.LeerIntNullable(fila, "idCompra"),
                 IdUsuario = AccesoDatos.LeerInt(fila, "idUsuario"),
+                NombreUsuario = AccesoDatos.LeerString(fila, "nombreUsuario"),
+                NumeroComprobante = AccesoDatos.LeerString(fila, "numeroComprobante"),
                 Fecha = AccesoDatos.LeerFecha(fila, "fecha"),
                 MedioPago = AccesoDatos.LeerString(fila, "medioPago"),
                 Monto = AccesoDatos.LeerDecimal(fila, "monto"),

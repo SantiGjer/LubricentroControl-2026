@@ -8,14 +8,10 @@ using LubricentroControl_2026.Utilidades;
 namespace LubricentroControl_2026
 {
     // ABM de proveedores. Admin y Encargado, acceso completo; Empleado, solo consulta
-    // (Requerimientos §5): se le esconde el botón de alta, el modal del formulario y la columna
-    // de Acciones, y los métodos de escritura igual cortan al principio por las dudas.
+    // (Requerimientos §5): se le esconde el botón de alta, el modal del formulario y "Editar", y
+    // los métodos de escritura igual cortan al principio por las dudas. "Ver" queda para todos.
     public partial class Proveedores : PaginaSegura
     {
-        // Índice de la columna "Acciones" en gvProveedores.Columns — no tiene sentido
-        // para el Empleado si no hay formulario donde cargar la selección.
-        private const int ColumnaAcciones = 5;
-
         private const string IdModal = "modalProveedor";
 
         protected void Page_Load(object sender, EventArgs e)
@@ -30,22 +26,17 @@ namespace LubricentroControl_2026
             {
                 btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
-                gvProveedores.Columns[ColumnaAcciones].Visible = false;
             }
 
             CargarGrilla();
         }
 
-        // El filtro por texto lo hace la tabla en el navegador (Lubricentro.js).
+        // Todos, activos e inactivos: el filtro por texto y el estado los aplica la tabla en el
+        // navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            gvProveedores.DataSource = ProveedorDAL.Listar(chkIncluirInactivos.Checked);
+            gvProveedores.DataSource = ProveedorDAL.Listar(incluirInactivos: true);
             gvProveedores.DataBind();
-        }
-
-        protected void chkIncluirInactivos_CheckedChanged(object sender, EventArgs e)
-        {
-            CargarGrilla();
         }
 
         protected void btnNuevo_Click(object sender, EventArgs e)

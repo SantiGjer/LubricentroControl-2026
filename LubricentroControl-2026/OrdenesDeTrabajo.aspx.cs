@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
@@ -9,19 +10,18 @@ namespace LubricentroControl_2026
 {
     // ABM de órdenes de trabajo (Fase 3). Acceso completo para Admin, Encargado y Empleado
     // (Requerimientos §5); Lectura, solo consulta. La lista arranca filtrada en las órdenes
-    // Abiertas, de la más nueva a la más vieja. Alta y edición en un modal: cliente/vehículo/turno
-    // quedan fijos una vez creada la orden (ver Docs/EstadoActual.md, sesión de esta pantalla):
-    // el selector y los desplegables solo se muestran en "Nueva orden"; editando una ya creada se
-    // ven como texto fijo, junto con el detalle de servicios e insumos.
+    // Abiertas, de la más nueva a la más vieja. "Ver" abre la orden completa de solo lectura, para
+    // todos los roles. Alta y edición en otro modal: cliente/vehículo/turno quedan fijos una vez
+    // creada la orden (ver Docs/EstadoActual.md, sesión de esta pantalla): el selector y los
+    // desplegables solo se muestran en "Nueva orden"; editando una ya creada se ven como texto
+    // fijo, junto con el detalle de servicios e insumos.
     public partial class OrdenesDeTrabajo : PaginaSegura
     {
-        // Índice de la columna "Acciones" en gvOrdenes.Columns.
-        private const int ColumnaAcciones = 4;
-
         // Índice de la columna "Acciones" (Quitar) en gvServicios/gvInsumosOrden.
         private const int ColumnaQuitar = 3;
 
         private const string IdModal = "modalOrden";
+        private const string IdModalVer = "modalVerOrden";
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -35,10 +35,9 @@ namespace LubricentroControl_2026
             {
                 btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
-                gvOrdenes.Columns[ColumnaAcciones].Visible = false;
+                btnEditarDesdeVer.Visible = false;
             }
 
-            CargarFiltroEstado();
             CargarEstados();
             CargarCatalogos();
             LimpiarFormulario();
@@ -123,18 +122,6 @@ namespace LubricentroControl_2026
                 + "&idTurno=" + Server.UrlEncode(ddlTurno.SelectedValue));
         }
 
-        // Arranca en "Abierta": lo que se busca casi siempre al entrar son las órdenes nuevas que
-        // todavía no se empezaron. Las demás se ven cambiando el filtro.
-        private void CargarFiltroEstado()
-        {
-            ddlFiltroEstado.Items.Clear();
-            ddlFiltroEstado.Items.Add(new ListItem("(Todos)", ""));
-            foreach (var estado in OrdenDeTrabajo.Estados)
-                ddlFiltroEstado.Items.Add(new ListItem(estado, estado));
-
-            ddlFiltroEstado.SelectedValue = OrdenDeTrabajo.EstadoAbierta;
-        }
-
         private void CargarEstados()
         {
             ddlEstado.Items.Clear();
@@ -147,35 +134,24 @@ namespace LubricentroControl_2026
         private void CargarCatalogos()
         {
             ddlServicio.Items.Clear();
-            foreach (var servicio in ServicioDAL.Listar(incluirInactivos: false))
-                ddlServicio.Items.Add(new ListItem(servicio.Nombre, servicio.IdServicio.ToString()));
+            foreach (var servicio in ProductoDAL.Listar(Producto.TipoServicio, incluirInactivos: false))
+                ddlServicio.Items.Add(new ListItem(
+                    servicio.Nombre + " ($ " + servicio.Precio.ToString("N2") + ")",
+                    servicio.IdProducto.ToString()));
 
             ddlInsumo.Items.Clear();
-            foreach (var insumo in InsumoDAL.Listar(incluirInactivos: false))
+            foreach (var insumo in ProductoDAL.Listar(Producto.TipoInsumo, incluirInactivos: false))
                 ddlInsumo.Items.Add(new ListItem(
                     insumo.Nombre + " (stock: " + insumo.StockActual.ToString("N2") + ")",
-                    insumo.IdInsumo.ToString()));
+                    insumo.IdProducto.ToString()));
         }
 
-        // El estado filtra en el servidor; el texto, la tabla en el navegador (Lubricentro.js).
-        // OrdenDeTrabajoDAL.Listar ya las trae de la más nueva a la más vieja.
+        // Todas las órdenes, de la más nueva a la más vieja: el estado y el texto los filtra la
+        // tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            gvOrdenes.DataSource = OrdenDeTrabajoDAL.Listar(ddlFiltroEstado.SelectedValue);
+            gvOrdenes.DataSource = OrdenDeTrabajoDAL.Listar();
             gvOrdenes.DataBind();
-        }
-
-        // El filtro de la tabla busca también por DNI, que no es una columna: va en data-buscar.
-        protected void gvOrdenes_RowDataBound(object sender, GridViewRowEventArgs e)
-        {
-            if (e.Row.RowType != DataControlRowType.DataRow) return;
-
-            e.Row.Attributes["data-buscar"] = ((OrdenDeTrabajo)e.Row.DataItem).Dni;
-        }
-
-        protected void ddlFiltroEstado_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            CargarGrilla();
         }
 
         // --- Selector de cliente -----------------------------------------------------------
@@ -255,6 +231,52 @@ namespace LubricentroControl_2026
             args.IsValid = LeerIdOculto(ddlVehiculo.SelectedValue) > 0;
         }
 
+        // --- Ver (solo lectura, todos los roles) ---------------------------------------------
+
+        private void Ver(int idOrden)
+        {
+            var orden = OrdenDeTrabajoDAL.ObtenerPorId(idOrden);
+            if (orden == null)
+            {
+                MostrarMensaje("La orden no existe.", false);
+                CargarGrilla();
+                return;
+            }
+
+            hdnIdOrdenVer.Value = orden.IdOrden.ToString();
+            litTituloVer.Text = "Orden #" + orden.IdOrden + " — " + Server.HtmlEncode(orden.Estado);
+            litVerCliente.Text = Server.HtmlEncode(orden.NombreCliente + " — " + orden.Documento);
+            litVerVehiculo.Text = Server.HtmlEncode(orden.Patente);
+            litVerTurno.Text = Server.HtmlEncode(DescribirTurno(orden.IdTurno));
+            litVerFecha.Text = orden.Fecha.ToString("dd/MM/yyyy HH:mm");
+            litVerKilometraje.Text = orden.Kilometraje.HasValue ? orden.Kilometraje.Value.ToString("N0") + " km" : "—";
+            litVerEstado.Text = Server.HtmlEncode(orden.Estado);
+            litVerUsuario.Text = Server.HtmlEncode(orden.NombreUsuario);
+            litVerObservaciones.Text = string.IsNullOrEmpty(orden.Observaciones) ? "—" : Server.HtmlEncode(orden.Observaciones);
+
+            var venta = ComprobanteVentaDAL.ObtenerPorOrden(idOrden);
+            litVerVenta.Text = venta == null
+                ? "—"
+                : Server.HtmlEncode(venta.NumeroComprobante) + " · saldo pendiente $ " + venta.SaldoPendiente.ToString("N2");
+
+            var servicios = DetalleOrdenServicioDAL.ListarPorOrden(idOrden);
+            var insumos = DetalleOrdenInsumoDAL.ListarPorOrden(idOrden);
+            gvVerServicios.DataSource = servicios;
+            gvVerServicios.DataBind();
+            gvVerInsumos.DataSource = insumos;
+            gvVerInsumos.DataBind();
+            litVerTotal.Text = (servicios.Sum(s => s.Subtotal) + insumos.Sum(i => i.Subtotal)).ToString("N2");
+
+            Interfaz.AbrirModal(this, IdModalVer);
+        }
+
+        protected void btnEditarDesdeVer_Click(object sender, EventArgs e)
+        {
+            if (EsSoloLectura) return;
+
+            Seleccionar(LeerIdOculto(hdnIdOrdenVer.Value));
+        }
+
         // --- ABM de la cabecera -----------------------------------------------------------
 
         protected void btnNuevo_Click(object sender, EventArgs e)
@@ -315,38 +337,64 @@ namespace LubricentroControl_2026
             MostrarMensajeFormulario(resultado.Mensaje, resultado.Exito);
         }
 
-        // Cerrar genera la venta. Si el cliente no tiene cuenta corriente no puede quedar
-        // debiendo: se pasa directo a cobrar esa venta en Pagos (con el cliente y el monto ya
-        // cargados). Con cuenta corriente, la deuda queda en su cuenta como hasta ahora.
-        protected void btnCerrarOrden_Click(object sender, EventArgs e)
+        // --- Cierre: genera la venta y, según se elija, se cobra ahora o queda en la cuenta ----
+
+        protected void btnCerrarACuenta_Click(object sender, EventArgs e)
+        {
+            CerrarOrden(cobrarAhora: false);
+        }
+
+        protected void btnCerrarYCobrar_Click(object sender, EventArgs e)
+        {
+            CerrarOrden(cobrarAhora: true);
+        }
+
+        // Cerrar genera la venta (OrdenDeTrabajoDAL.Cerrar). Con "cobrar ahora" se pasa a Pagos con
+        // el cliente y el saldo de esa venta cargados (~/Pagos?idVenta=). Un cliente sin cuenta
+        // corriente no puede dejarla en la cuenta: aunque llegara ese pedido (el botón ni se
+        // muestra), se cobra igual. La venta y su movimiento de cuenta corriente se generan igual
+        // en los dos casos: lo único que cambia es adónde va la pantalla (Requerimientos §9.7).
+        private void CerrarOrden(bool cobrarAhora)
         {
             if (EsSoloLectura) return;
 
             var idOrden = LeerIdOculto(hdnIdOrden.Value);
+            var orden = OrdenDeTrabajoDAL.ObtenerPorId(idOrden);
+            if (orden != null && !orden.ClienteConCuentaCorriente) cobrarAhora = true;
+
             var resultado = OrdenDeTrabajoDAL.Cerrar(idOrden);
+            var mensaje = resultado.Mensaje;
 
             if (resultado.Exito)
             {
                 var venta = ComprobanteVentaDAL.ObtenerPorOrden(idOrden);
-                var cliente = venta == null ? null : ClienteDAL.ObtenerPorId(venta.IdCliente);
-                if (venta != null && cliente != null && !cliente.CuentaCorriente && venta.SaldoPendiente > 0)
+                if (cobrarAhora && venta != null && venta.SaldoPendiente > 0)
                 {
                     Response.Redirect("~/Pagos?idVenta=" + venta.IdVenta);
                     return;
                 }
+
+                if (!cobrarAhora && venta != null && venta.SaldoPendiente > 0)
+                    mensaje += " El saldo de $ " + venta.SaldoPendiente.ToString("N2") + " quedó en la cuenta corriente del cliente.";
             }
 
             CargarGrilla();
             if (resultado.Exito) Seleccionar(idOrden);
-            MostrarMensajeFormulario(resultado.Mensaje, resultado.Exito);
+            MostrarMensajeFormulario(mensaje, resultado.Exito);
         }
 
         protected void gvOrdenes_RowCommand(object sender, GridViewCommandEventArgs e)
         {
-            if (EsSoloLectura) return;
-            if (e.CommandName != "Editar") return;
+            var idOrden = LeerIdOculto(Convert.ToString(e.CommandArgument));
 
-            Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
+            if (e.CommandName == "Ver")
+            {
+                Ver(idOrden);
+                return;
+            }
+
+            if (EsSoloLectura) return;
+            if (e.CommandName == "Editar") Seleccionar(idOrden);
         }
 
         private void Seleccionar(int idOrden)
@@ -364,14 +412,14 @@ namespace LubricentroControl_2026
 
             pnlSeleccionNueva.Visible = false;
             pnlSeleccionFija.Visible = true;
-            litClienteInfo.Text = Server.HtmlEncode(orden.NombreCliente + " — DNI " + orden.Dni);
+            litClienteInfo.Text = Server.HtmlEncode(orden.NombreCliente + " — " + orden.Documento);
             litVehiculoInfo.Text = Server.HtmlEncode(orden.Patente);
             litTurnoInfo.Text = Server.HtmlEncode(DescribirTurno(orden.IdTurno));
 
             txtKilometraje.Text = orden.Kilometraje.HasValue ? orden.Kilometraje.Value.ToString() : string.Empty;
             txtObservaciones.Text = orden.Observaciones;
 
-            var esTerminal = orden.Estado == OrdenDeTrabajo.EstadoCerrada || orden.Estado == OrdenDeTrabajo.EstadoCancelada;
+            var esTerminal = !orden.EsEditable;
 
             pnlEstado.Visible = true;
             ddlEstado.Visible = !esTerminal;
@@ -383,7 +431,7 @@ namespace LubricentroControl_2026
 
             btnGuardar.Visible = !esTerminal;
             btnCancelarOrden.Visible = !esTerminal;
-            btnCerrarOrden.Visible = !esTerminal;
+            phCerrarOrden.Visible = !esTerminal;
 
             litTituloFormulario.Text = "Orden #" + orden.IdOrden + " — " + orden.Estado;
 
@@ -408,13 +456,32 @@ namespace LubricentroControl_2026
                 : turno.FechaHoraAsignada.ToString("dd/MM/yyyy HH:mm") + " — " + turno.Estado;
         }
 
+        // Las líneas y el total, y con el total, el texto de la confirmación de cierre: con
+        // cuenta corriente se ofrece dejar el saldo en la cuenta o cobrarlo; sin ella, solo cobrar.
         private void CargarDetalle(int idOrden)
         {
-            gvServicios.DataSource = DetalleOrdenServicioDAL.ListarPorOrden(idOrden);
+            var servicios = DetalleOrdenServicioDAL.ListarPorOrden(idOrden);
+            var insumos = DetalleOrdenInsumoDAL.ListarPorOrden(idOrden);
+
+            gvServicios.DataSource = servicios;
             gvServicios.DataBind();
 
-            gvInsumosOrden.DataSource = DetalleOrdenInsumoDAL.ListarPorOrden(idOrden);
+            gvInsumosOrden.DataSource = insumos;
             gvInsumosOrden.DataBind();
+
+            var total = servicios.Sum(s => s.Subtotal) + insumos.Sum(i => i.Subtotal);
+            litTotalOrden.Text = total.ToString("N2");
+
+            var orden = OrdenDeTrabajoDAL.ObtenerPorId(idOrden);
+            var conCuenta = orden != null && orden.ClienteConCuentaCorriente;
+            var nombre = orden == null ? "" : Server.HtmlEncode(orden.NombreCliente);
+
+            btnCerrarACuenta.Visible = conCuenta;
+            btnCerrarYCobrar.Text = conCuenta ? "Cobrar ahora" : "Cerrar y cobrar";
+            litConfirmarCierre.Text = "Al cerrar la orden se genera la venta por <b>$ " + total.ToString("N2") + "</b>. " +
+                (conCuenta
+                    ? nombre + " tiene cuenta corriente: ¿el saldo va a su cuenta o lo cobrás ahora?"
+                    : nombre + " no tiene cuenta corriente: después de cerrarla pasás a registrar el cobro.");
         }
 
         // --- Detalle: servicios (postbacks parciales del UpdatePanel, el modal no se cierra) ----
@@ -499,7 +566,7 @@ namespace LubricentroControl_2026
             pnlEstado.Visible = false;
             btnGuardar.Visible = true;
             btnCancelarOrden.Visible = false;
-            btnCerrarOrden.Visible = false;
+            phCerrarOrden.Visible = false;
             litTituloFormulario.Text = "Nueva orden";
             pnlDialogo.CssClass = "modal-dialog modal-lg";
             pnlDetalle.Visible = false;

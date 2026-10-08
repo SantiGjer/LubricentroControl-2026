@@ -12,38 +12,55 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroTurnos" class="filtro-tabla-texto"
-            placeholder="Filtrar por cliente, DNI, patente o fecha" aria-label="Filtrar turnos" />
-        <span class="opcion-barra">
-            <asp:Label runat="server" AssociatedControlID="ddlFiltroEstado">Estado</asp:Label>
-            <asp:DropDownList ID="ddlFiltroEstado" runat="server" AutoPostBack="true"
-                OnSelectedIndexChanged="ddlFiltroEstado_SelectedIndexChanged" />
-        </span>
+            placeholder="Buscar por cliente, documento, patente o fecha" aria-label="Buscar turnos" />
         <span class="acciones-barra">
             <asp:Button ID="btnNuevo" runat="server" CssClass="boton-rojo" Text="Nuevo turno"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
         </span>
     </div>
 
+    <div class="opciones-tabla" id="opcionesTurnos">
+        <div class="grupo-opciones" data-atributo="cuando">
+            <span class="titulo-opciones">Cuándo</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="Hoy">Hoy</button>
+            <button type="button" class="opcion" data-valor="Próximo">Próximos</button>
+            <button type="button" class="opcion" data-valor="Pasado">Pasados</button>
+        </div>
+        <div class="grupo-opciones" data-columna="Estado">
+            <span class="titulo-opciones">Estado</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="Solicitado|Confirmado">Pendientes</button>
+            <button type="button" class="opcion" data-valor="Solicitado">Solicitados</button>
+            <button type="button" class="opcion" data-valor="Confirmado">Confirmados</button>
+            <button type="button" class="opcion" data-valor="Completado">Completados</button>
+            <button type="button" class="opcion" data-valor="Cancelado">Cancelados</button>
+        </div>
+    </div>
+
+    <%-- Vienen ordenados desde el servidor: primero los de hoy (por hora), después los próximos y
+         al final los pasados (TurnoDAL.Listar). Los de hoy van marcados (fila-hoy). --%>
     <asp:GridView ID="gvTurnos" runat="server" CssClass="tabla-abm" data-filtro="filtroTurnos"
+        data-opciones-tabla="opcionesTurnos" data-titulo-detalle="Turno"
         AutoGenerateColumns="false" DataKeyNames="IdTurno" GridLines="None"
         OnRowCommand="gvTurnos_RowCommand" OnRowDataBound="gvTurnos_RowDataBound"
         EmptyDataText="No hay turnos para mostrar.">
         <Columns>
-            <asp:TemplateField HeaderText="Fecha y hora">
-                <ItemTemplate>
-                    <%# Eval("FechaHoraAsignada", "{0:dd/MM/yyyy HH:mm}") %>
-                </ItemTemplate>
-            </asp:TemplateField>
-            <asp:BoundField DataField="NombreCliente" HeaderText="Cliente" />
+            <asp:BoundField DataField="FechaHoraAsignada" HeaderText="Fecha y hora" DataFormatString="{0:dd/MM/yyyy HH:mm}"
+                ItemStyle-CssClass="celda-fecha" />
+            <asp:BoundField DataField="NombreCliente" HeaderText="Cliente" ItemStyle-CssClass="celda-titulo" />
+            <asp:BoundField DataField="Documento" HeaderText="Documento" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:TemplateField HeaderText="Vehículo">
-                <ItemTemplate>
-                    <%# Eval("Patente") ?? "—" %>
-                </ItemTemplate>
+                <ItemTemplate><%#: Eval("Patente") ?? "—" %></ItemTemplate>
             </asp:TemplateField>
             <asp:BoundField DataField="Estado" HeaderText="Estado" />
+            <asp:BoundField DataField="Observaciones" HeaderText="Observaciones" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="FechaSolicitud" HeaderText="Pedido el" DataFormatString="{0:dd/MM/yyyy HH:mm}"
+                HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <a href="#" class="accion-ver" data-ver-detalle>Ver</a>
+                    <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir %>'
                         CommandName="Editar" CommandArgument='<%# Eval("IdTurno") %>'
                         CausesValidation="false">Editar</asp:LinkButton>
                 </ItemTemplate>
@@ -77,7 +94,7 @@
                                     <asp:Label runat="server" AssociatedControlID="txtCliente">Cliente</asp:Label>
                                     <div class="selector-busqueda" data-postback="true" data-opciones="<%: OpcionesClientes %>">
                                         <asp:TextBox ID="txtCliente" runat="server" CssClass="selector-texto" autocomplete="off"
-                                            placeholder="Elegí el cliente o buscalo por nombre o DNI" />
+                                            placeholder="Elegí el cliente o buscalo por nombre o documento" />
                                         <button type="button" class="selector-boton" tabindex="-1" aria-label="Ver los clientes"></button>
                                         <asp:HiddenField ID="hdnIdCliente" runat="server" OnValueChanged="hdnIdCliente_ValueChanged" />
                                     </div>

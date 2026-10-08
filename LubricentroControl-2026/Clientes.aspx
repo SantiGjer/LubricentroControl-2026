@@ -19,6 +19,7 @@
     <asp:HiddenField ID="hdnVhModelo" runat="server" />
     <asp:HiddenField ID="hdnVhAnio" runat="server" />
     <asp:HiddenField ID="hdnVhTipoCombustible" runat="server" />
+    <asp:HiddenField ID="hdnVhCambioDueno" runat="server" />
 
     <asp:HiddenField ID="hdnVieneDeOrden" runat="server" />
     <asp:HiddenField ID="hdnOrKilometraje" runat="server" />
@@ -29,40 +30,65 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroClientes" class="filtro-tabla-texto"
-            placeholder="Filtrar por nombre, apellido, DNI, teléfono o mail" aria-label="Filtrar clientes" />
-        <span class="opcion-barra">
-            <asp:CheckBox ID="chkIncluirInactivos" runat="server" AutoPostBack="true"
-                OnCheckedChanged="chkIncluirInactivos_CheckedChanged" />
-            <asp:Label runat="server" AssociatedControlID="chkIncluirInactivos">Incluir inactivos</asp:Label>
-        </span>
+            placeholder="Buscar por nombre, documento, teléfono, mail o patente" aria-label="Buscar clientes" />
         <span class="acciones-barra">
             <asp:Button ID="btnNuevo" runat="server" CssClass="boton-rojo" Text="Nuevo cliente"
                 OnClick="btnNuevo_Click" CausesValidation="false" />
         </span>
     </div>
 
+    <div class="opciones-tabla" id="opcionesClientes">
+        <div class="grupo-opciones" data-columna="Estado" data-inicial="Activo">
+            <span class="titulo-opciones">Estado</span>
+            <button type="button" class="opcion" data-valor="Activo">Activos</button>
+            <button type="button" class="opcion" data-valor="Inactivo">Inactivos</button>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+        </div>
+        <div class="grupo-opciones" data-columna="Tipo">
+            <span class="titulo-opciones">Tipo</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="Persona física">Personas</button>
+            <button type="button" class="opcion" data-valor="Empresa">Empresas</button>
+        </div>
+        <div class="grupo-opciones" data-columna="Cta. cte.">
+            <span class="titulo-opciones">Cuenta corriente</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="Sí">Con cuenta</button>
+            <button type="button" class="opcion" data-valor="No">Sin cuenta</button>
+        </div>
+    </div>
+
+    <%-- Las columnas con "oculta" arrancan escondidas: se suman con "Columnas" y se ven todas en "Ver". --%>
     <asp:GridView ID="gvClientes" runat="server" CssClass="tabla-abm" data-filtro="filtroClientes"
+        data-opciones-tabla="opcionesClientes" data-titulo-detalle="Cliente"
         AutoGenerateColumns="false" DataKeyNames="IdCliente" GridLines="None"
         OnRowCommand="gvClientes_RowCommand" EmptyDataText="No hay clientes cargados.">
         <Columns>
-            <asp:BoundField DataField="Apellido" HeaderText="Apellido" />
-            <asp:BoundField DataField="Nombre" HeaderText="Nombre" />
-            <asp:BoundField DataField="Dni" HeaderText="DNI" />
-            <asp:BoundField DataField="Telefono" HeaderText="Teléfono" />
+            <asp:BoundField DataField="Denominacion" HeaderText="Cliente" ItemStyle-CssClass="celda-titulo" />
+            <asp:BoundField DataField="TipoCliente" HeaderText="Tipo" />
+            <asp:BoundField DataField="Documento" HeaderText="Documento" ItemStyle-CssClass="sin-corte" />
+            <asp:BoundField DataField="CondicionIva" HeaderText="Condición IVA" />
+            <asp:BoundField DataField="Telefono" HeaderText="Teléfono" ItemStyle-CssClass="sin-corte" />
             <asp:BoundField DataField="Email" HeaderText="Mail" />
-            <asp:TemplateField HeaderText="Cta. cte.">
-                <ItemTemplate>
-                    <%# (bool)Eval("CuentaCorriente") ? "Sí" : "No" %>
-                </ItemTemplate>
+            <asp:BoundField DataField="Direccion" HeaderText="Dirección" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="Localidad" HeaderText="Localidad" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="Provincia" HeaderText="Provincia" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="CodigoPostal" HeaderText="Código postal" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:TemplateField HeaderText="Vehículos" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
+                <ItemTemplate><%#: PatentesDe((int)Eval("IdCliente")) %></ItemTemplate>
             </asp:TemplateField>
+            <asp:TemplateField HeaderText="Cta. cte.">
+                <ItemTemplate><%# (bool)Eval("CuentaCorriente") ? "Sí" : "No" %></ItemTemplate>
+            </asp:TemplateField>
+            <asp:BoundField DataField="FechaAlta" HeaderText="Alta" DataFormatString="{0:dd/MM/yyyy}"
+                HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:TemplateField HeaderText="Estado">
-                <ItemTemplate>
-                    <%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %>
-                </ItemTemplate>
+                <ItemTemplate><%# (bool)Eval("Activo") ? "Activo" : "Inactivo" %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <a href="#" class="accion-ver" data-ver-detalle>Ver</a>
+                    <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir %>'
                         CommandName="Editar" CommandArgument='<%# Eval("IdCliente") %>'
                         CausesValidation="false">Editar</asp:LinkButton>
                 </ItemTemplate>
@@ -88,7 +114,7 @@
                     </asp:Panel>
 
                     <asp:Panel ID="pnlVieneDeVehiculo" runat="server" Visible="false" CssClass="alert alert-info" role="alert">
-                        Estás creando un cliente para asignarlo a un vehículo nuevo.
+                        <asp:Literal ID="litVieneDeVehiculo" runat="server" Text="Estás creando un cliente para asignarlo a un vehículo nuevo." />
                         <asp:Button ID="btnVolverAVehiculos" runat="server" CssClass="boton-gris boton-chico" Text="Volver a Vehículos sin crear"
                             OnClick="btnVolverAVehiculos_Click" CausesValidation="false" />
                     </asp:Panel>
@@ -109,33 +135,65 @@
                     <asp:HiddenField ID="hdnActivo" runat="server" Value="True" />
 
                     <div class="row campos-formulario">
-                        <div class="col-md-6 campo">
+                        <div class="col-12 campo">
+                            <label>Tipo de cliente</label>
+                            <asp:RadioButtonList ID="rblTipoCliente" runat="server" ClientIDMode="Static"
+                                RepeatLayout="Flow" RepeatDirection="Horizontal" CssClass="opciones-radio" />
+                        </div>
+
+                        <%-- Persona física: nombre y apellido. Empresa: razón social. --%>
+                        <div class="col-md-6 campo" data-mostrar-si="rblTipoCliente=Persona física">
                             <asp:Label runat="server" AssociatedControlID="txtNombre">Nombre</asp:Label>
                             <asp:TextBox ID="txtNombre" runat="server" MaxLength="50" />
-                            <asp:RequiredFieldValidator runat="server" ControlToValidate="txtNombre"
+                            <asp:CustomValidator runat="server" ControlToValidate="txtNombre" ValidateEmptyText="true"
+                                OnServerValidate="valDatoDePersona_ServerValidate"
                                 CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
                                 ErrorMessage="El nombre es obligatorio." />
                         </div>
 
-                        <div class="col-md-6 campo">
+                        <div class="col-md-6 campo" data-mostrar-si="rblTipoCliente=Persona física">
                             <asp:Label runat="server" AssociatedControlID="txtApellido">Apellido</asp:Label>
                             <asp:TextBox ID="txtApellido" runat="server" MaxLength="50" />
-                            <asp:RequiredFieldValidator runat="server" ControlToValidate="txtApellido"
+                            <asp:CustomValidator runat="server" ControlToValidate="txtApellido" ValidateEmptyText="true"
+                                OnServerValidate="valDatoDePersona_ServerValidate"
                                 CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
                                 ErrorMessage="El apellido es obligatorio." />
                         </div>
 
-                        <div class="col-md-6 campo">
-                            <asp:Label runat="server" AssociatedControlID="txtDni">DNI</asp:Label>
-                            <asp:TextBox ID="txtDni" runat="server" MaxLength="8" />
-                            <asp:RequiredFieldValidator runat="server" ControlToValidate="txtDni"
+                        <div class="col-12 campo" data-mostrar-si="rblTipoCliente=Empresa">
+                            <asp:Label runat="server" AssociatedControlID="txtRazonSocial">Razón social</asp:Label>
+                            <asp:TextBox ID="txtRazonSocial" runat="server" MaxLength="150" />
+                            <asp:CustomValidator runat="server" ControlToValidate="txtRazonSocial" ValidateEmptyText="true"
+                                OnServerValidate="valRazonSocial_ServerValidate"
                                 CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
-                                ErrorMessage="El DNI es obligatorio." />
-                            <asp:CustomValidator runat="server" ControlToValidate="txtDni"
-                                OnServerValidate="valDni_ServerValidate"
-                                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
-                                ErrorMessage="El DNI debe tener 7 u 8 números, sin puntos." />
+                                ErrorMessage="La razón social es obligatoria." />
                         </div>
+
+                        <div class="col-12"><p class="subtitulo-formulario">Datos fiscales</p></div>
+
+                        <div class="col-md-4 campo">
+                            <asp:Label runat="server" AssociatedControlID="ddlTipoDocumento">Tipo de identificación</asp:Label>
+                            <asp:DropDownList ID="ddlTipoDocumento" runat="server" />
+                        </div>
+
+                        <div class="col-md-4 campo">
+                            <asp:Label runat="server" AssociatedControlID="txtNumeroDocumento">Número</asp:Label>
+                            <asp:TextBox ID="txtNumeroDocumento" runat="server" MaxLength="20" />
+                            <asp:CustomValidator ID="valNumeroDocumento" runat="server" ControlToValidate="txtNumeroDocumento"
+                                ValidateEmptyText="true" OnServerValidate="valNumeroDocumento_ServerValidate"
+                                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente" />
+                        </div>
+
+                        <div class="col-md-4 campo">
+                            <asp:Label runat="server" AssociatedControlID="ddlCondicionIva">Condición frente al IVA</asp:Label>
+                            <asp:DropDownList ID="ddlCondicionIva" runat="server" />
+                        </div>
+
+                        <div class="col-12">
+                            <p class="texto-ayuda">Una empresa, y un responsable inscripto, monotributista o exento, se identifica con su CUIT.</p>
+                        </div>
+
+                        <div class="col-12"><p class="subtitulo-formulario">Contacto y domicilio</p></div>
 
                         <div class="col-md-6 campo">
                             <asp:Label runat="server" AssociatedControlID="txtTelefono">Teléfono</asp:Label>
@@ -149,11 +207,34 @@
                         <div class="col-md-6 campo">
                             <asp:Label runat="server" AssociatedControlID="txtEmail">Mail</asp:Label>
                             <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" MaxLength="150" />
+                            <asp:CustomValidator runat="server" ControlToValidate="txtEmail"
+                                OnServerValidate="valEmail_ServerValidate"
+                                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
+                                ErrorMessage="El mail no tiene un formato válido." />
+                        </div>
+
+                        <div class="col-md-8 campo">
+                            <asp:Label runat="server" AssociatedControlID="txtDireccion">Dirección</asp:Label>
+                            <asp:TextBox ID="txtDireccion" runat="server" MaxLength="200" placeholder="Calle y número" />
+                        </div>
+
+                        <div class="col-md-4 campo">
+                            <asp:Label runat="server" AssociatedControlID="txtCodigoPostal">Código postal</asp:Label>
+                            <asp:TextBox ID="txtCodigoPostal" runat="server" MaxLength="8" placeholder="1638 o C1406GZA" />
+                            <asp:CustomValidator runat="server" ControlToValidate="txtCodigoPostal"
+                                OnServerValidate="valCodigoPostal_ServerValidate"
+                                CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
+                                ErrorMessage="Usá 4 números (1638) o el formato CPA (C1406GZA)." />
                         </div>
 
                         <div class="col-md-6 campo">
-                            <asp:Label runat="server" AssociatedControlID="txtDireccion">Dirección</asp:Label>
-                            <asp:TextBox ID="txtDireccion" runat="server" MaxLength="200" />
+                            <asp:Label runat="server" AssociatedControlID="txtLocalidad">Localidad</asp:Label>
+                            <asp:TextBox ID="txtLocalidad" runat="server" MaxLength="100" />
+                        </div>
+
+                        <div class="col-md-6 campo">
+                            <asp:Label runat="server" AssociatedControlID="ddlProvincia">Provincia</asp:Label>
+                            <asp:DropDownList ID="ddlProvincia" runat="server" />
                         </div>
 
                         <div class="col-12 campo">
@@ -162,8 +243,8 @@
                                 <asp:Label runat="server" AssociatedControlID="chkCuentaCorriente" CssClass="form-check-label">Cuenta corriente</asp:Label>
                             </div>
                             <p class="texto-ayuda">
-                                Con cuenta corriente el cliente puede quedar debiendo. Sin ella, al cerrar su orden
-                                de trabajo se pasa directo a cobrarla.
+                                Con cuenta corriente el cliente puede quedar debiendo: al cerrar su orden se elige si el saldo
+                                va a la cuenta o se cobra en el momento. Sin ella, al cerrar su orden se pasa directo a cobrarla.
                                 <asp:Literal ID="litCuentaCorrienteBloqueada" runat="server" Visible="false"
                                     Text="Solo un encargado o un administrador puede cambiarla." />
                             </p>

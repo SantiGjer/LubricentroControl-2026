@@ -47,11 +47,21 @@
             <asp:BoundField DataField="NumeroComprobante" HeaderText="Número" />
             <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy}" />
             <asp:BoundField DataField="NombreCliente" HeaderText="Cliente" />
+            <asp:BoundField DataField="DocumentoCliente" HeaderText="Documento" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:BoundField DataField="Patente" HeaderText="Vehículo" />
+            <asp:BoundField DataField="Subtotal" HeaderText="Neto" DataFormatString="{0:N2}"
+                ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right"
+                HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="Impuestos" HeaderText="IVA" DataFormatString="{0:N2}"
+                ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right"
+                HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:BoundField DataField="Total" HeaderText="Total" DataFormatString="{0:N2}"
                 ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
             <asp:BoundField DataField="SaldoPendiente" HeaderText="Saldo pendiente" DataFormatString="{0:N2}"
                 ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
+            <asp:TemplateField HeaderText="Factura" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
+                <ItemTemplate><%#: Eval("NumeroFactura") ?? "—" %></ItemTemplate>
+            </asp:TemplateField>
         </Columns>
     </asp:GridView>
     </div>

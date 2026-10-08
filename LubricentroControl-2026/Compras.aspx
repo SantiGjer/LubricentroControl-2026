@@ -12,32 +12,49 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroCompras" class="filtro-tabla-texto"
-            placeholder="Filtrar por número, proveedor, CUIT o fecha" aria-label="Filtrar compras" />
-        <span class="opcion-barra">
-            <asp:CheckBox ID="chkSoloConSaldo" runat="server" AutoPostBack="true"
-                OnCheckedChanged="chkSoloConSaldo_CheckedChanged" />
-            <asp:Label runat="server" AssociatedControlID="chkSoloConSaldo">Solo con saldo pendiente</asp:Label>
-        </span>
+            placeholder="Buscar por número, proveedor, CUIT o fecha" aria-label="Buscar compras" />
         <span class="acciones-barra">
             <asp:Button ID="btnNuevaCompra" runat="server" CssClass="boton-rojo" Text="Nueva compra"
                 OnClick="btnNuevaCompra_Click" CausesValidation="false" />
         </span>
     </div>
 
+    <div class="opciones-tabla" id="opcionesCompras">
+        <div class="grupo-opciones" data-columna="Condición">
+            <span class="titulo-opciones">Condición</span>
+            <button type="button" class="opcion" data-valor="">Todas</button>
+            <button type="button" class="opcion" data-valor="Contado">Contado</button>
+            <button type="button" class="opcion" data-valor="Cuenta corriente">Cuenta corriente</button>
+        </div>
+        <div class="grupo-opciones" data-atributo="saldo">
+            <span class="titulo-opciones">Saldo</span>
+            <button type="button" class="opcion" data-valor="">Todas</button>
+            <button type="button" class="opcion" data-valor="pendiente">Con saldo pendiente</button>
+            <button type="button" class="opcion" data-valor="pagada">Pagadas</button>
+        </div>
+    </div>
+
     <asp:GridView ID="gvCompras" runat="server" CssClass="tabla-abm" data-filtro="filtroCompras"
+        data-opciones-tabla="opcionesCompras"
         AutoGenerateColumns="false" DataKeyNames="IdCompra" GridLines="None"
         OnRowCommand="gvCompras_RowCommand" OnRowDataBound="gvCompras_RowDataBound"
         EmptyDataText="No hay compras para mostrar.">
         <Columns>
-            <asp:BoundField DataField="NumeroComprobante" HeaderText="Número" />
+            <asp:BoundField DataField="NumeroComprobante" HeaderText="Número" ItemStyle-CssClass="celda-titulo" />
             <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy}" />
             <asp:BoundField DataField="RazonSocial" HeaderText="Proveedor" />
+            <asp:TemplateField HeaderText="CUIT" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
+                <ItemTemplate><%#: BIZ.Modelo.Proveedor.FormatearCuit(Convert.ToString(Eval("Cuit"))) %></ItemTemplate>
+            </asp:TemplateField>
             <asp:BoundField DataField="CondicionPago" HeaderText="Condición" />
+            <asp:BoundField DataField="MedioPago" HeaderText="Medio de pago" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="Subtotal" HeaderText="Subtotal" DataFormatString="{0:N2}" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
+            <asp:BoundField DataField="Impuestos" HeaderText="Impuestos" DataFormatString="{0:N2}" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
             <asp:BoundField DataField="Total" HeaderText="Total" DataFormatString="{0:N2}" />
             <asp:BoundField DataField="SaldoPendiente" HeaderText="Saldo pendiente" DataFormatString="{0:N2}" />
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <asp:LinkButton runat="server" CssClass="accion-ver"
                         CommandName="Ver" CommandArgument='<%# Eval("IdCompra") %>'
                         CausesValidation="false">Ver</asp:LinkButton>
                 </ItemTemplate>

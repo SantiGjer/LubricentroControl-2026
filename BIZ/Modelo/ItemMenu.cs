@@ -18,6 +18,9 @@ namespace BIZ.Modelo
         public int? IdMenuPadre { get; set; }
         public int Orden { get; set; }
 
+        // Nombre del ícono de la barra lateral (Site.Master.cs); null en las opciones de segundo nivel.
+        public string Icono { get; set; }
+
         // El rol ve la pantalla pero no puede modificar (matriz de permisos §5).
         public bool SoloLectura { get; set; }
 

@@ -11,12 +11,10 @@ namespace LubricentroControl_2026
     // ABM de turnos (Fase 3). Acceso completo para Admin, Encargado y Empleado (Requerimientos
     // §5); Lectura, solo consulta. El formulario se abre en un modal sobre la lista. El cliente se
     // elige con el selector con búsqueda (mismo que el dueño en Vehículos) — sin el atajo "Nuevo
-    // cliente" — y queda fijo una vez creado el turno.
+    // cliente" — y queda fijo una vez creado el turno. La lista arranca con los turnos de hoy
+    // arriba de todo (TurnoDAL.Listar).
     public partial class Turnos : PaginaSegura
     {
-        // Índice de la columna "Acciones" en gvTurnos.Columns.
-        private const int ColumnaAcciones = 4;
-
         private const string IdModal = "modalTurno";
 
         protected void Page_Load(object sender, EventArgs e)
@@ -31,10 +29,8 @@ namespace LubricentroControl_2026
             {
                 btnNuevo.Visible = false;
                 pnlFormulario.Visible = false;
-                gvTurnos.Columns[ColumnaAcciones].Visible = false;
             }
 
-            CargarFiltroEstado();
             CargarEstados();
             LimpiarFormulario();
             CargarGrilla();
@@ -46,14 +42,6 @@ namespace LubricentroControl_2026
             get { return Selectores.OpcionesClientes(); }
         }
 
-        private void CargarFiltroEstado()
-        {
-            ddlFiltroEstado.Items.Clear();
-            ddlFiltroEstado.Items.Add(new ListItem("(Todos)", ""));
-            foreach (var estado in Turno.Estados)
-                ddlFiltroEstado.Items.Add(new ListItem(estado, estado));
-        }
-
         private void CargarEstados()
         {
             ddlEstado.Items.Clear();
@@ -61,24 +49,22 @@ namespace LubricentroControl_2026
                 ddlEstado.Items.Add(new ListItem(estado, estado));
         }
 
-        // El estado filtra en el servidor; el texto, la tabla en el navegador (Lubricentro.js).
+        // Todos los turnos, los de hoy primero: el texto, el estado y el "cuándo" los filtra la
+        // tabla en el navegador (Lubricentro.js).
         private void CargarGrilla()
         {
-            gvTurnos.DataSource = TurnoDAL.Listar(ddlFiltroEstado.SelectedValue);
+            gvTurnos.DataSource = TurnoDAL.Listar();
             gvTurnos.DataBind();
         }
 
-        // El filtro de la tabla busca también por DNI, que no es una columna: va en data-buscar.
+        // data-cuando (Hoy/Próximo/Pasado) para la opción "Cuándo"; los de hoy, marcados.
         protected void gvTurnos_RowDataBound(object sender, GridViewRowEventArgs e)
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-            e.Row.Attributes["data-buscar"] = ((Turno)e.Row.DataItem).Dni;
-        }
-
-        protected void ddlFiltroEstado_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            CargarGrilla();
+            var turno = (Turno)e.Row.DataItem;
+            e.Row.Attributes["data-cuando"] = turno.Cuando;
+            if (turno.Cuando == "Hoy") e.Row.CssClass = "fila-hoy";
         }
 
         // --- Selector de cliente -----------------------------------------------------------

@@ -12,29 +12,42 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroClientes" class="filtro-tabla-texto"
-            placeholder="Filtrar por nombre, apellido o DNI" aria-label="Filtrar clientes" />
-        <span class="opcion-barra">
-            <asp:CheckBox ID="chkIncluirSinCuenta" runat="server" AutoPostBack="true"
-                OnCheckedChanged="chkIncluirSinCuenta_CheckedChanged" />
-            <asp:Label runat="server" AssociatedControlID="chkIncluirSinCuenta">Incluir clientes sin cuenta corriente</asp:Label>
-        </span>
+            placeholder="Buscar por cliente o documento" aria-label="Buscar clientes" />
+    </div>
+
+    <div class="opciones-tabla" id="opcionesCuentas">
+        <div class="grupo-opciones" data-columna="Cuenta corriente" data-inicial="Habilitada">
+            <span class="titulo-opciones">Cuenta corriente</span>
+            <button type="button" class="opcion" data-valor="Habilitada">Habilitada</button>
+            <button type="button" class="opcion" data-valor="No habilitada">No habilitada</button>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+        </div>
+        <div class="grupo-opciones" data-atributo="saldo">
+            <span class="titulo-opciones">Saldo</span>
+            <button type="button" class="opcion" data-valor="">Todos</button>
+            <button type="button" class="opcion" data-valor="debe">Deben</button>
+            <button type="button" class="opcion" data-valor="a-favor">A favor</button>
+            <button type="button" class="opcion" data-valor="cero">Sin saldo</button>
+        </div>
     </div>
 
     <asp:GridView ID="gvClientes" runat="server" CssClass="tabla-abm" data-filtro="filtroClientes"
+        data-opciones-tabla="opcionesCuentas"
         AutoGenerateColumns="false" DataKeyNames="IdCliente" GridLines="None"
-        OnRowCommand="gvClientes_RowCommand" EmptyDataText="No hay clientes con cuenta corriente.">
+        OnRowCommand="gvClientes_RowCommand" OnRowDataBound="gvClientes_RowDataBound"
+        EmptyDataText="No hay clientes cargados.">
         <Columns>
-            <asp:BoundField DataField="Apellido" HeaderText="Apellido" />
-            <asp:BoundField DataField="Nombre" HeaderText="Nombre" />
-            <asp:BoundField DataField="Dni" HeaderText="DNI" />
+            <asp:BoundField DataField="Denominacion" HeaderText="Cliente" ItemStyle-CssClass="celda-titulo" />
+            <asp:BoundField DataField="Documento" HeaderText="Documento" />
             <asp:TemplateField HeaderText="Cuenta corriente">
-                <ItemTemplate>
-                    <%# (bool)Eval("CuentaCorriente") ? "Habilitada" : "No habilitada" %>
-                </ItemTemplate>
+                <ItemTemplate><%# (bool)Eval("CuentaCorriente") ? "Habilitada" : "No habilitada" %></ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Saldo">
+                <ItemTemplate><%# SaldoDe((int)Eval("IdCliente")).ToString("N2") %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
-                    <asp:LinkButton runat="server"
+                    <asp:LinkButton runat="server" CssClass="accion-ver"
                         CommandName="Ver" CommandArgument='<%# Eval("IdCliente") %>'
                         CausesValidation="false">Ver cuenta</asp:LinkButton>
                     <asp:HyperLink runat="server" Visible='<%# PuedeEditarCliente %>'

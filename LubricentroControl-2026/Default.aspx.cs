@@ -53,7 +53,7 @@ namespace LubricentroControl_2026
         // Los 3 insumos con mayor faltante (stock mínimo menos stock actual).
         private void CargarStockBajo()
         {
-            var bajos = InsumoDAL.ListarStockBajo();
+            var bajos = ProductoDAL.ListarStockBajo();
 
             gvStockBajo.DataSource = bajos
                 .OrderByDescending(i => i.StockMinimo - i.StockActual)
@@ -68,16 +68,16 @@ namespace LubricentroControl_2026
                     + (bajos.Count > CantidadStockBajo ? " Se muestran los " + CantidadStockBajo + " con mayor faltante." : "");
             }
 
-            // Reportes no está disponible para todos los roles: quien no lo ve va a Insumos.
+            // Reportes no está disponible para todos los roles: quien no lo ve va a Productos.
             if (TieneAcceso("~/Reportes/StockBajo"))
             {
                 lnkStock.NavigateUrl = "~/Reportes/StockBajo";
                 lnkStock.Text = "Ver reporte de stock bajo";
             }
-            else if (TieneAcceso("~/Insumos"))
+            else if (TieneAcceso("~/Productos"))
             {
-                lnkStock.NavigateUrl = "~/Insumos";
-                lnkStock.Text = "Ir a Insumos";
+                lnkStock.NavigateUrl = "~/Productos";
+                lnkStock.Text = "Ir a Productos";
             }
             else
             {
@@ -111,7 +111,7 @@ namespace LubricentroControl_2026
         {
             if (e.Row.RowType != DataControlRowType.DataRow) return;
 
-            var insumo = (Insumo)e.Row.DataItem;
+            var insumo = (Producto)e.Row.DataItem;
             if (insumo.StockActual <= 0)
                 e.Row.Style.Add("background-color", "#f8d7da");
         }

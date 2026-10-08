@@ -7,7 +7,7 @@ namespace BIZ.Data
     public static class VehiculoDAL
     {
         private const string SelectBase = @"
-            SELECT v.idVehiculo, v.idCliente, c.nombre + ' ' + c.apellido AS nombreCliente,
+            SELECT v.idVehiculo, v.idCliente, c.denominacion AS nombreCliente, c.tipoDocumento, c.numeroDocumento,
                    v.patente, v.marca, v.modelo, v.anio, v.tipoCombustible, v.activo
             FROM Vehiculo v
             INNER JOIN Cliente c ON c.idCliente = v.idCliente";
@@ -19,6 +19,8 @@ namespace BIZ.Data
                 IdVehiculo = AccesoDatos.LeerInt(fila, "idVehiculo"),
                 IdCliente = AccesoDatos.LeerInt(fila, "idCliente"),
                 NombreCliente = AccesoDatos.LeerString(fila, "nombreCliente"),
+                TipoDocumentoCliente = AccesoDatos.LeerString(fila, "tipoDocumento"),
+                NumeroDocumentoCliente = AccesoDatos.LeerString(fila, "numeroDocumento"),
                 Patente = AccesoDatos.LeerString(fila, "patente"),
                 Marca = AccesoDatos.LeerString(fila, "marca"),
                 Modelo = AccesoDatos.LeerString(fila, "modelo"),
@@ -32,7 +34,7 @@ namespace BIZ.Data
         {
             var sql = SelectBase +
                       (incluirInactivos ? "" : " WHERE v.activo = 1") +
-                      " ORDER BY c.apellido, c.nombre, v.patente";
+                      " ORDER BY c.denominacion, v.patente";
 
             var lista = new List<Vehiculo>();
             foreach (DataRow fila in AccesoDatos.Consultar(sql).Rows)
@@ -49,7 +51,7 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Vehículos de un cliente puntual. La usa el botón "Ver vehículos" de Clientes.
+        // Vehículos de un cliente puntual (selectores de vehículo de Turnos y Órdenes).
         public static List<Vehiculo> ListarPorCliente(int idCliente, bool incluirInactivos = true)
         {
             var sql = SelectBase + " WHERE v.idCliente = @idCliente" +
@@ -108,28 +110,29 @@ namespace BIZ.Data
             return ResultadoOperacion.Ok("Vehículo creado.");
         }
 
+        // No cambia el dueño: eso es CambiarDueno, que valida que el vehículo no tenga nada en
+        // curso a nombre del dueño actual.
         public static ResultadoOperacion Actualizar(Vehiculo vehiculo)
         {
-            var validacion = vehiculo.Validar();
-            if (!validacion.Exito) return validacion;
-
-            if (ObtenerPorId(vehiculo.IdVehiculo) == null)
+            var existente = ObtenerPorId(vehiculo.IdVehiculo);
+            if (existente == null)
                 return ResultadoOperacion.Error("El vehículo no existe.");
 
-            if (ClienteDAL.ObtenerPorId(vehiculo.IdCliente) == null)
-                return ResultadoOperacion.Error("El cliente no existe.");
+            vehiculo.IdCliente = existente.IdCliente;
+
+            var validacion = vehiculo.Validar();
+            if (!validacion.Exito) return validacion;
 
             if (ExistePatente(vehiculo.Patente, vehiculo.IdVehiculo))
                 return ResultadoOperacion.Error("Ya existe otro vehículo con esa patente.");
 
             const string sql = @"
                 UPDATE Vehiculo
-                SET idCliente = @idCliente, patente = @patente, marca = @marca, modelo = @modelo,
+                SET patente = @patente, marca = @marca, modelo = @modelo,
                     anio = @anio, tipoCombustible = @tipoCombustible, activo = @activo
                 WHERE idVehiculo = @idVehiculo";
 
             AccesoDatos.Ejecutar(sql,
-                AccesoDatos.Param("@idCliente", vehiculo.IdCliente),
                 AccesoDatos.Param("@patente", vehiculo.Patente),
                 AccesoDatos.Param("@marca", vehiculo.Marca),
                 AccesoDatos.Param("@modelo", vehiculo.Modelo),
@@ -139,6 +142,50 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idVehiculo", vehiculo.IdVehiculo));
 
             return ResultadoOperacion.Ok("Vehículo actualizado.");
+        }
+
+        // Transfiere el vehículo a otro cliente (Requerimientos §9.12). El historial no se mueve:
+        // cada turno, orden y venta guarda su propio cliente, así que lo hecho para el dueño
+        // anterior queda a su nombre. Por eso no se permite mientras el vehículo tenga una orden en
+        // el taller o un turno vigente: quedarían a nombre de un cliente que ya no es el dueño
+        // (y TurnoDAL/OrdenDeTrabajoDAL rechazarían editarlos). Hay que cerrarlos o cancelarlos antes.
+        public static ResultadoOperacion CambiarDueno(int idVehiculo, int idClienteNuevo)
+        {
+            var vehiculo = ObtenerPorId(idVehiculo);
+            if (vehiculo == null)
+                return ResultadoOperacion.Error("El vehículo no existe.");
+
+            if (!vehiculo.Activo)
+                return ResultadoOperacion.Error("El vehículo está dado de baja: reactivalo antes de cambiarle el dueño.");
+
+            var cliente = ClienteDAL.ObtenerPorId(idClienteNuevo);
+            if (cliente == null)
+                return ResultadoOperacion.Error("Seleccioná el nuevo dueño.");
+
+            if (!cliente.Activo)
+                return ResultadoOperacion.Error("El cliente elegido está dado de baja.");
+
+            if (cliente.IdCliente == vehiculo.IdCliente)
+                return ResultadoOperacion.Error("Ese cliente ya es el dueño del vehículo.");
+
+            var ordenes = OrdenDeTrabajoDAL.ContarEnCursoPorVehiculo(idVehiculo);
+            if (ordenes > 0)
+                return ResultadoOperacion.Error("El vehículo tiene " +
+                    (ordenes == 1 ? "una orden de trabajo en curso" : ordenes + " órdenes de trabajo en curso") +
+                    " a nombre de " + vehiculo.NombreCliente + ". Cerrala o cancelala antes de cambiar el dueño.");
+
+            var turnos = TurnoDAL.ContarVigentesPorVehiculo(idVehiculo);
+            if (turnos > 0)
+                return ResultadoOperacion.Error("El vehículo tiene " +
+                    (turnos == 1 ? "un turno pendiente" : turnos + " turnos pendientes") +
+                    " a nombre de " + vehiculo.NombreCliente + ". Completalo o cancelalo antes de cambiar el dueño.");
+
+            AccesoDatos.Ejecutar(
+                "UPDATE Vehiculo SET idCliente = @idCliente WHERE idVehiculo = @idVehiculo",
+                AccesoDatos.Param("@idCliente", idClienteNuevo),
+                AccesoDatos.Param("@idVehiculo", idVehiculo));
+
+            return ResultadoOperacion.Ok("El vehículo " + vehiculo.Patente + " pasó a nombre de " + cliente.Denominacion + ".");
         }
 
         // Baja lógica: el vehículo puede estar referenciado por órdenes de trabajo,

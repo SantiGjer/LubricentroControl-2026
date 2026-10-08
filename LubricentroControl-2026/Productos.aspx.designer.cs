@@ -6,7 +6,7 @@
 
 namespace LubricentroControl_2026
 {
-    public partial class Insumos
+    public partial class Productos
     {
         /// <summary>Control pnlMensaje.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlMensaje;
@@ -14,14 +14,11 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
-        /// <summary>Control chkIncluirInactivos.</summary>
-        protected global::System.Web.UI.WebControls.CheckBox chkIncluirInactivos;
-
         /// <summary>Control btnNuevo.</summary>
         protected global::System.Web.UI.WebControls.Button btnNuevo;
 
-        /// <summary>Control gvInsumos.</summary>
-        protected global::System.Web.UI.WebControls.GridView gvInsumos;
+        /// <summary>Control gvProductos.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvProductos;
 
         /// <summary>Control pnlDialogo.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlDialogo;
@@ -38,8 +35,8 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensajeFormulario.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensajeFormulario;
 
-        /// <summary>Control hdnIdInsumo.</summary>
-        protected global::System.Web.UI.WebControls.HiddenField hdnIdInsumo;
+        /// <summary>Control hdnIdProducto.</summary>
+        protected global::System.Web.UI.WebControls.HiddenField hdnIdProducto;
 
         /// <summary>Control hdnActivo.</summary>
         protected global::System.Web.UI.WebControls.HiddenField hdnActivo;
@@ -47,8 +44,32 @@ namespace LubricentroControl_2026
         /// <summary>Control pnlDatos.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlDatos;
 
+        /// <summary>Control rblTipo.</summary>
+        protected global::System.Web.UI.WebControls.RadioButtonList rblTipo;
+
+        /// <summary>Control pnlTipoFijo.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlTipoFijo;
+
         /// <summary>Control txtNombre.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtNombre;
+
+        /// <summary>Control txtDescripcion.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtDescripcion;
+
+        /// <summary>Control txtSku.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtSku;
+
+        /// <summary>Control txtCodigoBarras.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtCodigoBarras;
+
+        /// <summary>Control txtPrecio.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtPrecio;
+
+        /// <summary>Control ddlTipoIva.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlTipoIva;
+
+        /// <summary>Control ddlAlicuota.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlAlicuota;
 
         /// <summary>Control txtMarca.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtMarca;
@@ -58,9 +79,6 @@ namespace LubricentroControl_2026
 
         /// <summary>Control txtStockMinimo.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtStockMinimo;
-
-        /// <summary>Control txtPrecioVenta.</summary>
-        protected global::System.Web.UI.WebControls.TextBox txtPrecioVenta;
 
         /// <summary>Control pnlStockInicial.</summary>
         protected global::System.Web.UI.WebControls.Panel pnlStockInicial;

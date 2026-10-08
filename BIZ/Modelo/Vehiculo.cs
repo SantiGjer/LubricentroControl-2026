@@ -25,8 +25,15 @@ namespace BIZ.Modelo
         public int IdVehiculo { get; set; }
         public int IdCliente { get; set; }
 
-        // Viene del JOIN con Cliente; solo para mostrar en la grilla, no se guarda.
+        // Vienen del JOIN con Cliente; solo para mostrar en la grilla, no se guardan.
         public string NombreCliente { get; set; }
+        public string TipoDocumentoCliente { get; set; }
+        public string NumeroDocumentoCliente { get; set; }
+
+        public string DocumentoCliente
+        {
+            get { return Cliente.FormatearDocumento(TipoDocumentoCliente, NumeroDocumentoCliente); }
+        }
 
         public string Patente { get; set; }
         public string Marca { get; set; }
