@@ -1,8 +1,9 @@
 ﻿/* ============================================================================
    LubricentroControl 2026 — Datos iniciales
 
-   Carga los 4 roles, el árbol de menú con sus permisos por rol, y el usuario
-   administrador inicial. Correr DESPUÉS de 01_Esquema.sql.
+   Carga los 4 roles, el árbol de menú con sus permisos por rol, el usuario
+   administrador inicial y unos datos de ejemplo del comercio para las facturas.
+   Correr DESPUÉS de 01_Esquema.sql.
 
      sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i Database\02_DatosIniciales.sql
 
@@ -60,7 +61,8 @@ INSERT INTO Url (descripcion, path) VALUES
     (N'Reporte de ventas por período','~/Reportes/VentasPorPeriodo'),
     (N'Reporte de cuentas corrientes','~/Reportes/CuentasCorrientes'),
     (N'Usuarios',                    '~/Usuarios'),
-    (N'Roles y permisos',            '~/Roles');
+    (N'Roles y permisos',            '~/Roles'),
+    (N'Datos del comercio',          '~/DatosComercio');
 
 /* --- Árbol de menú -------------------------------------------------------
    idUrl NULL = grupo desplegable. El ícono solo lo usan las opciones de
@@ -105,7 +107,8 @@ FROM (VALUES
     (N'Ventas por período',           '~/Reportes/VentasPorPeriodo',    @gReportes,  2),
     (N'Cuentas corrientes',           '~/Reportes/CuentasCorrientes',   @gReportes,  3),
     (N'Usuarios',                     '~/Usuarios',                     @gAdmin,     1),
-    (N'Roles y permisos',             '~/Roles',                        @gAdmin,     2)
+    (N'Roles y permisos',             '~/Roles',                        @gAdmin,     2),
+    (N'Datos del comercio',           '~/DatosComercio',                @gAdmin,     3)
 ) AS v(texto, path, padre, orden)
 JOIN Url u ON u.path = v.path;
 
@@ -119,7 +122,7 @@ JOIN Url u ON u.path = v.path;
 INSERT INTO MenuNivel (idMenu, idNivel, soloLectura)
 SELECT idMenu, @admin, 0 FROM Menu;
 
-/* Encargado: todo menos Administración (usuarios y roles). */
+/* Encargado: todo menos Administración (usuarios, roles y datos del comercio). */
 INSERT INTO MenuNivel (idMenu, idNivel, soloLectura)
 SELECT idMenu, @encargado, 0
 FROM Menu
@@ -144,6 +147,14 @@ SELECT m.idMenu, @lectura, 1
 FROM Menu m
 WHERE m.idMenu NOT IN (@gAdmin, @gReportes)
   AND ISNULL(m.idMenuPadre, 0) NOT IN (@gAdmin, @gReportes);
+
+/* --- Datos del comercio para las facturas ---------------------------------
+   De ejemplo: se reemplazan por los reales desde Administración > Datos del
+   comercio antes de imprimir una factura. */
+INSERT INTO Emisor (idEmisor, razonSocial, cuit, condicionIva, domicilio, ingresosBrutos,
+                    inicioActividades, puntoVenta)
+VALUES (1, N'Lubricentro Control S.R.L.', '30716543214', 'Responsable Inscripto',
+        N'Av. San Martín 1500, Ciudad Autónoma de Buenos Aires', '901-716543-2', '2020-03-01', 1);
 
 GO
 

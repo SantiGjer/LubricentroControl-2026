@@ -185,7 +185,7 @@ namespace BIZ.Modelo
         }
 
         // Valida los campos obligatorios y su formato, y los normaliza (espacios de los bordes,
-        // documento sin separadores, código postal en mayúsculas). Una empresa, y cualquiera que
+        // documento y teléfono sin separadores, código postal en mayúsculas). Una empresa, y cualquiera que
         // no sea consumidor final, se identifica con CUIT (§9.8); la base lo vuelve a exigir con
         // CK_Cliente_cuit.
         public ResultadoOperacion Validar()
@@ -247,7 +247,7 @@ namespace BIZ.Modelo
                 return ResultadoOperacion.Error("El código postal debe tener 4 números (1638) o el formato CPA (C1406GZA).");
 
             NumeroDocumento = NormalizarNumeroDocumento(TipoDocumento, NumeroDocumento);
-            Telefono = string.IsNullOrWhiteSpace(Telefono) ? null : Telefono.Trim();
+            Telefono = FormatoTelefono.Normalizar(Telefono);
             Email = string.IsNullOrWhiteSpace(Email) ? null : Email.Trim();
             Direccion = string.IsNullOrWhiteSpace(Direccion) ? null : Direccion.Trim();
             Localidad = string.IsNullOrWhiteSpace(Localidad) ? null : Localidad.Trim();

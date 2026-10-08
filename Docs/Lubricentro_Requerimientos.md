@@ -93,6 +93,10 @@ roles y sus permisos por pantalla se editan desde la aplicación (pantalla Roles
 §9.11): se pueden crear roles nuevos y cambiar el acceso de cada uno, salvo el de Admin, que queda
 siempre con acceso completo.
 
+**Nota (2026-10-08):** la pantalla **Datos del comercio** (los datos del lubricentro para las
+facturas, §9.10) va en Administración, junto a usuarios y roles: en la configuración inicial solo
+la ve Admin.
+
 ---
 
 ## 6. Módulos y requerimientos funcionales
@@ -196,6 +200,10 @@ cátedra; es un agregado posterior justificado por una necesidad real de trazabi
 factura imprimible de una venta (§9.10). `Cliente` sumó sus datos fiscales (§9.8) y
 `DetalleComprobanteVenta` el IVA de cada línea.
 
+**Nota (2026-10-08):** se sumó `Emisor`, los datos del comercio que factura (una sola fila,
+§9.10), que hasta entonces estaban en `Web.config`, e `ImagenProducto`, la imagen opcional de cada
+producto (§9.13).
+
 ---
 
 ## 9. Supuestos a confirmar
@@ -215,7 +223,9 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
   ej. `AB123CD`). Se guarda en mayúsculas.
 - **Teléfono (`Cliente.telefono`, `Proveedor.telefono`, agregado 2026-10-07):** opcional. Solo
   números y los separadores habituales (espacios, guiones, puntos, paréntesis y un `+` adelante),
-  con entre 6 y 15 dígitos. Se guarda tal cual se escribió.
+  con entre 6 y 15 dígitos. Desde el 2026-10-08 se guarda **sin los separadores** (solo los
+  dígitos, y el `+` si lo tenía), igual que el DNI y el CUIT, para que todos se vean iguales:
+  `11-4321-5678` queda `1143215678`.
 - **Año del vehículo (`Vehiculo.anio`, agregado 2026-10-07):** opcional, desde 1900 hasta el año
   siguiente al actual (un 0 km puede salir con el modelo del año que viene).
 
@@ -392,7 +402,9 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
 - **Sin validez fiscal:** no hay CAE de ARCA (ex AFIP); la factura lo dice. La facturación
   electrónica real sigue fuera de alcance (§10).
 - Los datos del comercio (razón social, CUIT, condición frente al IVA, domicilio, ingresos brutos,
-  inicio de actividades, punto de venta) van en `Web.config` (claves `Emisor.*`). La factura guarda
+  inicio de actividades, punto de venta) se editan desde la pantalla **Datos del comercio**
+  (Administración) y se guardan en la tabla `Emisor`, de una sola fila. Hasta el 2026-10-08 iban
+  en `Web.config` (claves `Emisor.*`) y no se podían cambiar desde la aplicación. La factura guarda
   una copia de esos datos y de los del cliente al emitirse, para no cambiar si después se editan.
 
 ### 9.11 Roles y permisos editables (confirmado 2026-10-07)
@@ -417,6 +429,25 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
 - No se permite mientras el vehículo tenga una orden en el taller (Abierta o En proceso) o un turno
   pendiente (Solicitado o Confirmado): quedarían a nombre de un cliente que ya no es el dueño. Hay
   que cerrarlos o cancelarlos antes.
+
+### 9.13 Imagen de cada producto (2026-10-08)
+
+Pedido del usuario: una imagen por producto. Los detalles se resolvieron con criterio propio,
+pendientes de confirmar:
+
+- **Opcional, una por producto** (servicio o insumo). Se elige en el formulario de Productos, con
+  vista previa antes de guardar, y se puede reemplazar o quitar. La cambian los mismos roles que
+  editan productos; la ve cualquiera que vea la pantalla.
+- **PNG o JPG, hasta 5 MB.** Si mide más de 800 px de lado se guarda achicada (no se muestra más
+  grande), en el mismo formato; una foto de teléfono se guarda derecha aunque la cámara la haya
+  anotado girada.
+- Se ve en miniatura junto al nombre en la lista y en grande en "Ver". No aparece en órdenes,
+  ventas ni facturas.
+- Se guarda en la base (tabla `ImagenProducto`), no en una carpeta del servidor: así está igual en
+  todas las máquinas que usan la misma base.
+- Los productos de ejemplo traen ilustraciones propias, sin derechos de terceros
+  (`Database\05_ImagenesDemo.sql`, opcional). Para los productos reales, fotos propias o del
+  catálogo del distribuidor.
 
 ---
 

@@ -30,7 +30,7 @@
                     <asp:Label runat="server" AssociatedControlID="txtEmail" CssClass="login-label">Mail</asp:Label>
                     <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" CssClass="login-input" />
                     <asp:RequiredFieldValidator runat="server" ControlToValidate="txtEmail"
-                        CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Recuperar"
+                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="Recuperar"
                         ErrorMessage="Ingresá tu mail." />
                 </div>
 

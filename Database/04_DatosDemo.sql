@@ -46,25 +46,25 @@ DECLARE @empleado INT = ISNULL((SELECT idUsuario FROM Usuario WHERE email = 'emp
 INSERT INTO Cliente (tipoCliente, nombre, apellido, razonSocial, tipoDocumento, numeroDocumento, condicionIva,
                      telefono, email, direccion, localidad, provincia, codigoPostal, cuentaCorriente) VALUES
     (N'Persona física', N'Juan', N'Pérez', NULL, 'DNI', '30111222', 'Consumidor Final',
-     '11-4321-5678', 'juan.perez@gmail.com', N'Av. Rivadavia 1234', N'Caballito', N'Ciudad Autónoma de Buenos Aires', 'C1406GZA', 1),
+     '1143215678', 'juan.perez@gmail.com', N'Av. Rivadavia 1234', N'Caballito', N'Ciudad Autónoma de Buenos Aires', 'C1406GZA', 1),
     (N'Persona física', N'María', N'Gómez', NULL, 'DNI', '28222333', 'Consumidor Final',
-     '11-4555-1122', 'maria.gomez@gmail.com', N'San Martín 456', N'Vicente López', N'Buenos Aires', '1638', 0),
+     '1145551122', 'maria.gomez@gmail.com', N'San Martín 456', N'Vicente López', N'Buenos Aires', '1638', 0),
     (N'Persona física', N'Carlos', N'Rodríguez', NULL, 'CUIT', '20253334445', 'Responsable Inscripto',
-     '11-4666-2233', 'carlos.rodriguez@gmail.com', N'Av. Cabildo 789', N'Belgrano', N'Ciudad Autónoma de Buenos Aires', '1426', 1),
+     '1146662233', 'carlos.rodriguez@gmail.com', N'Av. Cabildo 789', N'Belgrano', N'Ciudad Autónoma de Buenos Aires', '1426', 1),
     (N'Persona física', N'Ana', N'López', NULL, 'DNI', '32444555', 'Consumidor Final',
-     '11-4777-3344', 'ana.lopez@hotmail.com', N'Belgrano 234', N'San Isidro', N'Buenos Aires', '1642', 0),
+     '1147773344', 'ana.lopez@hotmail.com', N'Belgrano 234', N'San Isidro', N'Buenos Aires', '1642', 0),
     (N'Persona física', N'Luis', N'Fernández', NULL, 'DNI', '27555666', 'Consumidor Final',
-     '11-4888-4455', 'luis.fernandez@gmail.com', N'Av. Mitre 1560', N'Avellaneda', N'Buenos Aires', '1870', 0),
+     '1148884455', 'luis.fernandez@gmail.com', N'Av. Mitre 1560', N'Avellaneda', N'Buenos Aires', '1870', 0),
     (N'Persona física', N'Laura', N'Martínez', NULL, 'DNI', '31666777', 'Consumidor Final',
-     '11-4999-5566', 'laura.martinez@gmail.com', N'Sarmiento 890', N'Morón', N'Buenos Aires', '1708', 0),
+     '1149995566', 'laura.martinez@gmail.com', N'Sarmiento 890', N'Morón', N'Buenos Aires', '1708', 0),
     (N'Persona física', N'Diego', N'Sánchez', NULL, 'DNI', '29777888', 'Consumidor Final',
-     '11-4111-6677', 'diego.sanchez@gmail.com', N'Av. Corrientes 3200', N'Almagro', N'Ciudad Autónoma de Buenos Aires', '1193', 0),
+     '1141116677', 'diego.sanchez@gmail.com', N'Av. Corrientes 3200', N'Almagro', N'Ciudad Autónoma de Buenos Aires', '1193', 0),
     (N'Persona física', N'Sofía', N'Romero', NULL, 'CUIT', '27338889998', 'Monotributista',
-     '11-4222-7788', 'sofia.romero@hotmail.com', N'Moreno 550', N'Quilmes', N'Buenos Aires', '1878', 0),
+     '1142227788', 'sofia.romero@hotmail.com', N'Moreno 550', N'Quilmes', N'Buenos Aires', '1878', 0),
     (N'Empresa', NULL, NULL, N'Agropecuaria Díaz S.A.', 'CUIT', '30714598216', 'Responsable Inscripto',
-     '02324-42-8899', 'administracion@agrodiaz.com.ar', N'Ruta 5 Km 103', N'Mercedes', N'Buenos Aires', '6600', 0),
+     '02324428899', 'administracion@agrodiaz.com.ar', N'Ruta 5 Km 103', N'Mercedes', N'Buenos Aires', '6600', 0),
     (N'Persona física', N'Valentina', N'Torres', NULL, 'DNI', '34000111', 'Consumidor Final',
-     '11-4444-9900', 'valentina.torres@gmail.com', N'Independencia 678', N'La Plata', N'Buenos Aires', 'B1900ABC', 1);
+     '1144449900', 'valentina.torres@gmail.com', N'Independencia 678', N'La Plata', N'Buenos Aires', 'B1900ABC', 1);
 
 DECLARE @cliJuan INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '30111222');
 DECLARE @cliMaria INT = (SELECT idCliente FROM Cliente WHERE numeroDocumento = '28222333');
@@ -103,16 +103,16 @@ DECLARE @vehValentina INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'AH
 
 /* --- 3. Proveedores (10) --------------------------------------------------- */
 INSERT INTO Proveedor (razonSocial, cuit, telefono, email, direccion) VALUES
-    ('YPF Lubricantes S.A.', '30711234561', '11-5000-1001', 'ventas@ypflubricantes.com.ar', 'Av. del Libertador 1000, CABA'),
-    ('Shell Argentina S.R.L.', '30711234562', '11-5000-1002', 'contacto@shellargentina.com.ar', 'Av. Leandro N. Alem 2000, CABA'),
-    ('Distribuidora Filtros del Sur S.A.', '30711234563', '11-5000-1003', 'ventas@filtrosdelsur.com.ar', 'Av. Hipólito Yrigoyen 3400, Lanús'),
-    ('Repuestos Mercedes S.R.L.', '30711234564', '11-5000-1004', 'info@repuestosmercedes.com.ar', 'Av. Mitre 4500, San Justo'),
-    ('Neumáticos del Plata S.A.', '30711234565', '11-5000-1005', 'ventas@neumaticosdelplata.com.ar', 'Camino Gral. Belgrano 5600, Quilmes'),
-    ('Baterías Moura Argentina S.A.', '30711234566', '11-5000-1006', 'comercial@baterismoura.com.ar', 'Ruta 8 Km 45, Pilar'),
-    ('Autopartes San Martín S.R.L.', '30711234567', '11-5000-1007', 'ventas@autopartessm.com.ar', 'Av. San Martín 6700, CABA'),
-    ('Lubricantes Total Argentina S.A.', '30711234568', '11-5000-1008', 'info@totalargentina.com.ar', 'Av. Córdoba 7800, CABA'),
-    ('Distribuidora Bosch Repuestos S.A.', '30711234569', '11-5000-1009', 'ventas@boschrepuestos.com.ar', 'Av. Boulogne Sur Mer 8900, San Isidro'),
-    ('Correas y Filtros del Norte S.R.L.', '30711234570', '11-5000-1010', 'contacto@correasfiltrosnorte.com.ar', 'Panamericana Km 32, Tigre');
+    ('YPF Lubricantes S.A.', '30711234561', '1150001001', 'ventas@ypflubricantes.com.ar', 'Av. del Libertador 1000, CABA'),
+    ('Shell Argentina S.R.L.', '30711234562', '1150001002', 'contacto@shellargentina.com.ar', 'Av. Leandro N. Alem 2000, CABA'),
+    ('Distribuidora Filtros del Sur S.A.', '30711234563', '1150001003', 'ventas@filtrosdelsur.com.ar', 'Av. Hipólito Yrigoyen 3400, Lanús'),
+    ('Repuestos Mercedes S.R.L.', '30711234564', '1150001004', 'info@repuestosmercedes.com.ar', 'Av. Mitre 4500, San Justo'),
+    ('Neumáticos del Plata S.A.', '30711234565', '1150001005', 'ventas@neumaticosdelplata.com.ar', 'Camino Gral. Belgrano 5600, Quilmes'),
+    ('Baterías Moura Argentina S.A.', '30711234566', '1150001006', 'comercial@baterismoura.com.ar', 'Ruta 8 Km 45, Pilar'),
+    ('Autopartes San Martín S.R.L.', '30711234567', '1150001007', 'ventas@autopartessm.com.ar', 'Av. San Martín 6700, CABA'),
+    ('Lubricantes Total Argentina S.A.', '30711234568', '1150001008', 'info@totalargentina.com.ar', 'Av. Córdoba 7800, CABA'),
+    ('Distribuidora Bosch Repuestos S.A.', '30711234569', '1150001009', 'ventas@boschrepuestos.com.ar', 'Av. Boulogne Sur Mer 8900, San Isidro'),
+    ('Correas y Filtros del Norte S.R.L.', '30711234570', '1150001010', 'contacto@correasfiltrosnorte.com.ar', 'Panamericana Km 32, Tigre');
 
 DECLARE @provYPF INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234561');
 DECLARE @provShell INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234562');

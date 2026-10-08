@@ -461,6 +461,23 @@ body.sin-menu .pie-pagina {
     margin-bottom: 1.75rem;
 }
 
+/* El login no lleva título (el botón ya dice "Ingresar"): el nombre de la aplicación ocupa
+   ese lugar, con el mismo estilo que la marca de la barra lateral. */
+.login-nombre {
+    color: #0d0f11;
+    font-size: 1.85rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    text-align: center;
+    margin-bottom: 1.75rem;
+}
+
+.login-nombre strong {
+    color: #c0272d;
+    font-weight: 800;
+}
+
 .login-mensaje {
     background: #f8d7da;
     border: 1px solid #f1aeb5;
@@ -498,8 +515,12 @@ body.sin-menu .pie-pagina {
     color: #842029;
 }
 
+/* Sin !important en el display (ni la clase d-block de Bootstrap): el validador arranca con
+   display:none en línea, y un display con !important lo mostraría antes de enviar el formulario. */
 .login-card .text-danger {
     color: #b02a37 !important;
+    display: block;
+    margin-top: 0.25rem;
 }
 
 .login-campo {
@@ -531,8 +552,10 @@ body.sin-menu .pie-pagina {
     box-shadow: 0 0 0 3px rgba(192, 39, 45, 0.2);
 }
 
+/* max-width: el botón es un input, y la regla general de input lo cortaba en 280px. */
 .login-btn {
     width: 100%;
+    max-width: 100%;
     background: #c0272d;
     border: 1px solid #c0272d;
     color: #fff;
@@ -948,6 +971,17 @@ body.sin-menu .pie-pagina {
     font-weight: 600;
     color: #495057;
     margin: 0.9rem 0 0.3rem;
+}
+
+/* Formulario fijo en la página, fuera de un modal (Datos del comercio): el mismo fondo y la
+   misma grilla de campos que el cuerpo de un modal. No es un panel-gris porque ese anula el
+   espacio entre columnas. */
+.pantalla-abm .formulario-pagina {
+    background: #e6e8ea;
+    border-radius: 10px;
+    padding: 1.35rem 1.5rem 1.5rem;
+    max-width: 760px;
+    margin-bottom: 1.5rem;
 }
 
 /* Grilla de campos de un formulario: cada .campo lleva su etiqueta, el control y los
@@ -1609,6 +1643,117 @@ body.sin-menu .pie-pagina {
 .pantalla-abm .paginador-texto {
     font-weight: 600;
     color: #343a40;
+}
+
+/* --- Imágenes de productos --- */
+/* Miniatura al lado del nombre en la lista. Sin imagen, un recuadro vacío del mismo tamaño, para
+   que los nombres queden alineados. */
+.pantalla-abm .nombre-con-imagen {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.pantalla-abm .miniatura {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    padding: 2px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid #c9cdd1;
+    border-radius: 6px;
+}
+
+.pantalla-abm .miniatura-vacia {
+    background: #f2f3f4;
+    border-style: dashed;
+}
+
+/* Ventana "Ver": la imagen de la fila, arriba de los datos. */
+.pantalla-abm .imagen-detalle {
+    display: flex;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid #c9cdd1;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.pantalla-abm .imagen-detalle img {
+    max-width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+}
+
+/* Campo de imagen del formulario: el recuadro con la imagen (la actual o la recién elegida) y, al
+   lado, el archivo y "Quitar la imagen". */
+.pantalla-abm .campo-imagen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem 1.25rem;
+}
+
+.pantalla-abm .campo-imagen-vista {
+    flex: 0 0 auto;
+    width: 140px;
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem;
+    background: #fff;
+    border: 1px solid #c4c8cc;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.pantalla-abm .campo-imagen-vista img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.pantalla-abm .campo-imagen-vacia {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.pantalla-abm .campo-imagen-vista img:not([hidden]) + .campo-imagen-vacia {
+    display: none;
+}
+
+.pantalla-abm .campo-imagen-controles {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.pantalla-abm .campo-imagen input[type="file"] {
+    max-width: 100%;
+    font-size: 0.88rem;
+}
+
+/* El botón del navegador para elegir el archivo, como las opciones de los formularios. */
+.pantalla-abm .campo-imagen input[type="file"]::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #b8bcc1;
+    border-radius: 8px;
+    background: #f2f3f4;
+    color: #343a40;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pantalla-abm .campo-imagen input[type="file"]::file-selector-button:hover {
+    background: #e2e5e8;
+}
+
+.pantalla-abm .campo-imagen-quitar {
+    margin-top: 0.6rem;
 }
 
 /* --- Matriz de permisos (Roles) --- */

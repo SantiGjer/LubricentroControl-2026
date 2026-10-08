@@ -57,7 +57,8 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   no alcanza, la guarda corre en cada request.
 - Las 21 tablas del diagrama E/R creadas, con los datos semilla de seguridad, más
   `MovimientoStock` (kardex de stock, agregada en Fase 2), `Producto` (supertipo de Servicio e
-  Insumo) y `Factura`, las dos del 2026-10-07 — 24 tablas en total hoy.
+  Insumo) y `Factura`, las dos del 2026-10-07, y `Emisor` (datos del comercio) e `ImagenProducto`
+  (imagen de cada producto), las dos del 2026-10-08 — 27 tablas en total hoy, contando `MenuNivel`.
 - Capa `BIZ/Data` funcionando de punta a punta contra SQL Server.
 - **Interfaz común de las pantallas de gestión (desde 2026-10-07):** barra lateral fija a la
   izquierda con el menú del rol (grupos desplegables que se recuerdan, el isotipo del ingreso y el
@@ -90,6 +91,8 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   y stock inicial (registra un ajuste automático), y editándolo, el ajuste manual de stock (un solo
   campo con signo) y el historial de movimientos. Resaltado en rojo de los insumos con stock por
   debajo del mínimo; grilla paginada a 30 filas en el navegador. Modo solo-consulta para Empleado.
+  **Imagen opcional por producto** (desde 2026-10-08): PNG o JPG que se elige en el formulario (con
+  vista previa) y se ve en miniatura junto al nombre y en grande en "Ver".
 - **Turnos** (primera pantalla de Fase 3): alta/edición, sin baja lógica (no aplica — `Turno` no
   tiene columna `activo`; "cancelar" es simplemente llevar el campo `estado` a `Cancelado` desde
   el mismo formulario; en el alta el estado se muestra como texto fijo "Solicitado" y el
@@ -189,7 +192,8 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
 - **Factura de una venta** (desde 2026-10-07): "Facturar" en Ventas emite la factura A, B o C según
   la condición frente al IVA del comercio y del cliente, con numeración propia por letra y punto de
   venta, y se ve e imprime en la misma pantalla. Sin validez fiscal (sin CAE). Los precios son
-  finales: la venta guarda el IVA que contiene cada línea.
+  finales: la venta guarda el IVA que contiene cada línea. Los datos del comercio que salen en la
+  factura se editan en Administración > Datos del comercio (desde 2026-10-08).
 - **Roles y permisos** (desde 2026-10-07, en Administración): crear, renombrar y borrar roles y
   elegir para cada pantalla sin acceso / consulta / completo. Admin queda fijo con todo; Lectura no
   se borra.
@@ -216,6 +220,98 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-08 (cont. 2) — Imagen de cada producto e imágenes de ejemplo
+
+El usuario pidió una imagen para cada producto y preguntó de dónde sacar imágenes PNG para
+cargarlas. Decisiones (las de negocio, en Requerimientos §9.13):
+
+- **La imagen va en la base, no en una carpeta del sitio.** La base es compartida (VPN Radmin) y
+  cada máquina corre su propio IIS: un archivo en disco quedaría solo en la PC donde se subió.
+  Además no hace falta permiso de escritura sobre la carpeta (mismo motivo que `Emisor`). Va en una
+  tabla aparte, `ImagenProducto` (una fila por producto, opcional), para que las consultas de
+  productos no arrastren los archivos: `ProductoDAL` solo trae la fecha de la imagen.
+- **Se guarda achicada y con una miniatura.** Se acepta PNG o JPG de hasta 5 MB (se reconoce por
+  los primeros bytes, no por la extensión); si mide más de 800 px de lado se achica, en el mismo
+  formato (el PNG conserva la transparencia), y siempre se arma una miniatura de 120 px para la
+  lista: unos 7 KB contra 30 KB o más, que con cientos de productos se nota. Una foto de teléfono se
+  endereza según su orientación EXIF; si no, la copia achicada quedaría acostada (el navegador
+  endereza el original, pero la copia pierde ese dato). Es el primer uso de `System.Drawing`, en
+  `BIZ\Modelo\Imagen.cs`.
+- **La pantalla la pide aparte, a `ImagenProducto.ashx`.** El handler exige sesión
+  (`IReadOnlySessionState`), pero no mira permisos de pantalla: la imagen de un producto no es un
+  dato reservado. La dirección lleva la fecha de la imagen (`&v=`), así que el navegador la guarda
+  un año y una imagen nueva cambia la dirección.
+- **En la pantalla:** la miniatura va dentro de la celda del nombre (no suma texto, así que no
+  cambia cómo se ordena ni se filtra), y "Ver" muestra la imagen grande (`data-imagen`, genérico en
+  `Lubricentro.js`). En el formulario, la sección "Imagen" muestra la actual o la recién elegida
+  antes de guardar, y "Quitar la imagen". Un archivo que no es PNG ni JPG, o de más de 5 MB, lo
+  descarta el navegador sin subirlo; `maxRequestLength` pasó a 10 MB para que uno algo más pesado
+  llegue y se rechace con mensaje, no con la página de error de ASP.NET.
+- **El navegador vacía el campo de archivo en cada envío.** Si el producto no se guarda (SKU
+  repetido, un validador del servidor), la imagen elegida se pierde: el mensaje pide volver a
+  elegirla. Por eso la imagen se valida antes de guardar el producto, y se guarda después (en un
+  alta, recién ahí hay id).
+
+**Imágenes de ejemplo.** No hay un banco abierto de fotos de este rubro, y las fotos de producto
+de marcas (YPF, Shell, Fram…) tienen derechos de sus dueños. Se dibujaron 20 ilustraciones propias
+(SVG pasado a PNG con Chrome, sin derechos de terceros), una por producto de `04_DatosDemo.sql`:
+los insumos como objetos (bidón, filtro, batería…) y los servicios como insignias redondas con el
+estilo del isotipo. Están en `Database\ImagenesDemo` y las carga `05_ImagenesDemo.sql` (opcional),
+generado pasando cada PNG por `Imagen.Preparar`, así que sus miniaturas son las mismas que daría
+una subida desde la pantalla. Los binarios van partidos en renglones con `\` al final (T-SQL une
+las partes), para no tener renglones de 60.000 caracteres. Para fotos reales: el catálogo del
+distribuidor o del fabricante (suelen darlo a los revendedores) o fotos propias; los bancos libres
+sirven con cuidado: Pixabay no permite usar marcas en un uso comercial, y en Openverse cada imagen
+trae su propia licencia.
+
+La base de desarrollo no se recreó: se le creó la tabla y se corrió `05`. Verificado: las reglas
+de `Imagen.Preparar` llamadas directo sobre `BIZ.dll` (achica, conserva la transparencia, endereza
+una foto con EXIF 6, rechaza un texto con extensión .png, un PNG dañado y uno de 6 MB); 25 pruebas
+en Chrome sin ventana (subir, vista previa, guardar, "Ver", reemplazar, quitar, alta con imagen,
+archivos rechazados, SKU repetido con imagen elegida, Empleado solo ve, caché del handler, 404 y
+403 sin sesión); y el recorrido de las 18 pantallas del Admin sin errores. El producto de prueba
+se borró. Ojo al borrar en `Producto` desde `sqlcmd`: sin `-I` (`QUOTED_IDENTIFIER`) falla por los
+índices filtrados, igual que al insertar.
+
+### 2026-10-08 (cont.) — Login, teléfonos sin separadores y datos del comercio editables
+
+Pedido del usuario en tres puntos más uno agregado sobre la marcha:
+
+- **Botón "Ingresar" corrido a la izquierda.** No era el markup: la regla general
+  `input { max-width: 280px }` del template de Site.css cortaba el botón (es un `<input>`) dentro
+  de una tarjeta de 400px. `.login-btn` ahora lleva `max-width: 100%`, igual que `.login-input`.
+- **Sin el título "Ingresar"** arriba del login: repetía el texto del botón. En su lugar, el
+  nombre "Lubricentro Control" pasó de subtítulo chico y gris a título de la tarjeta
+  (`h1.login-nombre`), con el estilo de la marca de la barra lateral ("Control" en rojo). Las
+  otras tres pantallas de ingreso tienen su propio título y lo siguen llevando como subtítulo.
+- **Bug encontrado de paso, en las cuatro pantallas de ingreso:** los mensajes de los validadores
+  ("Ingresá tu mail.", etc.) se veían **apenas abría la página**, sin haber enviado nada. Llevaban
+  `CssClass="… d-block"`, y el `display: block !important` de Bootstrap le gana al
+  `style="display:none"` con el que ASP.NET arranca un validador `Display="Dynamic"`. Se sacó
+  `d-block` y el bloque lo da `.login-card .text-danger` sin `!important` (mismo criterio que
+  `.campo .text-danger` en las pantallas de gestión). No usar utilidades de `display` de Bootstrap
+  en validadores.
+- **Teléfonos sin separadores.** Los de ejemplo tenían guiones y los cargados a mano no. Se
+  guardan como el DNI y el CUIT: `FormatoTelefono.Normalizar` deja solo los dígitos (y el `+`
+  inicial). El formulario sigue aceptando guiones, espacios y paréntesis al escribir. No se le da
+  formato al mostrarlo: la característica tiene de 2 a 4 dígitos según la zona y no hay regla
+  simple para saber dónde cortar. `04_DatosDemo.sql` ya trae los números sin guiones.
+- **Datos del comercio editables (pedido nuevo).** Pasaron de `Web.config` (`Emisor.*`) a la
+  tabla `Emisor`, de una sola fila (`CK_Emisor_unico`), con la pantalla **Datos del comercio** en
+  Administración (`~/DatosComercio`, por defecto solo Admin, como Usuarios y Roles). Se eligió la
+  base y no escribir `Web.config` desde la aplicación: eso reinicia el sitio y necesita permisos
+  de escritura sobre la carpeta. El inicio de actividades pasó a ser una fecha (`DATE`), y la factura
+  lo sigue copiando como texto `dd/MM/yyyy`. La pantalla aclara que el cambio vale para las facturas
+  siguientes: cada factura ya guardaba una copia de los datos del comercio.
+
+La base de desarrollo no se recreó, para no perder lo cargado a mano: se le aplicó un script
+puntual (tabla `Emisor`, filas de `Url`/`Menu`/`MenuNivel` para Admin y teléfonos sin
+separadores). `01` a `04` se probaron desde cero en una instancia de LocalDB descartable.
+Verificado en Chrome sin ventana (puppeteer-core, en el scratchpad): login, guardar los datos del
+comercio (con el CUIT inválido rechazado), facturar una venta con los datos nuevos (sale C en el
+punto de venta 2), editar un teléfono con guiones y paréntesis, y Encargado sin acceso. La
+factura de prueba se borró y se restauraron los datos de ejemplo.
 
 ### 2026-10-08 — Qué hay que saber al levantar el proyecto en otra máquina
 
@@ -1879,8 +1975,13 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   desde Vehículos. Falta un botón "Ver vehículos" desde la ficha de un Cliente. **En parte resuelto
   el 2026-10-07:** "Ver" de un cliente muestra las patentes de sus vehículos y el buscador de
   Clientes encuentra por patente; el salto directo a Vehículos sigue sin hacerse.
-- **Datos del comercio para la factura:** los de `Web.config` (`Emisor.*`) son de ejemplo
-  ("Lubricentro Control S.R.L.", CUIT inventado). Reemplazarlos por los reales antes de usarla.
+- **Datos del comercio para la factura:** los que carga `02_DatosIniciales.sql` en la tabla
+  `Emisor` son de ejemplo ("Lubricentro Control S.R.L.", CUIT inventado). Reemplazarlos por los
+  reales antes de usarla, desde Administración > Datos del comercio (desde el 2026-10-08; antes
+  estaban en `Web.config`).
+- **Imágenes de los productos:** las de `05_ImagenesDemo.sql` son ilustraciones de ejemplo. Con
+  los productos reales, cargar fotos propias o las del catálogo del distribuidor desde Productos
+  (ver la entrada del 2026-10-08, cont. 2).
 - **Formato de números según la cultura del servidor:** los importes salen con `N2` y la cultura de
   la máquina (en esta, en-GB: `3,500.00`). Si se quiere el formato argentino (`3.500,00`) hay que fijar
   `<globalization culture="es-AR" uiCulture="es-AR">`. Revisado el 2026-10-08: los importes que se

@@ -1,5 +1,5 @@
-using System.Configuration;
 using System.Data;
+using System.Globalization;
 using BIZ.Modelo;
 
 namespace BIZ.Data
@@ -50,31 +50,12 @@ namespace BIZ.Data
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);
         }
 
-        // Datos del comercio, de las claves Emisor.* de appSettings (Web.config).
-        public static DatosEmisor LeerEmisor()
-        {
-            var config = ConfigurationManager.AppSettings;
-
-            int puntoVenta;
-            int.TryParse(config["Emisor.PuntoVenta"], out puntoVenta);
-
-            return new DatosEmisor
-            {
-                RazonSocial = config["Emisor.RazonSocial"],
-                Cuit = config["Emisor.Cuit"],
-                CondicionIva = config["Emisor.CondicionIva"],
-                Domicilio = config["Emisor.Domicilio"],
-                IngresosBrutos = config["Emisor.IngresosBrutos"],
-                InicioActividades = config["Emisor.InicioActividades"],
-                PuntoVenta = puntoVenta
-            };
-        }
-
         // Emite la factura de una venta, o devuelve la que ya tenía: una venta se factura una sola
-        // vez (UQ_Factura_venta) y la factura no se anula ni se edita. La letra sale de la
-        // condición frente al IVA del comercio y del cliente (Factura.DeterminarTipo); el número es
-        // el siguiente de esa letra y punto de venta, tomado con UPDLOCK/HOLDLOCK dentro del mismo
-        // batch del INSERT para que dos emisiones simultáneas no repitan número.
+        // vez (UQ_Factura_venta) y la factura no se anula ni se edita. Los datos del comercio salen
+        // de EmisorDAL y quedan copiados en la factura. La letra sale de la condición frente al IVA
+        // del comercio y del cliente (Factura.DeterminarTipo); el número es el siguiente de esa
+        // letra y punto de venta, tomado con UPDLOCK/HOLDLOCK dentro del mismo batch del INSERT
+        // para que dos emisiones simultáneas no repitan número.
         public static ResultadoOperacion Emitir(int idVenta, int idUsuario, out Factura factura)
         {
             factura = ObtenerPorVenta(idVenta);
@@ -89,9 +70,15 @@ namespace BIZ.Data
             if (cliente == null)
                 return ResultadoOperacion.Error("El cliente de la venta no existe.");
 
-            var emisor = LeerEmisor();
+            var emisor = EmisorDAL.Obtener();
+            if (emisor == null)
+                return ResultadoOperacion.Error(
+                    "Faltan los datos del comercio que factura: se cargan en Administración, Datos del comercio.");
+
             var validacionEmisor = emisor.Validar();
-            if (!validacionEmisor.Exito) return validacionEmisor;
+            if (!validacionEmisor.Exito)
+                return ResultadoOperacion.Error("Revisá los datos del comercio (Administración, Datos del comercio): " +
+                                                validacionEmisor.Mensaje);
 
             var tipo = Factura.DeterminarTipo(emisor.CondicionIva, cliente.CondicionIva);
 
@@ -123,12 +110,14 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idUsuario", idUsuario),
                 AccesoDatos.Param("@condicionVenta",
                     cliente.CuentaCorriente ? Factura.CondicionVentaCuentaCorriente : Factura.CondicionVentaContado),
-                AccesoDatos.Param("@emisorRazonSocial", emisor.RazonSocial.Trim()),
-                AccesoDatos.Param("@emisorCuit", emisor.Cuit.Replace("-", "").Trim()),
+                AccesoDatos.Param("@emisorRazonSocial", emisor.RazonSocial),
+                AccesoDatos.Param("@emisorCuit", emisor.Cuit),
                 AccesoDatos.Param("@emisorCondicionIva", emisor.CondicionIva),
                 AccesoDatos.Param("@emisorDomicilio", emisor.Domicilio),
                 AccesoDatos.Param("@emisorIngresosBrutos", emisor.IngresosBrutos),
-                AccesoDatos.Param("@emisorInicioActividades", emisor.InicioActividades),
+                AccesoDatos.Param("@emisorInicioActividades", emisor.InicioActividades.HasValue
+                    ? emisor.InicioActividades.Value.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)
+                    : null),
                 AccesoDatos.Param("@receptorNombre", cliente.Denominacion),
                 AccesoDatos.Param("@receptorTipoDocumento", cliente.TipoDocumento),
                 AccesoDatos.Param("@receptorNumeroDocumento", cliente.NumeroDocumento),

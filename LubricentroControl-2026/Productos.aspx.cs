@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Web;
 using System.Web.UI.WebControls;
 using BIZ.Data;
 using BIZ.Modelo;
@@ -12,16 +13,27 @@ namespace LubricentroControl_2026
     // §9.9 — reemplaza a las pantallas de Servicios e Insumos). Admin y Encargado, acceso completo;
     // Empleado y Lectura, solo consulta (Requerimientos §5): se les esconde el botón de alta, el
     // modal (incluidos el ajuste de stock y el historial) y "Editar", y los métodos de escritura
-    // igual cortan al principio por las dudas. "Ver" queda para todos.
+    // igual cortan al principio por las dudas. "Ver" queda para todos. Cada producto puede tener
+    // una imagen (§9.13): se elige en el formulario y se guarda con el producto.
     public partial class Productos : PaginaSegura
     {
         private const string IdModal = "modalProducto";
+
+        // El navegador vacía el campo de archivo en cada envío: si el producto no se guardó, la
+        // imagen elegida tampoco, y hay que volver a elegirla.
+        private const string AvisoImagenPerdida = "La imagen elegida no se guardó: volvé a elegirla.";
 
         protected void Page_Load(object sender, EventArgs e)
         {
             // Los avisos se muestran una sola vez (el Literal guarda su texto en el ViewState).
             pnlMensaje.Visible = false;
             pnlMensajeFormulario.Visible = false;
+
+            // Los límites de la imagen salen de BIZ: con data-tamano-maximo el navegador descarta
+            // un archivo más pesado sin mandarlo.
+            fuImagen.Attributes["data-tamano-maximo"] = Imagen.BytesMaximos.ToString(CultureInfo.InvariantCulture);
+            litAyudaImagen.Text = "PNG o JPG, hasta " + Imagen.MegabytesMaximos + " MB. Si mide más de " +
+                                  Imagen.LadoImagen + " px de lado, se achica al guardarla.";
 
             if (IsPostBack) return;
 
@@ -87,6 +99,18 @@ namespace LubricentroControl_2026
             }
         }
 
+        // Miniatura de la lista, con la imagen entera en data-imagen para "Ver", o un recuadro
+        // vacío si el producto no tiene. alt vacío: el nombre ya está al lado.
+        protected string Miniatura(object item)
+        {
+            var producto = (Producto)item;
+            if (!producto.TieneImagen) return "<span class=\"miniatura miniatura-vacia\"></span>";
+
+            return "<img class=\"miniatura\" src=\"" + HttpUtility.HtmlAttributeEncode(ImagenProducto.Url(producto, true)) +
+                   "\" data-imagen=\"" + HttpUtility.HtmlAttributeEncode(ImagenProducto.Url(producto, false)) +
+                   "\" alt=\"\" loading=\"lazy\" />";
+        }
+
         protected void btnNuevo_Click(object sender, EventArgs e)
         {
             if (EsSoloLectura) return;
@@ -105,8 +129,21 @@ namespace LubricentroControl_2026
             if (EsSoloLectura) return;
             if (!Page.IsValid)
             {
-                MostrarFormulario();
+                if (fuImagen.HasFile) MostrarMensajeFormulario(AvisoImagenPerdida, false);
+                else MostrarFormulario();
                 return;
+            }
+
+            // La imagen se valida antes de guardar nada: si no sirve, el producto queda como estaba.
+            Imagen imagen = null;
+            if (fuImagen.HasFile)
+            {
+                var preparada = Imagen.Preparar(fuImagen.FileBytes, out imagen);
+                if (!preparada.Exito)
+                {
+                    MostrarMensajeFormulario(preparada.Mensaje, false);
+                    return;
+                }
             }
 
             decimal precio, stockMinimo, stockInicial, alicuota;
@@ -140,11 +177,17 @@ namespace LubricentroControl_2026
 
             if (!resultado.Exito)
             {
-                MostrarMensajeFormulario(resultado.Mensaje, false);
+                MostrarMensajeFormulario(imagen == null ? resultado.Mensaje : resultado.Mensaje + " " + AvisoImagenPerdida, false);
                 return;
             }
 
-            MostrarMensaje(resultado.Mensaje, true);
+            // Después del producto: en un alta, recién ahora tiene id.
+            var cambioImagen = imagen != null ? ProductoDAL.GuardarImagen(producto.IdProducto, imagen)
+                : chkQuitarImagen.Checked ? ProductoDAL.QuitarImagen(producto.IdProducto)
+                : ResultadoOperacion.Ok();
+
+            MostrarMensaje(cambioImagen.Exito ? resultado.Mensaje : resultado.Mensaje + " " + cambioImagen.Mensaje,
+                cambioImagen.Exito);
             LimpiarFormulario();
             CargarGrilla();
         }
@@ -252,6 +295,7 @@ namespace LubricentroControl_2026
             txtStockMinimo.Text = producto.EsInsumo ? producto.StockMinimo.ToString("N2") : string.Empty;
             btnBorrar.Visible = producto.Activo;
             btnReactivar.Visible = !producto.Activo;
+            MostrarImagenActual(ImagenProducto.Url(producto, false));
 
             pnlStockInicial.Visible = false;
             pnlStockActual.Visible = producto.EsInsumo;
@@ -310,6 +354,7 @@ namespace LubricentroControl_2026
             txtStockMinimo.Text = string.Empty;
             btnBorrar.Visible = false;
             btnReactivar.Visible = false;
+            MostrarImagenActual(null);
             litTituloFormulario.Text = "Nuevo producto";
 
             txtStockInicial.Text = string.Empty;
@@ -322,6 +367,25 @@ namespace LubricentroControl_2026
             pnlHistorial.Visible = false;
             txtCantidadAjuste.Text = string.Empty;
             txtMotivoAjuste.Text = string.Empty;
+        }
+
+        // Recuadro de la imagen en el formulario: la actual del producto, o "Sin imagen". Quitarla
+        // solo se ofrece si tiene una.
+        private void MostrarImagenActual(string url)
+        {
+            if (url == null)
+            {
+                imgProducto.Attributes.Remove("src");
+                imgProducto.Attributes["hidden"] = "hidden";
+            }
+            else
+            {
+                imgProducto.Src = url;
+                imgProducto.Attributes.Remove("hidden");
+            }
+
+            pnlQuitarImagen.Visible = url != null;
+            chkQuitarImagen.Checked = false;
         }
 
         private void MostrarFormulario()

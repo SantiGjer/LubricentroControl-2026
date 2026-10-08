@@ -36,6 +36,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
@@ -52,6 +53,7 @@
     <Compile Include="Data\DetalleComprobanteVentaDAL.cs" />
     <Compile Include="Data\DetalleOrdenInsumoDAL.cs" />
     <Compile Include="Data\DetalleOrdenServicioDAL.cs" />
+    <Compile Include="Data\EmisorDAL.cs" />
     <Compile Include="Data\FacturaDAL.cs" />
     <Compile Include="Data\MenuDAL.cs" />
     <Compile Include="Data\MovimientoStockDAL.cs" />
@@ -70,12 +72,14 @@
     <Compile Include="Modelo\ComprobanteVenta.cs" />
     <Compile Include="Modelo\CuentaCorrienteCliente.cs" />
     <Compile Include="Modelo\CuentaCorrienteProveedor.cs" />
+    <Compile Include="Modelo\DatosEmisor.cs" />
     <Compile Include="Modelo\DetalleCompra.cs" />
     <Compile Include="Modelo\DetalleComprobanteVenta.cs" />
     <Compile Include="Modelo\DetalleOrdenInsumo.cs" />
     <Compile Include="Modelo\DetalleOrdenServicio.cs" />
     <Compile Include="Modelo\Factura.cs" />
     <Compile Include="Modelo\FormatoTelefono.cs" />
+    <Compile Include="Modelo\Imagen.cs" />
     <Compile Include="Modelo\ItemMenu.cs" />
     <Compile Include="Modelo\Iva.cs" />
     <Compile Include="Modelo\MovimientoStock.cs" />

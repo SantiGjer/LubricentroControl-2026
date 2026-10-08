@@ -62,6 +62,21 @@ namespace LubricentroControl_2026
         /// <summary>Control txtCodigoBarras.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtCodigoBarras;
 
+        /// <summary>Control imgProducto.</summary>
+        protected global::System.Web.UI.HtmlControls.HtmlImage imgProducto;
+
+        /// <summary>Control fuImagen.</summary>
+        protected global::System.Web.UI.WebControls.FileUpload fuImagen;
+
+        /// <summary>Control litAyudaImagen.</summary>
+        protected global::System.Web.UI.WebControls.Literal litAyudaImagen;
+
+        /// <summary>Control pnlQuitarImagen.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlQuitarImagen;
+
+        /// <summary>Control chkQuitarImagen.</summary>
+        protected global::System.Web.UI.WebControls.CheckBox chkQuitarImagen;
+
         /// <summary>Control txtPrecio.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtPrecio;
 

@@ -135,38 +135,4 @@ namespace BIZ.Modelo
             return totales;
         }
     }
-
-    // Datos del comercio que emite las facturas (salen de Web.config, ver FacturaDAL.LeerEmisor).
-    public class DatosEmisor
-    {
-        public string RazonSocial { get; set; }
-        public string Cuit { get; set; }
-        public string CondicionIva { get; set; }
-        public string Domicilio { get; set; }
-        public string IngresosBrutos { get; set; }
-        public string InicioActividades { get; set; }
-        public int PuntoVenta { get; set; }
-
-        // Un consumidor final no factura: el comercio tiene que ser responsable inscripto,
-        // monotributista o exento.
-        public ResultadoOperacion Validar()
-        {
-            if (string.IsNullOrWhiteSpace(RazonSocial))
-                return ResultadoOperacion.Error("Falta la razón social del comercio (Emisor.RazonSocial en Web.config).");
-
-            if (!Proveedor.EsCuitValido(Cuit))
-                return ResultadoOperacion.Error("El CUIT del comercio (Emisor.Cuit en Web.config) debe tener 11 números.");
-
-            if (CondicionIva != Iva.ResponsableInscripto && CondicionIva != Iva.Monotributista &&
-                CondicionIva != Iva.SujetoExento)
-                return ResultadoOperacion.Error(
-                    "La condición frente al IVA del comercio (Emisor.CondicionIva en Web.config) tiene que ser " +
-                    "Responsable Inscripto, Monotributista o Exento.");
-
-            if (PuntoVenta < 1 || PuntoVenta > 99999)
-                return ResultadoOperacion.Error("El punto de venta (Emisor.PuntoVenta en Web.config) tiene que estar entre 1 y 99999.");
-
-            return ResultadoOperacion.Ok();
-        }
-    }
 }

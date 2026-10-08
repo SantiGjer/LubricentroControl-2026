@@ -39,7 +39,8 @@ namespace BIZ.Modelo
                 : cuit;
         }
 
-        private static string SoloDigitos(string valor)
+        // También la usa DatosEmisor, que valida y muestra el CUIT del comercio con estos mismos métodos.
+        internal static string SoloDigitos(string valor)
         {
             var digitos = new StringBuilder();
             foreach (var c in valor)
@@ -47,8 +48,8 @@ namespace BIZ.Modelo
             return digitos.ToString();
         }
 
-        // Valida los campos obligatorios, normaliza el CUIT (le saca los guiones si
-        // vino con ellos) y les saca los espacios de los bordes a los demás.
+        // Valida los campos obligatorios, normaliza el CUIT y el teléfono (les saca los
+        // guiones si vinieron con ellos) y les saca los espacios de los bordes a los demás.
         public ResultadoOperacion Validar()
         {
             if (string.IsNullOrWhiteSpace(RazonSocial))
@@ -68,7 +69,7 @@ namespace BIZ.Modelo
 
             RazonSocial = RazonSocial.Trim();
             Cuit = SoloDigitos(Cuit);
-            Telefono = string.IsNullOrWhiteSpace(Telefono) ? null : Telefono.Trim();
+            Telefono = FormatoTelefono.Normalizar(Telefono);
             Email = string.IsNullOrWhiteSpace(Email) ? null : Email.Trim();
             Direccion = string.IsNullOrWhiteSpace(Direccion) ? null : Direccion.Trim();
 

@@ -26,7 +26,7 @@
                     <asp:Label runat="server" AssociatedControlID="txtPassword" CssClass="login-label">Contraseña nueva</asp:Label>
                     <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" autocomplete="new-password" CssClass="login-input" />
                     <asp:RequiredFieldValidator runat="server" ControlToValidate="txtPassword"
-                        CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Restablecer"
+                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="Restablecer"
                         ErrorMessage="Ingresá la contraseña nueva." />
                 </div>
 
@@ -34,7 +34,7 @@
                     <asp:Label runat="server" AssociatedControlID="txtRepetir" CssClass="login-label">Repetir contraseña</asp:Label>
                     <asp:TextBox ID="txtRepetir" runat="server" TextMode="Password" autocomplete="new-password" CssClass="login-input" />
                     <asp:CompareValidator runat="server" ControlToValidate="txtRepetir" ControlToCompare="txtPassword"
-                        CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Restablecer"
+                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="Restablecer"
                         ErrorMessage="Las contraseñas no coinciden." />
                 </div>
 

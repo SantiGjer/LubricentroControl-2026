@@ -20,7 +20,8 @@
       Ver: un enlace .accion-ver con data-ver-detalle en la fila abre una ventana con todos los
       datos de la fila, incluidas las columnas escondidas; los elementos .accion-detalle de la
       fila aparecen como botones en el pie de esa ventana. Las celdas con clase "celda-titulo"
-      (el nombre o el número) abren lo mismo que el .accion-ver de su fila.
+      (el nombre o el número) abren lo mismo que el .accion-ver de su fila. Si la fila tiene una
+      imagen con data-imagen (la miniatura de un producto), la ventana muestra esa imagen grande.
    2. Selectores con búsqueda (.selector-busqueda): campo de texto con la lista de opciones
       desplegable y el botón de búsqueda adentro del mismo campo. Las opciones vienen del
       servidor en data-opciones ([{ "v": valor, "t": texto }]) y el valor elegido queda en el
@@ -30,7 +31,9 @@
       (Utilidades/Interfaz.AbrirModal) para que el formulario siga a la vista.
       Campos condicionales: data-mostrar-si="idControl=Valor" (ver iniciarCondicionales).
    4. Barra lateral: Lubricentro.restaurarMenu() reabre los grupos del menú que el usuario dejó
-      abiertos (se recuerda en este navegador). */
+      abiertos (se recuerda en este navegador).
+   5. Campo de imagen (.campo-imagen): muestra la imagen elegida antes de guardarla y descarta la
+      que no sirve (ver iniciarCampoImagen). */
 (function () {
     'use strict';
 
@@ -631,7 +634,8 @@
             '<div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">' +
             '<div class="modal-header"><h2 class="modal-title" id="tituloDetalleFila"></h2>' +
             '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>' +
-            '<div class="modal-body"><dl class="datos-resumen datos-detalle"></dl></div>' +
+            '<div class="modal-body"><div class="imagen-detalle" hidden><img alt=""></div>' +
+            '<dl class="datos-resumen datos-detalle"></dl></div>' +
             '<div class="modal-footer"><span class="acciones-secundarias"></span>' +
             '<button type="button" class="boton-gris" data-bs-dismiss="modal">Cerrar</button></div>' +
             '</div></div>';
@@ -647,6 +651,18 @@
         var prefijo = t.tabla.getAttribute('data-titulo-detalle');
         var titulo = celdaTitulo ? celdaTitulo.textContent.replace(/\s+/g, ' ').trim() : '';
         modalDetalle.querySelector('.modal-title').textContent = prefijo ? prefijo + ': ' + titulo : titulo;
+
+        // La imagen de la fila, si tiene: la versión grande, que la miniatura trae en data-imagen.
+        var miniatura = fila.querySelector('img[data-imagen]');
+        var marco = modalDetalle.querySelector('.imagen-detalle');
+        var imagen = marco.querySelector('img');
+        marco.hidden = !miniatura;
+        if (miniatura) {
+            imagen.src = miniatura.getAttribute('data-imagen');
+            imagen.alt = titulo;
+        } else {
+            imagen.removeAttribute('src');
+        }
 
         var lista = modalDetalle.querySelector('dl');
         lista.innerHTML = '';
@@ -958,6 +974,87 @@
         });
     }
 
+    // --- Campo de imagen (.campo-imagen) -------------------------------------------------------
+    // El recuadro (.campo-imagen-vista img) muestra la imagen elegida antes de guardarla. Un
+    // archivo que no es PNG ni JPG, o que pesa más que data-tamano-maximo (bytes, en el campo de
+    // archivo), se descarta con un aviso sin mandarlo: el servidor lo rechazaría igual, pero
+    // después de esperar la subida. "Quitar la imagen" deja el recuadro vacío.
+
+    function iniciarCampoImagen(campo) {
+        campo.setAttribute('data-campo-iniciado', '');
+
+        var archivo = campo.querySelector('input[type="file"]');
+        var vista = campo.querySelector('.campo-imagen-vista img');
+        var aviso = campo.querySelector('.campo-imagen-error');
+        var quitar = campo.querySelector('.campo-imagen-quitar input[type="checkbox"]');
+        if (!archivo || !vista) return;
+
+        var guardada = vista.getAttribute('src');
+        var maximo = parseInt(archivo.getAttribute('data-tamano-maximo'), 10) || 0;
+        var elegida = null;
+
+        var mostrar = function (src) {
+            // La vista previa de un archivo anterior ya no se usa: se libera.
+            if (elegida && elegida !== src) {
+                URL.revokeObjectURL(elegida);
+                elegida = null;
+            }
+            if (src) vista.src = src;
+            else vista.removeAttribute('src');
+            vista.hidden = !src;
+        };
+
+        // Sin archivo nuevo, el recuadro vuelve a la imagen guardada (vacío si se va a quitar).
+        var mostrarGuardada = function () {
+            mostrar(quitar && quitar.checked ? null : guardada);
+        };
+
+        var avisar = function (texto) {
+            if (!aviso) return;
+            aviso.textContent = texto;
+            aviso.hidden = !texto;
+        };
+
+        archivo.addEventListener('change', function () {
+            var elegido = archivo.files && archivo.files[0];
+            avisar('');
+            if (!elegido) {
+                mostrarGuardada();
+                return;
+            }
+
+            if (elegido.type !== 'image/png' && elegido.type !== 'image/jpeg') {
+                avisar('La imagen tiene que ser PNG o JPG.');
+            } else if (maximo && elegido.size > maximo) {
+                avisar('La imagen no puede pesar más de ' + Math.round(maximo / 1048576) + ' MB.');
+            } else {
+                if (quitar) quitar.checked = false;
+                var url = URL.createObjectURL(elegido);
+                mostrar(url);
+                elegida = url;
+                return;
+            }
+            archivo.value = '';
+            mostrarGuardada();
+        });
+
+        if (quitar) {
+            quitar.addEventListener('change', function () {
+                if (quitar.checked) {
+                    archivo.value = '';
+                    avisar('');
+                }
+                mostrarGuardada();
+            });
+        }
+    }
+
+    function iniciarCamposImagen(raiz) {
+        var campos = raiz.querySelectorAll('.campo-imagen');
+        for (var i = 0; i < campos.length; i++)
+            if (!campos[i].hasAttribute('data-campo-iniciado')) iniciarCampoImagen(campos[i]);
+    }
+
     // Roles: pone todas las pantallas de la matriz en el mismo acceso (las fijas, como Inicio,
     // vienen deshabilitadas y no se tocan).
     Lubricentro.marcarPermisos = function (acceso) {
@@ -1016,6 +1113,7 @@
         iniciarTablas(document);
         iniciarSelectores(document);
         iniciarCondicionales(document);
+        iniciarCamposImagen(document);
     }
 
     // Sys.Application.add_load corre al cargar la página y otra vez después de cada postback

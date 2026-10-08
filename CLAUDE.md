@@ -23,7 +23,8 @@ automáticamente al cerrar una orden de trabajo, botón nuevo `btnCerrarOrden` e
 **Pagos** (de cliente o de proveedor, imputado a un comprobante puntual o "a cuenta general").
 Las 21 tablas del diagrama original ya existen (`Database\01_Esquema.sql`), más `MovimientoStock`
 (kardex de stock, agregada en Fase 2 — ver §9.3 de los Requerimientos), `Producto` y `Factura`
-(2026-10-07, §9.9 y §9.10) y dos columnas agregadas
+(2026-10-07, §9.9 y §9.10), `Emisor` (datos del comercio que factura, 2026-10-08), `ImagenProducto`
+(la imagen opcional de cada producto, 2026-10-08, §9.13) y dos columnas agregadas
 en Fase 4 (`ComprobanteCompra.medioPago`, `CuentaCorrienteCliente`/`Proveedor.idUsuario` — ver
 §9.5). **Los tres reportes de Fase 5 ya están hechos**: Stock bajo, Ventas por período (sobre
 `ComprobanteVentaDAL.ListarPorPeriodo`) y Cuentas corrientes (sobre
@@ -121,6 +122,7 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\01_Esquema.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\02_DatosIniciales.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\03_UsuariosDePrueba.sql"   # opcional
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\04_DatosDemo.sql"          # opcional, datos de ejemplo
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\05_ImagenesDemo.sql"       # opcional, imágenes de los productos de 04
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -136,8 +138,12 @@ Lo que clonar el repo no resuelve solo (relevado el 2026-10-08). Las decisiones 
 abiertas están en `Docs/EstadoActual.md`, sección 4.
 
 - **Recrear la base con `01` a `04`.** El esquema cambió el 2026-10-07 (ver «Base de datos»): con
-  una base anterior la app falla apenas se inicia sesión, porque el menú lee `Menu.icono`. `01`
-  borra los datos; `03` y `04` son opcionales (`04` usa al admin si faltan los usuarios de `03`).
+  una base anterior la app falla apenas se inicia sesión, porque el menú lee `Menu.icono`. Volvió
+  a cambiar el 2026-10-08 (tabla `Emisor`): sin ella fallan "Facturar" y Datos del comercio, y la
+  pantalla no aparece en el menú. Y otra vez el mismo día (tabla `ImagenProducto`): sin ella falla
+  todo lo que lista productos (Productos, Inicio, Órdenes, Compras, Stock bajo). `01` borra los
+  datos; `03`, `04` y `05` son opcionales (`04` usa al admin si faltan los usuarios de `03`; `05`
+  carga las imágenes de los productos de `04`).
 - **Los datos de ejemplo se fechan al correr `04`.** Turnos, órdenes, compras y pagos salen de
   `GETDATE()`, y dos turnos quedan para ese mismo día (10:30 y 17:00). Con la base recreada otro
   día, "hoy" sale vacío en Turnos y en el Inicio: no es un bug, se vuelven a correr `01` a `04`.
@@ -149,11 +155,13 @@ abiertas están en `Docs/EstadoActual.md`, sección 4.
   entera. Para que ande, copiar `Web.MailSettings.config.example` como `Web.MailSettings.config`,
   completarlo y poner la misma cuenta en `MailRemitente`; para probar sin correo,
   `MailModoDesarrollo=true` (los mails quedan en `App_Data\MailsEnviados`) sin commitearlo.
-- **Los datos del comercio para la factura (`Emisor.*` en `Web.config`) son de ejemplo**: razón
-  social, CUIT, domicilio, ingresos brutos e inicio de actividades inventados. Reemplazarlos por
-  los reales antes de imprimir una factura. `Emisor.CondicionIva` define la letra (Responsable
-  Inscripto emite A o B; Monotributista o Exento, C), y cada letra numera por separado en cada
-  `Emisor.PuntoVenta`.
+- **Los datos del comercio para la factura son de ejemplo**: razón social, CUIT, domicilio,
+  ingresos brutos e inicio de actividades inventados, sembrados por `02_DatosIniciales.sql` en la
+  tabla `Emisor`. Reemplazarlos por los reales antes de imprimir una factura, desde Administración
+  > Datos del comercio (`~/DatosComercio`, solo Admin de entrada). Hasta el 2026-10-08 estaban en
+  `Web.config` (`Emisor.*`), que ya no se lee. La condición frente al IVA define la letra
+  (Responsable Inscripto emite A o B; Monotributista o Exento, C), y cada letra numera por
+  separado en cada punto de venta.
 - **La factura no tiene validez fiscal:** no lleva CAE ni se conecta con AFIP/ARCA, que quedó
   fuera de alcance (ver «Reglas de negocio que cruzan módulos»). No es algo a medio hacer.
 - **Los números dependen de la configuración regional de Windows.** `<globalization>` no fija
@@ -183,11 +191,13 @@ requerimientos §4 — no partir `BIZ`):
   `MovimientoStock`, `Turno`, `OrdenDeTrabajo`, `DetalleOrdenServicio`, `DetalleOrdenInsumo`,
   `ComprobanteVenta`, `Factura` + `TotalesFactura` + `DatosEmisor`, etc.) y dos clases estáticas de
   reglas de formato: `FormatoTelefono` e `Iva` (tipos, alícuotas, condiciones frente al IVA y el
-  cálculo del IVA contenido).
+  cálculo del IVA contenido). `Imagen` es la imagen de un producto con sus reglas: qué archivo se
+  acepta y cómo se achica y se arma la miniatura (`Imagen.Preparar`, con `System.Drawing`).
 - `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
   `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `NivelDAL`, `ClienteDAL`, `VehiculoDAL`,
   `ProveedorDAL`, `ProductoDAL`, `MovimientoStockDAL`, `TurnoDAL`, `OrdenDeTrabajoDAL`,
-  `DetalleOrdenServicioDAL`, `DetalleOrdenInsumoDAL`, `ComprobanteVentaDAL`, `FacturaDAL`). Todo pasa por
+  `DetalleOrdenServicioDAL`, `DetalleOrdenInsumoDAL`, `ComprobanteVentaDAL`, `FacturaDAL`,
+  `EmisorDAL`). Todo pasa por
   `AccesoDatos.cs`, que centraliza
   la cadena de conexión y expone `Consultar` / `Ejecutar` / `Escalar` + los helpers `LeerString`,
   `LeerInt`, etc. para mapear `DataRow`. **Nunca concatenar SQL**: siempre
@@ -263,6 +273,16 @@ Reglas transversales de la capa web:
     botón + HiddenField con el id), con las opciones en `data-opciones="<%: OpcionesClientes %>"`
     (`Utilidades/Selectores.cs`). Con `data-postback="true"` elegir dispara el `OnValueChanged`
     del HiddenField (va adentro de un `UpdatePanel`).
+- **Imágenes (desde 2026-10-08, hoy solo de productos).** El archivo va en la base
+  (`ImagenProducto`, con su miniatura), no en una carpeta del sitio: la base es compartida y cada
+  máquina corre su propio IIS. Las pantallas lo piden aparte a `ImagenProducto.ashx` (exige
+  sesión; `ImagenProducto.Url` arma la dirección con la fecha de la imagen, para que el navegador
+  la guarde). En el formulario, `.campo-imagen` con un `FileUpload` (`Lubricentro.js` muestra la
+  vista previa y descarta sin subirlo lo que no es PNG ni JPG o pesa de más); la imagen se valida
+  con `Imagen.Preparar` **antes** de guardar la entidad y se guarda después. Un `FileUpload` no
+  sube nada en un postback parcial: si el formulario va en un `UpdatePanel`, el botón que guarda
+  tiene que ser `PostBackTrigger`. En una grilla, una miniatura con `data-imagen` (la imagen
+  entera) hace que "Ver" la muestre grande.
 - La sesión se toca solo a través de `Seguridad/SesionUsuario.cs`, nunca `Session["..."]` directo.
 - El menú es una **barra lateral** (desde 2026-10-07) que arma `Site.Master.cs` desde
   `MenuDAL.ObtenerArbol(idNivel)` (que a su vez arma el árbol con `ItemMenu.ArmarArbol`, en
@@ -294,8 +314,9 @@ Estas no se ven leyendo un solo archivo:
 - **Los precios son finales, con el IVA incluido.** Al generar la venta, cada línea copia el IVA
   de su producto y guarda el IVA que contiene (`Iva.Contenido`); la venta guarda el neto en
   `subtotal` y el IVA en `impuestos`, y el total no cambia. La factura (`FacturaDAL.Emitir`, desde
-  Ventas) toma la letra de la condición frente al IVA del comercio (`Web.config`, `Emisor.*`) y
-  del cliente, y es sin validez fiscal (sin CAE).
+  Ventas) toma la letra de la condición frente al IVA del comercio (tabla `Emisor`, `EmisorDAL`,
+  editable en `~/DatosComercio`) y del cliente, copia los datos de los dos al emitirse (editarlos
+  después no la cambia) y es sin validez fiscal (sin CAE).
 - **Cambiar el dueño de un vehículo es `VehiculoDAL.CambiarDueno`**, no la edición (`Actualizar`
   ya no toca `idCliente`): se rechaza con una orden en el taller o un turno pendiente del vehículo.
 - **Stock automático en los dos sentidos:** baja al agregar una línea de insumo a una orden de
@@ -365,7 +386,18 @@ El mismo día (segundo pedido) cambió más el esquema, así que **toda base ant
 `localidad`, `provincia`, `codigoPostal` y la columna calculada `denominacion`;
 `DetalleComprobanteVenta` con `tipoIva`, `alicuotaIva` e `importeIva`; `Factura`; y `Menu.icono`.
 Los índices filtrados exigen `SET QUOTED_IDENTIFIER ON` (sqlcmd lo trae apagado): los scripts lo
-fijan al principio; un script nuevo que inserte en `Producto` tiene que hacer lo mismo.
+fijan al principio; un script nuevo, o un `sqlcmd -Q` suelto, que escriba en `Producto` (insertar,
+actualizar o borrar) tiene que hacer lo mismo o correr con `-I`.
+
+El 2026-10-08 se sumó `Emisor`, los datos del comercio que factura: una tabla de **una sola fila**
+(`idEmisor = 1`, fijado por `CK_Emisor_unico`) en vez de claves de `Web.config`, para poder
+editarla desde la aplicación. `EmisorDAL.Guardar` hace `UPDATE` y, si no había fila, `INSERT`.
+
+El mismo día se sumó `ImagenProducto`, la imagen opcional de cada producto: el archivo (`contenido`,
+hasta 800 px de lado) y su `miniatura` de 120 px en `VARBINARY(MAX)`, con el tipo (`image/png` o
+`image/jpeg`) y la fecha. Va aparte de `Producto` para que sus consultas no arrastren los archivos
+(`ProductoDAL` solo lee la fecha). `05_ImagenesDemo.sql` carga las de los productos de ejemplo,
+con cada binario partido en renglones con `\` al final (T-SQL une las partes).
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`). Para pasar al
 SQL Server del lubricentro por VPN Radmin alcanza con cambiar la cadena `LubricentroDB` en
@@ -476,12 +508,13 @@ Desde 2026-10-07, además:
 
 | Campo | Regla | Dónde vive |
 |---|---|---|
-| `Cliente.telefono`, `Proveedor.telefono` | opcional; números, espacios, guiones, puntos, paréntesis y "+" inicial, 6 a 15 dígitos | `Modelo/FormatoTelefono.cs` (clase aparte: la propiedad `Telefono` de las entidades taparía el nombre) |
+| `Cliente.telefono`, `Proveedor.telefono` | opcional; se escribe con números, espacios, guiones, puntos, paréntesis y "+" inicial, 6 a 15 dígitos; se guarda y se muestra solo con los dígitos (y el "+"), desde 2026-10-08 | `Modelo/FormatoTelefono.cs` (`EsValido` y `Normalizar`; clase aparte: la propiedad `Telefono` de las entidades taparía el nombre) |
 | `Vehiculo.anio` | opcional; de 1900 al año que viene | `Vehiculo.AnioMinimo`/`AnioMaximo`; la pantalla usa un `RangeValidator` con esos límites puestos desde el código |
 | `Cliente.codigoPostal` | opcional; 4 dígitos o CPA (`C1406GZA`), en mayúsculas | `Cliente.EsCodigoPostalValido` |
 | `Cliente.provincia` | opcional; una de las 23 provincias o CABA | `Cliente.Provincias` (lista fija del desplegable) |
 | `Producto.sku`, `Producto.codigoBarras` | opcionales; letras, números y guiones; únicos; el SKU en mayúsculas | `Producto.EsCodigoValido` + `ProductoDAL` (unicidad) |
 | `Producto.alicuotaIva` | 21, 10,5, 27, 5 o 2,5 si es gravado; 0 si es exento o no gravado | `Iva.Alicuotas`; en un desplegable, el valor va en formato invariante `"0.##"` (la base la devuelve como `10.50`) |
+| Imagen de un producto (`ImagenProducto`, desde 2026-10-08) | opcional; PNG o JPG de hasta 5 MB, reconocido por sus primeros bytes y no por la extensión; se guarda en el mismo formato, a lo sumo de 800 px de lado, con una miniatura de 120 px | `Modelo/Imagen.cs` (`Preparar`); los límites llegan a la pantalla desde ahí |
 
 ### Patrón de validación de formularios (Fase 2)
 
@@ -853,3 +886,44 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   se manejó Chrome sin ventana con puppeteer-core contra IIS Express (pruebas en el scratchpad,
   no commiteadas): recorrido de las 17 pantallas y los flujos de los 13 puntos con tres roles.
   Encontró un bug real (la alícuota `10.50` de la base contra el `10.5` del desplegable).
+
+- **Login, teléfonos y datos del comercio (sesión 2026-10-08).** Detalle en
+  `Docs/EstadoActual.md`. Lo que deja precedente:
+
+  **La configuración que se edita desde la aplicación va en la base, no en `Web.config`.** Los
+  datos del comercio pasaron de `appSettings` a la tabla `Emisor` (una fila) con su pantalla en
+  Administración. Escribir `Web.config` desde la aplicación reinicia el sitio y pide permisos de
+  escritura sobre la carpeta. `Web.config` queda para lo que depende de la máquina (cadena de
+  conexión, mails).
+
+  **Nada de utilidades de `display` de Bootstrap (`d-block`, `d-flex`…) en un validador.** Llevan
+  `!important` y le ganan al `display:none` en línea con el que ASP.NET arranca un validador
+  `Display="Dynamic"`: el mensaje de error se ve desde que abre la página. Pasaba en las cuatro
+  pantallas de ingreso. El bloque se da con una regla propia sin `!important`
+  (`.campo .text-danger`, `.login-card .text-danger`).
+
+  **Un botón de Web Forms es un `<input>`**, así que la regla general `input { max-width: 280px }`
+  del template de Site.css también lo corta: un botón a todo el ancho necesita `max-width: 100%`.
+
+  **Los teléfonos se guardan solo con los dígitos** (`FormatoTelefono.Normalizar`), como el DNI y
+  el CUIT. A diferencia del CUIT, no se les da formato al mostrarlos: la característica tiene de 2
+  a 4 dígitos según la zona y no hay una regla simple para cortarla.
+
+- **Imagen de cada producto (sesión 2026-10-08).** Detalle en `Docs/EstadoActual.md` y
+  Requerimientos §9.13. Lo que deja precedente:
+
+  **Los archivos van en la base, en una tabla aparte.** En una carpeta del sitio, cada archivo
+  quedaría solo en la máquina donde se subió (la base es compartida por VPN y cada PC corre su
+  IIS). La tabla aparte evita arrastrar los archivos en cada consulta de la entidad, y un handler
+  (`.ashx`) los sirve con la fecha en la dirección, para que el navegador los guarde.
+
+  **Se achica al subir, no al mostrar.** `Imagen.Preparar` deja la imagen en 800 px y arma la
+  miniatura una sola vez; la lista pide solo la miniatura. Una foto de teléfono se endereza según
+  su orientación EXIF: el navegador endereza el original, pero la copia achicada pierde ese dato.
+
+  **El campo de archivo se vacía en cada postback.** Por eso la imagen se valida antes de guardar
+  la entidad, y si el guardado falla, el mensaje pide volver a elegirla.
+
+  **Las imágenes de ejemplo son propias.** Las fotos de productos de marca tienen derechos de sus
+  dueños y los bancos libres ponen condiciones (Pixabay no deja usar marcas en un uso comercial):
+  las de `Database\ImagenesDemo` se dibujaron para el proyecto.

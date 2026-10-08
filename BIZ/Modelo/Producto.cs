@@ -45,6 +45,16 @@ namespace BIZ.Modelo
 
         public decimal StockMinimo { get; set; }
 
+        // Fecha de la imagen del producto, null si no tiene (§9.13). La imagen no viaja con el
+        // producto: la pantalla la pide aparte (ImagenProducto.ashx) con esta fecha en la dirección,
+        // para que al cambiarla el navegador no siga mostrando la anterior.
+        public DateTime? FechaImagen { get; set; }
+
+        public bool TieneImagen
+        {
+            get { return FechaImagen.HasValue; }
+        }
+
         public bool EsInsumo
         {
             get { return Tipo == TipoInsumo; }

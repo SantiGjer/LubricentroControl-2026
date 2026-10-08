@@ -25,7 +25,7 @@
                 <asp:Label runat="server" AssociatedControlID="txtNombre" CssClass="login-label">Nombre</asp:Label>
                 <asp:TextBox ID="txtNombre" runat="server" CssClass="login-input" />
                 <asp:RequiredFieldValidator runat="server" ControlToValidate="txtNombre"
-                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Registro"
+                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Registro"
                     ErrorMessage="Ingresá tu nombre." />
             </div>
 
@@ -33,7 +33,7 @@
                 <asp:Label runat="server" AssociatedControlID="txtApellido" CssClass="login-label">Apellido</asp:Label>
                 <asp:TextBox ID="txtApellido" runat="server" CssClass="login-input" />
                 <asp:RequiredFieldValidator runat="server" ControlToValidate="txtApellido"
-                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Registro"
+                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Registro"
                     ErrorMessage="Ingresá tu apellido." />
             </div>
 
@@ -41,7 +41,7 @@
                 <asp:Label runat="server" AssociatedControlID="txtEmail" CssClass="login-label">Mail</asp:Label>
                 <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" autocomplete="username" CssClass="login-input" />
                 <asp:RequiredFieldValidator runat="server" ControlToValidate="txtEmail"
-                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Registro"
+                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Registro"
                     ErrorMessage="Ingresá tu mail." />
             </div>
 
@@ -49,7 +49,7 @@
                 <asp:Label runat="server" AssociatedControlID="txtPassword" CssClass="login-label">Contraseña</asp:Label>
                 <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" autocomplete="new-password" CssClass="login-input" />
                 <asp:RequiredFieldValidator runat="server" ControlToValidate="txtPassword"
-                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Registro"
+                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Registro"
                     ErrorMessage="Ingresá una contraseña." />
             </div>
 
@@ -57,7 +57,7 @@
                 <asp:Label runat="server" AssociatedControlID="txtRepetir" CssClass="login-label">Repetir contraseña</asp:Label>
                 <asp:TextBox ID="txtRepetir" runat="server" TextMode="Password" autocomplete="new-password" CssClass="login-input" />
                 <asp:CompareValidator runat="server" ControlToValidate="txtRepetir" ControlToCompare="txtPassword"
-                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Registro"
+                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Registro"
                     ErrorMessage="Las contraseñas no coinciden." />
             </div>
 

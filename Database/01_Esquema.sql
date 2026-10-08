@@ -1,9 +1,10 @@
 ﻿/* ============================================================================
    LubricentroControl 2026 — Esquema de base de datos
-   Las 21 entidades del diagrama E/R (16 de negocio + 5 de seguridad) más tres
+   Las 21 entidades del diagrama E/R (16 de negocio + 5 de seguridad) más cinco
    agregadas después: MovimientoStock (kardex de stock, Fase 2 — ver
    Docs/Lubricentro_Requerimientos.md §8 y §9.3), Producto (supertipo de
-   Servicio e Insumo, §9.9) y Factura (§9.10).
+   Servicio e Insumo, §9.9), Factura y Emisor (datos del comercio que factura,
+   §9.10) e ImagenProducto (la imagen de cada producto, §9.13).
 
    Idempotente: se puede correr varias veces. Borra y recrea todas las tablas,
    por lo que PIERDE LOS DATOS. Correr 02_DatosIniciales.sql a continuación.
@@ -31,6 +32,7 @@ DROP TABLE IF EXISTS CuentaCorrienteProveedor;
 DROP TABLE IF EXISTS CuentaCorrienteCliente;
 DROP TABLE IF EXISTS Pago;
 DROP TABLE IF EXISTS Factura;
+DROP TABLE IF EXISTS Emisor;
 DROP TABLE IF EXISTS DetalleComprobanteVenta;
 DROP TABLE IF EXISTS ComprobanteVenta;
 DROP TABLE IF EXISTS DetalleCompra;
@@ -41,6 +43,7 @@ DROP TABLE IF EXISTS OrdenDeTrabajo;
 DROP TABLE IF EXISTS Turno;
 DROP TABLE IF EXISTS Vehiculo;
 DROP TABLE IF EXISTS Cliente;
+DROP TABLE IF EXISTS ImagenProducto;
 DROP TABLE IF EXISTS Insumo;
 DROP TABLE IF EXISTS Servicio;
 DROP TABLE IF EXISTS Producto;
@@ -276,6 +279,27 @@ CREATE TABLE Insumo (
 );
 GO
 
+/* Imagen de un producto (§9.13, agregada el 2026-10-08): opcional, una por
+   producto. En una tabla aparte para que las consultas de productos no
+   arrastren los archivos: las pantallas la piden por separado
+   (ImagenProducto.ashx). PNG o JPG, del mismo formato que el archivo subido. */
+CREATE TABLE ImagenProducto (
+    idProducto         INT               NOT NULL,
+    /* image/png | image/jpeg */
+    tipoContenido      NVARCHAR(20)      NOT NULL,
+    /* A lo sumo 800 px de lado: el formulario y "Ver" no la muestran más grande. */
+    contenido          VARBINARY(MAX)    NOT NULL,
+    /* 120 px de lado, para la lista. */
+    miniatura          VARBINARY(MAX)    NOT NULL,
+    /* Va en la dirección de la imagen: al cambiarla, el navegador no sigue
+       mostrando la anterior. */
+    fechaActualizacion DATETIME          NOT NULL CONSTRAINT DF_ImagenProducto_fecha DEFAULT (GETDATE()),
+    CONSTRAINT PK_ImagenProducto PRIMARY KEY (idProducto),
+    CONSTRAINT FK_ImagenProducto_Producto FOREIGN KEY (idProducto) REFERENCES Producto(idProducto),
+    CONSTRAINT CK_ImagenProducto_tipo CHECK (tipoContenido IN ('image/png','image/jpeg'))
+);
+GO
+
 /* ==========================================================================
    OPERACIÓN: TURNOS Y ÓRDENES DE TRABAJO
    ========================================================================== */
@@ -429,6 +453,28 @@ CREATE TABLE DetalleComprobanteVenta (
     CONSTRAINT CK_DetVenta_iva CHECK (
         (tipoIva = 'Gravado' AND alicuotaIva > 0) OR
         (tipoIva IN ('Exento','No gravado') AND alicuotaIva = 0 AND importeIva = 0))
+);
+GO
+
+/* Datos del comercio que emite las facturas (§9.10): una sola fila (idEmisor = 1),
+   editable desde Administración > Datos del comercio. Cada factura los copia al
+   emitirse, así que cambiarlos no toca las ya emitidas. La condición frente al
+   IVA define la letra: Responsable Inscripto emite A o B; Monotributista o
+   Exento, C. Cada letra numera por separado en cada punto de venta. */
+CREATE TABLE Emisor (
+    idEmisor          INT               NOT NULL,
+    razonSocial       NVARCHAR(150)     NOT NULL,
+    /* Sin guiones */
+    cuit              NVARCHAR(20)      NOT NULL,
+    condicionIva      NVARCHAR(30)      NOT NULL,
+    domicilio         NVARCHAR(300)     NULL,
+    ingresosBrutos    NVARCHAR(30)      NULL,
+    inicioActividades DATE              NULL,
+    puntoVenta        INT               NOT NULL,
+    CONSTRAINT PK_Emisor PRIMARY KEY (idEmisor),
+    CONSTRAINT CK_Emisor_unico CHECK (idEmisor = 1),
+    CONSTRAINT CK_Emisor_condicionIva CHECK (condicionIva IN ('Responsable Inscripto','Monotributista','Exento')),
+    CONSTRAINT CK_Emisor_puntoVenta CHECK (puntoVenta BETWEEN 1 AND 99999)
 );
 GO
 

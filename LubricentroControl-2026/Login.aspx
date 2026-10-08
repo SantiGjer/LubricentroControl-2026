@@ -14,8 +14,7 @@
                 </svg>
             </div>
 
-            <h1 class="login-title">Ingresar</h1>
-            <p class="login-subtitle">Lubricentro Control</p>
+            <h1 class="login-nombre">Lubricentro <strong>Control</strong></h1>
 
             <asp:Panel ID="pnlMensaje" runat="server" Visible="false" role="alert" CssClass="login-mensaje">
                 <asp:Literal ID="litMensaje" runat="server" />
@@ -25,7 +24,7 @@
                 <asp:Label runat="server" AssociatedControlID="txtEmail" CssClass="login-label">Mail</asp:Label>
                 <asp:TextBox ID="txtEmail" runat="server" TextMode="Email" autocomplete="username" CssClass="login-input" />
                 <asp:RequiredFieldValidator runat="server" ControlToValidate="txtEmail"
-                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Login"
+                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Login"
                     ErrorMessage="Ingresá tu mail." />
             </div>
 
@@ -33,7 +32,7 @@
                 <asp:Label runat="server" AssociatedControlID="txtPassword" CssClass="login-label">Contraseña</asp:Label>
                 <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" autocomplete="current-password" CssClass="login-input" />
                 <asp:RequiredFieldValidator runat="server" ControlToValidate="txtPassword"
-                    CssClass="text-danger small d-block mt-1" Display="Dynamic" ValidationGroup="Login"
+                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="Login"
                     ErrorMessage="Ingresá tu contraseña." />
             </div>
 

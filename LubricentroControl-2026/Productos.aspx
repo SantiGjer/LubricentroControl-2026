@@ -48,7 +48,11 @@
         OnRowCommand="gvProductos_RowCommand" OnRowDataBound="gvProductos_RowDataBound"
         EmptyDataText="No hay productos cargados.">
         <Columns>
-            <asp:BoundField DataField="Nombre" HeaderText="Nombre" ItemStyle-CssClass="celda-titulo" />
+            <%-- La miniatura va con el nombre: no suma texto a la celda, así que no cambia cómo se
+                 ordena ni se filtra. "Ver" muestra la imagen entera (data-imagen). --%>
+            <asp:TemplateField HeaderText="Nombre" ItemStyle-CssClass="celda-titulo">
+                <ItemTemplate><span class="nombre-con-imagen"><%# Miniatura(Container.DataItem) %><span><%#: Eval("Nombre") %></span></span></ItemTemplate>
+            </asp:TemplateField>
             <asp:BoundField DataField="Tipo" HeaderText="Tipo" />
             <asp:BoundField DataField="Sku" HeaderText="SKU" />
             <asp:BoundField DataField="CodigoBarras" HeaderText="Código de barras" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta" />
@@ -139,6 +143,29 @@
                                         OnServerValidate="valCodigo_ServerValidate"
                                         CssClass="text-danger small" Display="Dynamic" ValidationGroup="Producto"
                                         ErrorMessage="Solo letras, números y guiones, sin espacios." />
+                                </div>
+
+                                <%-- La imagen elegida se ve en el recuadro antes de guardarla
+                                     (Lubricentro.js, .campo-imagen); se sube con "Guardar". --%>
+                                <div class="col-12"><p class="subtitulo-formulario">Imagen</p></div>
+
+                                <div class="col-12 campo">
+                                    <div class="campo-imagen">
+                                        <div class="campo-imagen-vista">
+                                            <img id="imgProducto" runat="server" alt="Imagen del producto" />
+                                            <span class="campo-imagen-vacia">Sin imagen</span>
+                                        </div>
+                                        <div class="campo-imagen-controles">
+                                            <asp:Label runat="server" AssociatedControlID="fuImagen">Archivo</asp:Label>
+                                            <asp:FileUpload ID="fuImagen" runat="server" accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
+                                            <span class="text-danger small campo-imagen-error" role="alert" hidden></span>
+                                            <p class="texto-ayuda"><asp:Literal ID="litAyudaImagen" runat="server" /></p>
+                                            <asp:Panel ID="pnlQuitarImagen" runat="server" CssClass="campo-imagen-quitar" Visible="false">
+                                                <asp:CheckBox ID="chkQuitarImagen" runat="server" />
+                                                <asp:Label runat="server" AssociatedControlID="chkQuitarImagen" CssClass="etiqueta-inline">Quitar la imagen</asp:Label>
+                                            </asp:Panel>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="col-12"><p class="subtitulo-formulario">Precio e IVA</p></div>
