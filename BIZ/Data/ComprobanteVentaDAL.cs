@@ -130,6 +130,9 @@ namespace BIZ.Data
         // suma el neto en subtotal y el IVA en impuestos, y el total no cambia.
         public static ResultadoOperacion GenerarDesdeOrden(int idOrden)
         {
+            // Este chequeo da el mensaje en el caso normal; lo que garantiza una sola venta por
+            // orden aunque dos usuarios cierren a la vez es UQ_ComprobanteVenta_orden (ver el
+            // catch del final).
             if (ObtenerPorOrden(idOrden) != null)
                 return ResultadoOperacion.Error("Esta orden ya tiene una venta generada.");
 
@@ -246,7 +249,17 @@ namespace BIZ.Data
             ");
             parametros.Add(AccesoDatos.Param("@tipoMovimientoCC", CuentaCorrienteCliente.TipoVenta));
 
-            AccesoDatos.Escalar(sql.ToString(), parametros.ToArray());
+            try
+            {
+                AccesoDatos.Escalar(sql.ToString(), parametros.ToArray());
+            }
+            catch (SqlException ex) when (ex.Number == 2627 && ex.Message.Contains("UQ_ComprobanteVenta_orden"))
+            {
+                // Otro usuario cerró la misma orden entre el chequeo del principio y este INSERT:
+                // la base rechazó la segunda venta (2627 = clave única repetida) y XACT_ABORT ya
+                // revirtió todo el batch, también el movimiento de cuenta corriente.
+                return ResultadoOperacion.Error("Esta orden ya tiene una venta generada.");
+            }
 
             return ResultadoOperacion.Ok("Se generó la venta correspondiente." +
                 (creditoAplicado > 0

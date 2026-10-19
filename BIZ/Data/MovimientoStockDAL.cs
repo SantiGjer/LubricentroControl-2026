@@ -43,10 +43,18 @@ namespace BIZ.Data
             return lista;
         }
 
-        // Núcleo atómico: valida stock suficiente y aplica el movimiento, dejando tanto el
-        // ajuste de Insumo.stockActual como su registro en MovimientoStock en una sola
-        // transacción. SET XACT_ABORT ON es necesario: BEGIN TRAN/COMMIT solos no revierten
-        // el UPDATE si el INSERT falla a mitad de camino (ver CLAUDE.md).
+        // Núcleo atómico: aplica el movimiento a Insumo.stockActual y lo registra en
+        // MovimientoStock en una sola transacción. SET XACT_ABORT ON es necesario: BEGIN
+        // TRAN/COMMIT solos no revierten el UPDATE si el INSERT falla a mitad de camino (ver
+        // CLAUDE.md).
+        //
+        // El stock se actualiza en relativo (stockActual + entrada - salida) y la condición de
+        // que no quede negativo va en el WHERE del mismo UPDATE (2026-10-18). Antes se leía el
+        // stock, se calculaba el resultado en C# y se guardaba ese número: si dos movimientos
+        // sobre el mismo insumo leían a la vez, el segundo pisaba al primero. Si el UPDATE no
+        // toca ninguna fila es que el stock no alcanzaba, y no se registra nada. El stock
+        // resultante del kardex se lee después del UPDATE, dentro de la transacción: la fila ya
+        // está bloqueada por el UPDATE hasta el COMMIT.
         public static ResultadoOperacion Registrar(int idInsumo, string tipoMovimiento,
             decimal entrada, decimal salida, int? idCompra, int? idOrden, int idUsuario, string descripcion)
         {
@@ -54,25 +62,30 @@ namespace BIZ.Data
             if (insumo == null || !insumo.EsInsumo)
                 return ResultadoOperacion.Error("El insumo no existe.");
 
-            var stockResultante = insumo.StockActual + entrada - salida;
-            if (stockResultante < 0)
-                return ResultadoOperacion.Error(
-                    "Stock insuficiente. Disponible: " + insumo.StockActual + ", se intentó descontar " + salida + ".");
-
             const string sql = @"
                 SET XACT_ABORT ON;
                 BEGIN TRANSACTION;
 
-                UPDATE Insumo SET stockActual = @stockResultante WHERE idInsumo = @idInsumo;
+                DECLARE @stockResultante DECIMAL(12,2) = NULL;
 
-                INSERT INTO MovimientoStock
-                    (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
-                VALUES
-                    (@idInsumo, @tipoMovimiento, @idCompra, @idOrden, @idUsuario, @entrada, @salida, @stockResultante, @descripcion);
+                UPDATE Insumo SET stockActual = stockActual + @entrada - @salida
+                WHERE idInsumo = @idInsumo AND stockActual + @entrada - @salida >= 0;
 
-                COMMIT TRANSACTION;";
+                IF @@ROWCOUNT = 1
+                BEGIN
+                    SELECT @stockResultante = stockActual FROM Insumo WHERE idInsumo = @idInsumo;
 
-            AccesoDatos.Ejecutar(sql,
+                    INSERT INTO MovimientoStock
+                        (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+                    VALUES
+                        (@idInsumo, @tipoMovimiento, @idCompra, @idOrden, @idUsuario, @entrada, @salida, @stockResultante, @descripcion);
+                END
+
+                COMMIT TRANSACTION;
+
+                SELECT @stockResultante;";
+
+            var stockResultante = AccesoDatos.Escalar(sql,
                 AccesoDatos.Param("@idInsumo", idInsumo),
                 AccesoDatos.Param("@tipoMovimiento", tipoMovimiento),
                 AccesoDatos.Param("@idCompra", idCompra),
@@ -80,10 +93,24 @@ namespace BIZ.Data
                 AccesoDatos.Param("@idUsuario", idUsuario),
                 AccesoDatos.Param("@entrada", entrada),
                 AccesoDatos.Param("@salida", salida),
-                AccesoDatos.Param("@stockResultante", stockResultante),
                 AccesoDatos.Param("@descripcion", descripcion));
 
+            if (stockResultante == null)
+                return StockInsuficiente(idInsumo, salida);
+
             return ResultadoOperacion.Ok("Stock actualizado.");
+        }
+
+        // Rechazo por stock insuficiente, con el stock de ese momento (se vuelve a leer: el
+        // de antes del UPDATE pudo cambiar mientras tanto). Lo usa también
+        // DetalleOrdenInsumoDAL.Agregar.
+        internal static ResultadoOperacion StockInsuficiente(int idInsumo, decimal salida)
+        {
+            var insumo = ProductoDAL.ObtenerPorId(idInsumo);
+            var disponible = insumo == null ? 0m : insumo.StockActual;
+
+            return ResultadoOperacion.Error(
+                "Stock insuficiente. Disponible: " + disponible + ", se intentó descontar " + salida + ".");
         }
 
         // La usa el botón "Ajustar stock" de Productos.aspx (y ProductoDAL.Crear, para el stock inicial).

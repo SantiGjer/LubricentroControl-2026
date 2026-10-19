@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 13 de octubre de 2026
+**Última actualización:** 20 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -227,6 +227,63 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-18 — Restricciones en ventas y cuenta corriente de clientes, y stock en relativo
+
+Alexis pidió revisar sus módulos (Ventas, Productos, Cuenta corriente de clientes) para la defensa
+del 20/10 y después arreglar tres de los puntos encontrados. Se commiteó el 19/10, a pedido suyo,
+después de aplicar el script de actualización a su base.
+
+- **Una venta por orden, garantizada por la base.** `ComprobanteVentaDAL.GenerarDesdeOrden`
+  chequeaba "ya tiene venta" con un `SELECT` antes de la transacción, y `ComprobanteVenta.idOrden`
+  no era único: dos cierres simultáneos de la misma orden generaban dos ventas, y dos débitos en la
+  cuenta corriente. Nuevo `UQ_ComprobanteVenta_orden`. El chequeo previo queda para el mensaje; el
+  error 2627 de esa restricción se atrapa y devuelve el mismo "Esta orden ya tiene una venta
+  generada" (`XACT_ABORT` ya revirtió el batch entero).
+- **CHECK nuevos** en reglas que solo controlaba la aplicación: `CK_Venta_importes`,
+  `CK_Venta_saldo` (0 ≤ saldo pendiente ≤ total), `CK_DetVenta_producto` (una línea 'S' apunta a un
+  servicio y una 'I' a un insumo, nunca a los dos), `CK_DetVenta_cantidad`, `CK_DetVenta_importes`,
+  `CK_CCCli_debeHaber` y `CK_CCCli_origen` (Venta con su venta, Pago con su pago, Ajuste sin
+  ninguno pero con usuario; como `CK_MovStock_origen`, con lo que un tipo fuera de los tres ya queda
+  rechazado). Descartados a propósito: `total = subtotal + impuestos` (cada uno se redondea por
+  separado y, con cantidades fraccionarias, puede diferir en un centavo: habría frenado ventas
+  válidas) y "debe o haber mayor a cero" (una venta de $0 genera un movimiento 0/0).
+- **Stock en relativo.** `MovimientoStockDAL.Registrar` y `DetalleOrdenInsumoDAL.Agregar` leían el
+  stock, calculaban el resultado en C# y guardaban ese valor: dos movimientos simultáneos se
+  pisaban. Ahora el `UPDATE` suma o resta sobre el valor de la base, con la condición de no quedar
+  negativo en el `WHERE`; si no toca ninguna fila es "Stock insuficiente" (el mensaje relee el
+  stock). `DetalleOrdenInsumoDAL.Quitar`, además, borra la línea antes y repone solo si la borró:
+  dos "Quitar" de la misma línea a la vez reponían dos veces.
+- **Base existente: `Database\Actualizar_2026-10-18_Restricciones.sql`.** Primero cuenta, por
+  restricción, las filas que no la cumplirían; si hay alguna, no cambia nada y las lista
+  (`RAISERROR`: con `sqlcmd -b` sale con error). Si no, agrega las 8 en una sola transacción. Se
+  puede correr más de una vez.
+
+**Verificación.** `MSBuild` de la solución y `aspnet_compiler`, sin errores.
+
+- **Instalación desde cero:** una base de prueba aparte, creada con `01` a `05` ya modificados, corre sin errores (los datos de ejemplo cumplen todo).
+- **SQL directo:** 17 pruebas. Las 14 violaciones las rechaza la restricción esperada (2627 o 547) y los 3 casos válidos entran, entre ellos el movimiento 0/0 de una venta de $0.
+- **Script de actualización**, sobre copias (backup y restore) de la base de desarrollo de Alexis:
+  - agrega las 8 restricciones sin tocar los datos;
+  - una segunda corrida no cambia nada;
+  - en otra copia con un dato inválido puesto a propósito, informa `CK_CCCli_origen 1` y no agrega ninguna.
+- **Programa de consola descartable** (no commiteado) sobre `BIZ.dll`, con el mismo recorrido contra la base nueva y contra la copia actualizada: 28 de 28 OK. Incluye cuatro pruebas de concurrencia que, con el `BIZ.dll` anterior y la base sin restricciones, fallaban todas:
+
+| Prueba (hilos a la vez) | Antes | Ahora |
+|---|---|---|
+| 8 hilos × 25 ajustes de ±1 | stock 993 en vez de 1.008, kardex descuadrado | 1.008, kardex coherente |
+| 20 hilos agregan 1 unidad, con 10 en stock | entraron las 20, stock final 8 | 10, stock 0 |
+| 2 hilos quitan la misma línea (×10) | 20 reposiciones | 10 |
+| 2 hilos cierran la misma orden (×10) | 10 órdenes con 2 ventas | 0 |
+
+Las pruebas no tocaron la base de desarrollo de Alexis (`LubricentroControl`): solo se leyó, y se
+le sacó un backup de copia para armarlas. Las bases de prueba se borraron al terminar. El 19/10, a
+pedido suyo y con un backup previo, se le aplicó el script de actualización: las 8 restricciones
+quedaron confiables (`is_not_trusted = 0`) y los datos, iguales (4 ventas, 11 líneas, 9 movimientos
+de cuenta corriente, 32 del kardex, 20 productos). **Para cada compañero:** si su base ya tiene lo
+del 2026-10-13 (columnas de `Proveedor` y el login `lubricentro_app`), alcanza con correr el script;
+si es anterior, se recrea con `01` a `05`, que ya trae las dos cosas. Los demás puntos de la
+revisión quedan en la sección 4.
 
 ### 2026-10-13 — Código postal que completa el domicilio, más datos de proveedores, usuario de la base, tablas que entran en la pantalla y stock bajo de ejemplo
 
@@ -1999,6 +2056,17 @@ falta es decidir si se unifica el criterio.
 ## 4. Pendientes conocidos, sin fecha
 
 Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
+
+- **Pendientes de la revisión de Ventas, Productos y Cuenta corriente de clientes (2026-10-18).**
+  (a) `OrdenDeTrabajoDAL.Cerrar` no es atómico: genera la venta en una transacción y guarda el
+  estado `Cerrada` en otra sentencia; si la segunda fallara, la orden queda abierta con su venta
+  hecha. (b) El saldo de cada movimiento de cuenta corriente (clientes y proveedores) se calcula con
+  `SELECT TOP 1 saldo …` sin `UPDLOCK`: dos movimientos simultáneos del mismo titular pueden leer
+  el mismo saldo anterior. (c) `CuentaCorrienteProveedor` no tiene los CHECK que se agregaron a la
+  de clientes. (d) La factura toma la condición de venta ("Contado" o "Cuenta corriente") del
+  interruptor del cliente, no de si esa venta se pagó. (e) Cerrar la orden de un cliente sin cuenta
+  corriente lleva a Pagos, pero nada obliga a completar el cobro. (f) El número `V-` tiene 6
+  dígitos fijos (`RIGHT('000000' + id, 6)`): se repetiría desde la venta 1.000.000.
 
 - ~~**LocalDB no arranca en la máquina de Federico (2026-10-07).**~~ **Resuelto el mismo día.** Era
   el problema de Windows 11 con discos NVMe que informan sectores de más de 4 KB ("misaligned log

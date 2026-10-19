@@ -133,6 +133,13 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\04_DatosDemo.sql"      
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\05_ImagenesDemo.sql"       # opcional, imágenes de los productos de 04
 ```
 
+Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18; una base
+recién creada con `01` no lo necesita, ya las trae):
+
+```powershell
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-18_Restricciones.sql"
+```
+
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
 acá (es `packages.config`) y `nuget.exe` no está instalado en esta máquina.
 
@@ -162,6 +169,12 @@ abiertas están en `Docs/EstadoActual.md`, sección 4.
   las demás el `Data Source` con su IP de Radmin. El repo es público: en un servidor compartido,
   cambiar la clave ahí y en el `Web.config` de cada PC, sin commitearla (`01` no le cambia la clave
   a un login que ya existe).
+- **Una base que ya tiene lo del 2026-10-13 pero se creó antes del 2026-10-18 se pone al día con
+  `Actualizar_2026-10-18_Restricciones.sql`** (o se recrea con `01` a `05`, que ya trae las dos
+  cosas). Agrega las restricciones nuevas de ventas y de cuenta corriente de clientes sin tocar los
+  datos. Antes de cambiar nada cuenta las filas que no las cumplirían: si hay alguna, no toca la
+  base y las lista. Sin ellas la aplicación anda igual, pero la base no frena, por ejemplo, una
+  venta duplicada por dos cierres simultáneos de la misma orden.
 - **Los datos de ejemplo se fechan al correr `04`.** Turnos, órdenes, compras y pagos salen de
   `GETDATE()`, y dos turnos quedan para ese mismo día (10:30 y 17:00). Con la base recreada otro
   día, "hoy" sale vacío en Turnos y en el Inicio: no es un bug, se vuelven a correr `01` a `04`.
@@ -368,9 +381,16 @@ Estas no se ven leyendo un solo archivo:
   junto con una tercera tabla (`DetalleOrdenInsumoDAL.Agregar` arma su propio batch
   `XACT_ABORT`/`BEGIN TRAN`/`COMMIT` en vez de llamar a `Registrar`, para no dejar un movimiento de
   kardex sin su línea de detalle si esa tercera escritura fallara — ver «Historial de decisiones»
-  para el detalle y el mecanismo de atomicidad).
+  para el detalle y el mecanismo de atomicidad). **Desde el 2026-10-18 el stock se actualiza en
+  relativo** (`stockActual = stockActual + @entrada - @salida`), con la condición de no quedar
+  negativo en el `WHERE` del mismo `UPDATE`, y el `stockResultante` del kardex se lee después del
+  `UPDATE`, dentro de la transacción. Nunca calcular el stock nuevo en C# y guardar ese número: dos
+  movimientos simultáneos sobre el mismo insumo se pisaban. `DetalleOrdenInsumoDAL.Quitar` borra
+  primero la línea y repone el stock solo si la borró.
 - **La venta no se carga a mano:** el comprobante de venta se genera automáticamente al cerrar la
-  orden de trabajo. Es un comprobante interno, sin validez fiscal.
+  orden de trabajo. Es un comprobante interno, sin validez fiscal. Una orden genera una sola venta:
+  lo garantiza `UQ_ComprobanteVenta_orden` (desde 2026-10-18), no solo el chequeo previo de
+  `GenerarDesdeOrden`.
 - **El vínculo Turno–Orden es opcional:** una orden puede nacer de un turno previo o de un walk-in
   (cliente que llega sin turno, se da de alta en el momento).
 - Clientes **y** proveedores pueden quedar con saldo pendiente; la cuenta corriente funciona en
@@ -405,10 +425,11 @@ Estas no se ven leyendo un solo archivo:
 relación menú↔rol, no es una entidad) y `MovimientoStock` (kardex de stock, agregada en Fase 2 —
 no estaba en el diagrama original, ver Requerimientos §8 y §9.3). Los estados de `Turno` y
 `OrdenDeTrabajo` están fijados por `CHECK` — usar exactamente esos literales. `MovimientoStock`
-usa un patrón distinto para su `tipoMovimiento`: sin `CHECK` sobre los valores literales (igual
-que `CuentaCorrienteCliente`/`Proveedor`), pero con `CK_MovStock_origen`, que ata cada tipo a qué
-FK debe estar poblada (mismo criterio que `CK_Pago_titular`) — entre los dos, cualquier valor
-fuera de los 4 esperados ya queda rechazado sin necesitar un CHECK aparte.
+usa un patrón distinto para su `tipoMovimiento`: sin `CHECK` sobre los valores literales, pero con
+`CK_MovStock_origen`, que ata cada tipo a qué FK debe estar poblada (mismo criterio que
+`CK_Pago_titular`) — entre los dos, cualquier valor fuera de los 4 esperados ya queda rechazado
+sin necesitar un CHECK aparte. `CuentaCorrienteCliente` sigue el mismo patrón desde el 2026-10-18
+(`CK_CCCli_origen`); `CuentaCorrienteProveedor` todavía no tiene ninguno de los dos.
 
 Fase 4 sumó dos columnas que tampoco estaban en el diagrama original (ver Requerimientos §9.5):
 `ComprobanteCompra.medioPago` (nullable, atada a `condicionPago = Contado` por
@@ -445,6 +466,14 @@ El 2026-10-13 `Proveedor` sumó `nombreFantasia`, `condicionIva` (la única obli
 usuario en la base, con `db_datareader` y `db_datawriter`: la aplicación no necesita más (no hace
 DDL). Un script nuevo que necesite crear o borrar tablas se corre con un usuario administrador,
 no con ese.
+
+El 2026-10-18 se sumaron restricciones a reglas que hasta entonces solo controlaba la aplicación:
+`UQ_ComprobanteVenta_orden` (una venta por orden), `CK_Venta_importes` y `CK_Venta_saldo`
+(importes no negativos, saldo pendiente entre 0 y el total), `CK_DetVenta_producto` (cada línea
+apunta al producto de su tipo), `CK_DetVenta_cantidad` y `CK_DetVenta_importes`, y en
+`CuentaCorrienteCliente`, `CK_CCCli_debeHaber` (debe o haber, nunca los dos; 0 y 0 vale, por una
+venta de $0) y `CK_CCCli_origen`. A una base que ya tiene lo del 2026-10-13 se las agrega
+`Actualizar_2026-10-18_Restricciones.sql`, sin tocar los datos (ver «Comandos»).
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`), con el usuario
 `lubricentro_app`. Para pasar al SQL Server del lubricentro por VPN Radmin alcanza con cambiar el
@@ -1002,3 +1031,31 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   **El límite de columnas depende del ancho real, no de un número fijo.** Se mide la tabla en el
   navegador: con un número fijo, en un monitor ancho sobrarían columnas y en uno chico faltarían.
   Las celdas que no se pueden partir (documento, CUIT, teléfono) mandan sobre el ajuste.
+
+- **Restricciones en ventas y cuenta corriente, y stock en relativo (sesión 2026-10-18, Alexis con
+  Claude).** Detalle en `Docs/EstadoActual.md`. Salió de revisar los módulos de Ventas, Productos y
+  Cuenta corriente de clientes. Lo que deja precedente:
+
+  **Una regla que la aplicación chequea antes de escribir también va en la base.** "Esta orden ya
+  tiene una venta" se chequeaba con un `SELECT` previo y, con dos cierres a la vez, los dos pasaban
+  (probado: 10 de 10 órdenes con venta duplicada). El chequeo queda para el mensaje y lo garantiza
+  `UQ_ComprobanteVenta_orden`. `GenerarDesdeOrden` atrapa ese error (2627) y devuelve el mismo
+  mensaje: es el primer `catch` de `SqlException` del proyecto, filtrado por número y por nombre de
+  la restricción, así que cualquier otro error sigue saliendo como antes.
+
+  **El stock se actualiza en relativo y la condición va en el mismo `UPDATE`.**
+  `MovimientoStockDAL.Registrar` y `DetalleOrdenInsumoDAL.Agregar` leían el stock, calculaban el
+  resultado en C# y guardaban ese número: con dos movimientos a la vez el segundo pisaba al primero
+  (probado: 20 hilos agregaron 1 unidad con 10 en stock y entraron los 20). Ahora
+  `UPDATE Insumo SET stockActual = stockActual - @cantidad WHERE … AND stockActual - @cantidad >= 0`
+  y, si no tocó ninguna fila, "Stock insuficiente". El `stockResultante` del kardex se lee después
+  del `UPDATE`, dentro de la transacción. `Quitar` borra la línea primero y repone solo si la
+  borró. Compras ya lo hacía en relativo.
+
+  **Para una base existente, un script de actualización que se puede correr más de una vez**, en
+  vez de pedir que se recree: cuenta antes las filas que no cumplirían cada restricción y, si hay,
+  no toca nada y las lista; si no, agrega todo en una sola transacción.
+
+  Quedan sin hacer, porque no se pidieron: cerrar la orden en la misma transacción que genera la
+  venta (`OrdenDeTrabajoDAL.Cerrar` guarda el estado aparte), el saldo de la cuenta corriente
+  calculado con `TOP 1` sin `UPDLOCK`, y los mismos CHECK en `CuentaCorrienteProveedor`.

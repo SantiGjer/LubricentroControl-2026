@@ -446,8 +446,14 @@ CREATE TABLE ComprobanteVenta (
     saldoPendiente    DECIMAL(12,2)     NOT NULL CONSTRAINT DF_Venta_saldo DEFAULT (0),
     CONSTRAINT PK_ComprobanteVenta PRIMARY KEY (idVenta),
     CONSTRAINT UQ_ComprobanteVenta_numero UNIQUE (numeroComprobante),
+    /* Una orden genera una sola venta (agregado 2026-10-18): el chequeo de
+       ComprobanteVentaDAL.GenerarDesdeOrden no alcanza si dos usuarios cierran la
+       misma orden a la vez. */
+    CONSTRAINT UQ_ComprobanteVenta_orden UNIQUE (idOrden),
     CONSTRAINT FK_Venta_Orden FOREIGN KEY (idOrden) REFERENCES OrdenDeTrabajo(idOrden),
-    CONSTRAINT FK_Venta_Cliente FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente)
+    CONSTRAINT FK_Venta_Cliente FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
+    CONSTRAINT CK_Venta_importes CHECK (subtotal >= 0 AND impuestos >= 0 AND total >= 0),
+    CONSTRAINT CK_Venta_saldo CHECK (saldoPendiente >= 0 AND saldoPendiente <= total)
 );
 GO
 
@@ -473,6 +479,13 @@ CREATE TABLE DetalleComprobanteVenta (
     CONSTRAINT FK_DetVenta_Servicio FOREIGN KEY (idServicio) REFERENCES Servicio(idServicio),
     CONSTRAINT FK_DetVenta_Insumo FOREIGN KEY (idInsumo) REFERENCES Insumo(idInsumo),
     CONSTRAINT CK_DetVenta_tipoItem CHECK (tipoItem IN ('S','I')),
+    /* Cada línea apunta al producto de su tipo y a ningún otro (agregado 2026-10-18,
+       mismo criterio que CK_MovStock_origen). */
+    CONSTRAINT CK_DetVenta_producto CHECK (
+        (tipoItem = 'S' AND idServicio IS NOT NULL AND idInsumo IS NULL) OR
+        (tipoItem = 'I' AND idInsumo IS NOT NULL AND idServicio IS NULL)),
+    CONSTRAINT CK_DetVenta_cantidad CHECK (cantidad > 0),
+    CONSTRAINT CK_DetVenta_importes CHECK (precioUnitario >= 0 AND subtotal >= 0 AND importeIva >= 0),
     CONSTRAINT CK_DetVenta_iva CHECK (
         (tipoIva = 'Gravado' AND alicuotaIva > 0) OR
         (tipoIva IN ('Exento','No gravado') AND alicuotaIva = 0 AND importeIva = 0))
@@ -591,7 +604,16 @@ CREATE TABLE CuentaCorrienteCliente (
     CONSTRAINT FK_CCCli_Cliente FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
     CONSTRAINT FK_CCCli_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
     CONSTRAINT FK_CCCli_Pago FOREIGN KEY (idPago) REFERENCES Pago(idPago),
-    CONSTRAINT FK_CCCli_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
+    CONSTRAINT FK_CCCli_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
+    /* Agregados 2026-10-18. Un movimiento va al debe o al haber, nunca a los dos (0 y 0
+       vale: una venta de $0). Y cada tipo con su origen, como CK_MovStock_origen: una
+       Venta apunta a su venta, un Pago a su pago y un Ajuste a ninguno de los dos, pero
+       guarda quién lo hizo. Un tipo fuera de Venta/Pago/Ajuste ya queda rechazado. */
+    CONSTRAINT CK_CCCli_debeHaber CHECK (debe >= 0 AND haber >= 0 AND (debe = 0 OR haber = 0)),
+    CONSTRAINT CK_CCCli_origen CHECK (
+        (tipoMovimiento = 'Venta'  AND idVenta IS NOT NULL AND idPago IS NULL) OR
+        (tipoMovimiento = 'Pago'   AND idPago IS NOT NULL AND idVenta IS NULL) OR
+        (tipoMovimiento = 'Ajuste' AND idVenta IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL))
 );
 GO
 

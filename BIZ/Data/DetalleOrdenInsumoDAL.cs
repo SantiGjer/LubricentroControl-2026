@@ -42,7 +42,9 @@ namespace BIZ.Data
         // de MovimientoStockDAL.Registrar (que atomiza las primeras dos), acá hace falta una
         // tercera — se replica el mismo patrón SET XACT_ABORT ON/BEGIN TRAN/COMMIT (ver
         // CLAUDE.md) en vez de encadenar dos llamadas separadas, para no dejar un movimiento de
-        // stock sin su línea de detalle si la segunda escritura fallara.
+        // stock sin su línea de detalle si la segunda escritura fallara. El stock se descuenta en
+        // relativo, con la condición de no quedar negativo en el mismo UPDATE (2026-10-18, mismo
+        // criterio que MovimientoStockDAL.Registrar): si no alcanza, no se escribe nada.
         public static ResultadoOperacion Agregar(int idOrden, int idInsumo, decimal cantidad, int idUsuario)
         {
             var orden = OrdenDeTrabajoDAL.ObtenerPorId(idOrden);
@@ -61,36 +63,43 @@ namespace BIZ.Data
             if (!insumo.Activo)
                 return ResultadoOperacion.Error("El insumo está dado de baja.");
 
-            var stockResultante = insumo.StockActual - cantidad;
-            if (stockResultante < 0)
-                return ResultadoOperacion.Error(
-                    "Stock insuficiente. Disponible: " + insumo.StockActual + ", se intentó descontar " + cantidad + ".");
-
             const string sql = @"
                 SET XACT_ABORT ON;
                 BEGIN TRANSACTION;
 
-                UPDATE Insumo SET stockActual = @stockResultante WHERE idInsumo = @idInsumo;
+                DECLARE @stockResultante DECIMAL(12,2) = NULL;
 
-                INSERT INTO MovimientoStock
-                    (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
-                VALUES
-                    (@idInsumo, @tipoMovimiento, NULL, @idOrden, @idUsuario, 0, @cantidad, @stockResultante, @descripcion);
+                UPDATE Insumo SET stockActual = stockActual - @cantidad
+                WHERE idInsumo = @idInsumo AND stockActual - @cantidad >= 0;
 
-                INSERT INTO DetalleOrdenInsumo (idOrden, idInsumo, cantidad, precioUnitario)
-                VALUES (@idOrden, @idInsumo, @cantidad, @precioUnitario);
+                IF @@ROWCOUNT = 1
+                BEGIN
+                    SELECT @stockResultante = stockActual FROM Insumo WHERE idInsumo = @idInsumo;
 
-                COMMIT TRANSACTION;";
+                    INSERT INTO MovimientoStock
+                        (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+                    VALUES
+                        (@idInsumo, @tipoMovimiento, NULL, @idOrden, @idUsuario, 0, @cantidad, @stockResultante, @descripcion);
 
-            AccesoDatos.Ejecutar(sql,
+                    INSERT INTO DetalleOrdenInsumo (idOrden, idInsumo, cantidad, precioUnitario)
+                    VALUES (@idOrden, @idInsumo, @cantidad, @precioUnitario);
+                END
+
+                COMMIT TRANSACTION;
+
+                SELECT @stockResultante;";
+
+            var stockResultante = AccesoDatos.Escalar(sql,
                 AccesoDatos.Param("@idInsumo", idInsumo),
                 AccesoDatos.Param("@tipoMovimiento", MovimientoStock.TipoOrden),
                 AccesoDatos.Param("@idOrden", idOrden),
                 AccesoDatos.Param("@idUsuario", idUsuario),
                 AccesoDatos.Param("@cantidad", cantidad),
-                AccesoDatos.Param("@stockResultante", stockResultante),
                 AccesoDatos.Param("@descripcion", "Orden de trabajo #" + idOrden),
                 AccesoDatos.Param("@precioUnitario", insumo.Precio));
+
+            if (stockResultante == null)
+                return MovimientoStockDAL.StockInsuficiente(idInsumo, cantidad);
 
             return ResultadoOperacion.Ok("Insumo agregado. Stock actualizado.");
         }
@@ -109,6 +118,9 @@ namespace BIZ.Data
         // orden Abierta o En proceso: una Cerrada ya copió la línea a la venta, y una Cancelada
         // ya repuso el stock de todas sus líneas (quitar una repondría dos veces). El kardex usa
         // TipoCancelacionOrden (ya admitido por CK_MovStock_origen) para no tocar el esquema.
+        // Desde el 2026-10-18 primero se borra la línea y solo si se borró se repone el stock,
+        // en relativo: si dos usuarios quitan la misma línea a la vez, el segundo no repone de
+        // nuevo.
         public static ResultadoOperacion Quitar(int idDetalle, int idUsuario)
         {
             var detalle = ObtenerPorId(idDetalle);
@@ -125,32 +137,41 @@ namespace BIZ.Data
             if (insumo == null || !insumo.EsInsumo)
                 return ResultadoOperacion.Error("El insumo no existe.");
 
-            var stockResultante = insumo.StockActual + detalle.Cantidad;
-
             const string sql = @"
                 SET XACT_ABORT ON;
                 BEGIN TRANSACTION;
 
-                UPDATE Insumo SET stockActual = @stockResultante WHERE idInsumo = @idInsumo;
-
-                INSERT INTO MovimientoStock
-                    (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
-                VALUES
-                    (@idInsumo, @tipoMovimiento, NULL, @idOrden, @idUsuario, @cantidad, 0, @stockResultante, @descripcion);
+                DECLARE @stockResultante DECIMAL(12,2) = NULL;
 
                 DELETE FROM DetalleOrdenInsumo WHERE idDetalle = @idDetalle;
 
-                COMMIT TRANSACTION;";
+                IF @@ROWCOUNT = 1
+                BEGIN
+                    UPDATE Insumo SET stockActual = stockActual + @cantidad WHERE idInsumo = @idInsumo;
 
-            AccesoDatos.Ejecutar(sql,
+                    SELECT @stockResultante = stockActual FROM Insumo WHERE idInsumo = @idInsumo;
+
+                    INSERT INTO MovimientoStock
+                        (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+                    VALUES
+                        (@idInsumo, @tipoMovimiento, NULL, @idOrden, @idUsuario, @cantidad, 0, @stockResultante, @descripcion);
+                END
+
+                COMMIT TRANSACTION;
+
+                SELECT @stockResultante;";
+
+            var stockResultante = AccesoDatos.Escalar(sql,
                 AccesoDatos.Param("@idInsumo", detalle.IdInsumo),
                 AccesoDatos.Param("@tipoMovimiento", MovimientoStock.TipoCancelacionOrden),
                 AccesoDatos.Param("@idOrden", detalle.IdOrden),
                 AccesoDatos.Param("@idUsuario", idUsuario),
                 AccesoDatos.Param("@cantidad", detalle.Cantidad),
-                AccesoDatos.Param("@stockResultante", stockResultante),
                 AccesoDatos.Param("@descripcion", "Reposición por quitar insumo de la orden #" + detalle.IdOrden),
                 AccesoDatos.Param("@idDetalle", idDetalle));
+
+            if (stockResultante == null)
+                return ResultadoOperacion.Error("La línea de insumo ya no existe: la quitó otro usuario.");
 
             return ResultadoOperacion.Ok("Insumo quitado. Se repuso el stock.");
         }
