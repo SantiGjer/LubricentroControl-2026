@@ -1,16 +1,48 @@
 # Registro de cambios
 
-Resumen de los últimos tres envíos al repositorio, del más nuevo al más viejo. El detalle de cada
+Resumen de los últimos envíos al repositorio, del más nuevo al más viejo. El detalle de cada
 sesión está en `Docs/EstadoActual.md` y las decisiones de negocio en
 `Docs/Lubricentro_Requerimientos.md` §9.
 
-> **Los tres cambian el esquema de la base.** Con una base anterior, recrearla con `01` a `04`
-> (el `01` borra los datos); `05` es opcional y carga las imágenes de ejemplo. Ver `CLAUDE.md`,
-> «Al levantar el proyecto en otra máquina».
+> **Todos cambian el esquema de la base.** Con una base anterior, recrearla con `01` a `04`
+> (el `01` borra los datos); `05` es opcional y carga las imágenes de ejemplo. Los dos más nuevos
+> traen además un script para poner al día, sin perder datos, una base que ya tiene lo anterior.
+> Ver `CLAUDE.md`, «Al levantar el proyecto en otra máquina».
 
 ---
 
-## 1. 2026-10-13 — Código postal, proveedores, usuario de la base y tablas que entran en la pantalla
+## 1. 2026-10-20 — Nota de crédito
+
+Requerimientos §9.17. Tabla nueva: `NotaCredito`. **Sin ella Ventas, Pagos y Órdenes fallan:** con
+una base que ya tiene lo del 2026-10-18, correr `Database\Actualizar_2026-10-20_NotaCredito.sql`.
+
+- Desde Ventas, una venta (facturada o no) se anula con una nota de crédito: completa, una por venta,
+  con motivo obligatorio. Toma la letra de la factura (o la que le correspondería), numera aparte por
+  letra y punto de venta, y se imprime con el formato de la factura.
+- Acredita el total en la cuenta corriente del cliente (movimiento "Nota de crédito") y deja la venta
+  sin saldo pendiente. No repone stock. Una venta anulada no se factura.
+- Ventas distingue las anuladas (opción "Anuladas"); Ventas por período resta las notas de crédito.
+
+Verificado con MSBuild, `aspnet_compiler`, base creada con `01` a `05`, 19 pruebas sobre `BIZ.dll`
+(con dos emisiones simultáneas de la misma venta) y el recorrido de la pantalla en IIS Express.
+
+---
+
+## 2. 2026-10-18 — Una venta por orden, restricciones y stock en relativo
+
+Commit `36263a1`. Script para una base existente: `Database\Actualizar_2026-10-18_Restricciones.sql`.
+
+- `UQ_ComprobanteVenta_orden`: dos cierres simultáneos de la misma orden ya no generan dos ventas.
+- CHECK nuevos en `ComprobanteVenta`, `DetalleComprobanteVenta` y `CuentaCorrienteCliente`.
+- El stock se actualiza en relativo, con la condición de no quedar negativo en el mismo `UPDATE`: dos
+  movimientos simultáneos sobre el mismo insumo ya no se pisan.
+
+Verificado con pruebas en SQL y un programa con hilos simultáneos: antes duplicaba ventas y vendía de
+más; ahora no.
+
+---
+
+## 3. 2026-10-13 — Código postal, proveedores, usuario de la base y tablas que entran en la pantalla
 
 Requerimientos §9.12 y §9.14 a §9.16.
 
@@ -52,7 +84,7 @@ punta en Chrome.
 
 ---
 
-## 2. 2026-10-08 — Imagen de cada producto, datos del comercio editables, teléfonos y login
+## 4. 2026-10-08 — Imagen de cada producto, datos del comercio editables, teléfonos y login
 
 Commit `b95f53c`. Requerimientos §9.13. Tablas nuevas: `Emisor` e `ImagenProducto`.
 
@@ -76,7 +108,7 @@ Commit `b95f53c`. Requerimientos §9.13. Tablas nuevas: `Emisor` e `ImagenProduc
 
 ---
 
-## 3. 2026-10-08 — Barra lateral, listas, productos con IVA, factura, datos fiscales y roles
+## 5. 2026-10-08 — Barra lateral, listas, productos con IVA, factura, datos fiscales y roles
 
 Commit `e1f137f`. Segundo pedido del 2026-10-07, en 13 puntos (Requerimientos §9.7 a §9.12).
 

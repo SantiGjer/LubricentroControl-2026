@@ -143,6 +143,8 @@ la ve Admin.
 - Incluye detalle línea por línea (servicios + insumos consumidos en la orden), subtotal, impuestos, total y saldo pendiente.
 - Desde el 2026-10-07, cada venta se puede **facturar** desde la misma pantalla de Ventas (§9.10):
   factura A, B o C según la condición frente al IVA, imprimible, también sin validez fiscal.
+- Desde el 2026-10-20, una venta (facturada o no) se **anula con una nota de crédito** desde la misma
+  pantalla (§9.17).
 
 ### 6.7 Pagos
 - Medios de pago aceptados: **efectivo, transferencia, tarjeta**.
@@ -394,8 +396,8 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
   (21, 10,5, 27, 5 o 2,5 %). Al generar la venta, cada línea copia el IVA de su producto y guarda
   el IVA contenido (neto redondeado a 2 decimales, IVA = diferencia); la venta suma el neto en
   `subtotal` y el IVA en `impuestos`.
-- **Factura:** se genera a pedido desde Ventas ("Facturar"), una por venta, y no se anula ni se
-  edita. La letra sale de la condición frente al IVA del comercio y del cliente: un responsable
+- **Factura:** se genera a pedido desde Ventas ("Facturar"), una por venta, y no se edita: se anula
+  con una nota de crédito (§9.17). La letra sale de la condición frente al IVA del comercio y del cliente: un responsable
   inscripto le factura **A** a otro responsable inscripto y a un monotributista, y **B** al resto;
   un comercio monotributista o exento emite **C**. Numeración correlativa por letra y punto de
   venta (formato `00001-00000001`). La A discrimina neto e IVA por alícuota; la B muestra precios
@@ -505,6 +507,32 @@ pendientes de confirmar:
   IP de Radmin.
 - El repositorio es público: en un servidor compartido, cambiar la clave de `lubricentro_app` y
   ponerla en el `Web.config` de cada PC sin subirla al repositorio.
+
+### 9.17 Nota de crédito (2026-10-20)
+
+Pedido del usuario: una forma de anular una venta mal hecha, que hasta acá solo se corregía con un
+ajuste en la cuenta corriente.
+
+- **Anula la venta completa, una por venta**, desde Ventas ("Anular con una nota de crédito"), con un
+  **motivo obligatorio**. No se edita ni se anula. La venta anulada sigue en la lista, marcada, y ya
+  no se puede facturar.
+- **Letra y numeración:** la letra de la factura que anula; si la venta no se había facturado, la que
+  le correspondería (mismo criterio que §9.10). Numera aparte de las facturas, correlativa por letra
+  y punto de venta. Códigos de ARCA: 03 (A), 08 (B) y 13 (C). Se imprime con el mismo formato que la
+  factura, con la referencia a lo que anula y el motivo, y también es sin validez fiscal.
+- **Plata:** acredita el total de la venta en la cuenta corriente del cliente (movimiento "Nota de
+  crédito", al haber) y deja la venta sin saldo pendiente. Lo que el cliente debía de esa venta se
+  cancela, y lo que ya había pagado le queda a favor (se aplica solo a la próxima venta, §6.7). Si
+  se le devuelve la plata, se registra con un ajuste en la cuenta corriente.
+- **Stock:** no se repone, porque los insumos ya se usaron en el vehículo. Si el cliente devuelve algo
+  sin usar, se registra con un ajuste de stock en Productos.
+- **Reportes:** Ventas por período resta las notas de crédito del período en que se emiten y muestra
+  el neto vendido.
+- La emite quien puede escribir en Ventas, igual que "Facturar".
+- **Por ahora no:** nota de crédito parcial (por algunas líneas o por un monto), por ejemplo para
+  acreditar solo un producto devuelto y no el servicio.
+- **Descartado (2026-10-20):** que la nota de crédito reponga el stock sola. Lo usado no se puede
+  volver a vender: queda para uso interno del taller.
 
 ---
 

@@ -50,14 +50,29 @@ namespace LubricentroControl_2026
         /// <summary>Control litFacturaInfo.</summary>
         protected global::System.Web.UI.WebControls.Literal litFacturaInfo;
 
+        /// <summary>Control litNotaCreditoInfo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litNotaCreditoInfo;
+
         /// <summary>Control gvDetalleVenta.</summary>
         protected global::System.Web.UI.WebControls.GridView gvDetalleVenta;
+
+        /// <summary>Control pnlEmitirNotaCredito.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlEmitirNotaCredito;
+
+        /// <summary>Control txtMotivoNotaCredito.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtMotivoNotaCredito;
+
+        /// <summary>Control btnEmitirNotaCredito.</summary>
+        protected global::System.Web.UI.WebControls.Button btnEmitirNotaCredito;
 
         /// <summary>Control btnVerFactura.</summary>
         protected global::System.Web.UI.WebControls.Button btnVerFactura;
 
         /// <summary>Control btnFacturar.</summary>
         protected global::System.Web.UI.WebControls.Button btnFacturar;
+
+        /// <summary>Control btnVerNotaCredito.</summary>
+        protected global::System.Web.UI.WebControls.Button btnVerNotaCredito;
 
         /// <summary>Control litTituloFactura.</summary>
         protected global::System.Web.UI.WebControls.Literal litTituloFactura;
@@ -76,6 +91,9 @@ namespace LubricentroControl_2026
 
         /// <summary>Control litFacturaCodigo.</summary>
         protected global::System.Web.UI.WebControls.Literal litFacturaCodigo;
+
+        /// <summary>Control litDocumentoTitulo.</summary>
+        protected global::System.Web.UI.WebControls.Literal litDocumentoTitulo;
 
         /// <summary>Control litFacturaNumero.</summary>
         protected global::System.Web.UI.WebControls.Literal litFacturaNumero;
@@ -109,6 +127,12 @@ namespace LubricentroControl_2026
 
         /// <summary>Control litReferencia.</summary>
         protected global::System.Web.UI.WebControls.Literal litReferencia;
+
+        /// <summary>Control phMotivoNotaCredito.</summary>
+        protected global::System.Web.UI.WebControls.PlaceHolder phMotivoNotaCredito;
+
+        /// <summary>Control litMotivoNotaCredito.</summary>
+        protected global::System.Web.UI.WebControls.Literal litMotivoNotaCredito;
 
         /// <summary>Control litFacturaLineas.</summary>
         protected global::System.Web.UI.WebControls.Literal litFacturaLineas;

@@ -133,11 +133,13 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\04_DatosDemo.sql"      
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\05_ImagenesDemo.sql"       # opcional, imágenes de los productos de 04
 ```
 
-Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18; una base
-recién creada con `01` no lo necesita, ya las trae):
+Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18 y nota de
+crédito del 2026-10-20; una base recién creada con `01` no los necesita, ya los trae). En este
+orden; los dos se pueden correr más de una vez:
 
 ```powershell
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-18_Restricciones.sql"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-20_NotaCredito.sql"
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -175,6 +177,10 @@ abiertas están en `Docs/EstadoActual.md`, sección 4.
   datos. Antes de cambiar nada cuenta las filas que no las cumplirían: si hay alguna, no toca la
   base y las lista. Sin ellas la aplicación anda igual, pero la base no frena, por ejemplo, una
   venta duplicada por dos cierres simultáneos de la misma orden.
+- **Una base anterior al 2026-10-20 necesita además `Actualizar_2026-10-20_NotaCredito.sql`**
+  (tabla `NotaCredito`). Este sí es obligatorio: la lista de ventas lee si cada venta tiene nota de
+  crédito, así que sin la tabla fallan Ventas, Pagos, Órdenes de trabajo (al cerrar) y Ventas por
+  período.
 - **Los datos de ejemplo se fechan al correr `04`.** Turnos, órdenes, compras y pagos salen de
   `GETDATE()`, y dos turnos quedan para ese mismo día (10:30 y 17:00). Con la base recreada otro
   día, "hoy" sale vacío en Turnos y en el Inicio: no es un bug, se vuelven a correr `01` a `04`.
@@ -391,6 +397,11 @@ Estas no se ven leyendo un solo archivo:
   orden de trabajo. Es un comprobante interno, sin validez fiscal. Una orden genera una sola venta:
   lo garantiza `UQ_ComprobanteVenta_orden` (desde 2026-10-18), no solo el chequeo previo de
   `GenerarDesdeOrden`.
+- **Una venta se anula con una nota de crédito** (`NotaCreditoDAL.Emitir`, desde 2026-10-20, §9.17):
+  completa y una por venta. Acredita el total en la cuenta corriente del cliente (movimiento
+  `NotaCredito`, con la venta y el usuario) y deja la venta con `saldoPendiente = 0`. No repone
+  stock. Una venta anulada no se factura (`FacturaDAL.Emitir` lo rechaza), y `ComprobanteVenta.Anulada`
+  sale del `LEFT JOIN` con `NotaCredito` en `ComprobanteVentaDAL`.
 - **El vínculo Turno–Orden es opcional:** una orden puede nacer de un turno previo o de un walk-in
   (cliente que llega sin turno, se da de alta en el momento).
 - Clientes **y** proveedores pueden quedar con saldo pendiente; la cuenta corriente funciona en
@@ -474,6 +485,16 @@ apunta al producto de su tipo), `CK_DetVenta_cantidad` y `CK_DetVenta_importes`,
 `CuentaCorrienteCliente`, `CK_CCCli_debeHaber` (debe o haber, nunca los dos; 0 y 0 vale, por una
 venta de $0) y `CK_CCCli_origen`. A una base que ya tiene lo del 2026-10-13 se las agrega
 `Actualizar_2026-10-18_Restricciones.sql`, sin tocar los datos (ver «Comandos»).
+
+El 2026-10-20 se sumó `NotaCredito` (§9.17): la nota de crédito que anula una venta, con
+`UQ_NotaCredito_venta` (una por venta), `UQ_NotaCredito_numero` (letra, punto de venta y número),
+la factura que anula (`idFactura`, nullable) y la copia de los datos del comercio y del cliente,
+como `Factura`. Su movimiento de cuenta corriente es `NotaCredito`: apunta a la venta que anula
+(`idVenta`) y guarda el usuario, y `CK_CCCli_origen` lo admite desde ese día.
+`Actualizar_2026-10-20_NotaCredito.sql` crea la tabla y reemplaza la versión anterior de
+`CK_CCCli_origen`, que reconoce leyendo su definición. Ojo al revisar el esquema con el usuario de
+la aplicación: `lubricentro_app` no tiene `VIEW DEFINITION`, así que lee
+`sys.check_constraints.definition` como NULL. Esas consultas se hacen con un usuario administrador.
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`), con el usuario
 `lubricentro_app`. Para pasar al SQL Server del lubricentro por VPN Radmin alcanza con cambiar el
@@ -1059,3 +1080,24 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   Quedan sin hacer, porque no se pidieron: cerrar la orden en la misma transacción que genera la
   venta (`OrdenDeTrabajoDAL.Cerrar` guarda el estado aparte), el saldo de la cuenta corriente
   calculado con `TOP 1` sin `UPDLOCK`, y los mismos CHECK en `CuentaCorrienteProveedor`.
+
+- **Nota de crédito (sesión 2026-10-20, Alexis con Claude).** Detalle en `Docs/EstadoActual.md` y
+  Requerimientos §9.17. Lo que deja precedente:
+
+  **Factura y nota de crédito se imprimen con la misma hoja a través de una interfaz.**
+  `IComprobanteImpreso` (`BIZ\Modelo`) tiene lo que las dos comparten: letra, número, código de
+  ARCA, fecha y los datos copiados del comercio y del cliente. `Ventas.aspx.cs` arma la hoja una
+  sola vez (`MostrarComprobante`) para cualquiera de las dos. Un tercer comprobante (una nota de
+  débito, por ejemplo) solo tiene que implementarla.
+
+  **Un comprobante que anula se emite como la factura:** una por venta, con UNIQUE en la base;
+  número `MAX + 1` bajo `UPDLOCK, HOLDLOCK`; y la emisión repetida devuelve el que ya existe,
+  también si dos usuarios lo emiten a la vez (se atrapa el 2627 de `UQ_NotaCredito_venta`).
+
+  **Los scripts de actualización se encadenan sin pisarse.** El del 2026-10-18 ya acepta
+  `NotaCredito` en su chequeo y en su definición de `CK_CCCli_origen`. El del 2026-10-20 reemplaza
+  la versión anterior de esa restricción si la encuentra, y no hace nada si ya está.
+
+  **Probar la pantalla sin Visual Studio:** IIS Express sobre una copia del sitio cuyo `Web.config`
+  apunta a una base de prueba, y un script de PowerShell que inicia sesión y hace los postbacks
+  (campos ocultos de Web Forms incluidos). Llega a la pantalla real sin tocar la base de nadie.

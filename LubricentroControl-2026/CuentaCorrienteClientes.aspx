@@ -91,7 +91,7 @@
                                 EmptyDataText="Todavía no hay movimientos registrados.">
                                 <Columns>
                                     <asp:BoundField DataField="Fecha" HeaderText="Fecha" DataFormatString="{0:dd/MM/yyyy HH:mm}" />
-                                    <asp:BoundField DataField="TipoMovimiento" HeaderText="Tipo" />
+                                    <asp:BoundField DataField="TipoDescripcion" HeaderText="Tipo" />
                                     <asp:BoundField DataField="Debe" HeaderText="Debe" DataFormatString="{0:N2}" />
                                     <asp:BoundField DataField="Haber" HeaderText="Haber" DataFormatString="{0:N2}" />
                                     <asp:BoundField DataField="Saldo" HeaderText="Saldo" DataFormatString="{0:N2}" />

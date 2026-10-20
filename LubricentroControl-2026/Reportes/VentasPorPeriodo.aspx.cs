@@ -52,11 +52,30 @@ namespace LubricentroControl_2026.Reportes
             }
 
             var ventas = ComprobanteVentaDAL.ListarPorPeriodo(desde, hasta);
+            var notasCredito = NotaCreditoDAL.ListarPorPeriodo(desde, hasta);
 
             gvVentas.DataSource = ventas;
             gvVentas.DataBind();
 
-            litResumen.Text = ArmarResumen(ventas);
+            litResumen.Text = ArmarResumen(ventas) + ArmarResumenNotasCredito(ventas, notasCredito);
+        }
+
+        // Las notas de crédito restan de lo vendido en el período en que se emiten (§9.17), aunque
+        // anulen una venta de otro período.
+        private static string ArmarResumenNotasCredito(List<ComprobanteVenta> ventas, List<NotaCredito> notasCredito)
+        {
+            if (notasCredito.Count == 0) return "";
+
+            var anulado = notasCredito.Sum(n => n.Total);
+            var texto = " " + (notasCredito.Count == 1
+                ? "<b>1</b> nota de crédito"
+                : "<b>" + notasCredito.Count + "</b> notas de crédito") +
+                " en el período, por <b>$" + anulado.ToString("N2") + "</b>";
+
+            if (ventas.Count > 0)
+                texto += ": neto vendido <b>$" + (ventas.Sum(v => v.Total) - anulado).ToString("N2") + "</b>";
+
+            return texto + ".";
         }
 
         private static string ArmarResumen(List<ComprobanteVenta> ventas)
@@ -88,6 +107,13 @@ namespace LubricentroControl_2026.Reportes
             var venta = (ComprobanteVenta)e.Row.DataItem;
             if (venta.SaldoPendiente > 0)
                 e.Row.Style.Add("background-color", "#f8d7da");
+
+            // Anulada por una nota de crédito: gris y con el número tachado, como en Ventas.
+            if (venta.Anulada)
+            {
+                e.Row.Style.Add("color", "#6c757d");
+                e.Row.Cells[0].Style.Add("text-decoration", "line-through");
+            }
         }
 
         // El mensaje ya viene con HTML armado por el llamador, no se re-escapa acá.

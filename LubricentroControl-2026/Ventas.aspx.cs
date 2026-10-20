@@ -9,11 +9,12 @@ using LubricentroControl_2026.Utilidades;
 
 namespace LubricentroControl_2026
 {
-    // Comprobantes de venta (Fase 4) y sus facturas. La venta no se carga a mano: se genera
-    // automáticamente al cerrar una orden de trabajo (OrdenDeTrabajoDAL.Cerrar →
-    // ComprobanteVentaDAL.GenerarDesdeOrden, Requerimientos §6.6). Desde acá se consulta y se
-    // factura (FacturaDAL.Emitir, Requerimientos §9.10): facturar es la única escritura de la
-    // pantalla, así que quien la tiene en solo consulta ve las facturas pero no las genera.
+    // Comprobantes de venta (Fase 4), sus facturas y sus notas de crédito. La venta no se carga a
+    // mano: se genera automáticamente al cerrar una orden de trabajo (OrdenDeTrabajoDAL.Cerrar →
+    // ComprobanteVentaDAL.GenerarDesdeOrden, Requerimientos §6.6). Desde acá se consulta, se
+    // factura (FacturaDAL.Emitir, §9.10) y se anula con una nota de crédito (NotaCreditoDAL.Emitir,
+    // §9.17): son las dos escrituras de la pantalla, así que quien la tiene en solo consulta ve las
+    // facturas y las notas de crédito pero no las genera.
     public partial class Ventas : PaginaSegura
     {
         private const string IdModal = "modalVenta";
@@ -48,6 +49,15 @@ namespace LubricentroControl_2026
             var venta = (ComprobanteVenta)e.Row.DataItem;
             e.Row.Attributes["data-saldo"] = venta.SaldoPendiente > 0 ? "pendiente" : "saldada";
             e.Row.Attributes["data-factura"] = venta.Facturada ? "si" : "no";
+            e.Row.Attributes["data-estado"] = venta.Anulada ? "anulada" : "vigente";
+
+            // Una venta anulada sigue en la lista (es historia), pero se distingue: gris y con el
+            // número tachado.
+            if (venta.Anulada)
+            {
+                e.Row.Style.Add("color", "#6c757d");
+                e.Row.Cells[0].Style.Add("text-decoration", "line-through");
+            }
         }
 
         protected void gvVentas_RowCommand(object sender, GridViewCommandEventArgs e)
@@ -64,6 +74,9 @@ namespace LubricentroControl_2026
                     break;
                 case "Facturar":
                     Facturar(idVenta);
+                    break;
+                case "VerNotaCredito":
+                    VerNotaCredito(idVenta);
                     break;
             }
         }
@@ -89,9 +102,14 @@ namespace LubricentroControl_2026
             litTotalInfo.Text = venta.Total.ToString("N2");
             litSaldoInfo.Text = venta.SaldoPendiente.ToString("N2");
             litFacturaInfo.Text = venta.Facturada ? Server.HtmlEncode(venta.NumeroFactura) : "Sin facturar";
+            litNotaCreditoInfo.Text = venta.Anulada ? Server.HtmlEncode(venta.NumeroNotaCredito) : "—";
 
+            // Una venta anulada no se factura ni se vuelve a anular.
             btnVerFactura.Visible = venta.Facturada;
-            btnFacturar.Visible = !venta.Facturada && !EsSoloLectura;
+            btnFacturar.Visible = !venta.Facturada && !venta.Anulada && !EsSoloLectura;
+            btnVerNotaCredito.Visible = venta.Anulada;
+            pnlEmitirNotaCredito.Visible = !venta.Anulada && !EsSoloLectura;
+            txtMotivoNotaCredito.Text = string.Empty;
 
             gvDetalleVenta.DataSource = DetalleComprobanteVentaDAL.ListarPorVenta(idVenta);
             gvDetalleVenta.DataBind();
@@ -107,6 +125,37 @@ namespace LubricentroControl_2026
         protected void btnFacturar_Click(object sender, EventArgs e)
         {
             Facturar(LeerIdOculto(hdnIdVenta.Value));
+        }
+
+        protected void btnVerNotaCredito_Click(object sender, EventArgs e)
+        {
+            VerNotaCredito(LeerIdOculto(hdnIdVenta.Value));
+        }
+
+        // Anula la venta con una nota de crédito (o trae la que ya tenía) y la muestra lista para
+        // imprimir. El motivo es obligatorio (validador del grupo NotaCredito y NotaCreditoDAL).
+        protected void btnEmitirNotaCredito_Click(object sender, EventArgs e)
+        {
+            if (EsSoloLectura) return;
+
+            var idVenta = LeerIdOculto(hdnIdVenta.Value);
+            if (!Page.IsValid)
+            {
+                Interfaz.AbrirModal(this, IdModal);
+                return;
+            }
+
+            NotaCredito notaCredito;
+            var resultado = NotaCreditoDAL.Emitir(idVenta, txtMotivoNotaCredito.Text, UsuarioActual.IdUsuario, out notaCredito);
+            if (!resultado.Exito)
+            {
+                MostrarMensaje(Server.HtmlEncode(resultado.Mensaje), false);
+                return;
+            }
+
+            CargarGrilla();
+            MostrarMensaje(Server.HtmlEncode(resultado.Mensaje), true);
+            MostrarNotaCredito(notaCredito);
         }
 
         // Emite la factura (o trae la que ya tenía) y la muestra lista para imprimir.
@@ -139,49 +188,83 @@ namespace LubricentroControl_2026
             MostrarFactura(factura);
         }
 
-        // Arma la hoja de la factura. La A discrimina el IVA (precios y subtotales netos, IVA por
-        // alícuota); la B muestra precios finales e informa el IVA contenido (Ley 27.743); la C,
-        // de un emisor monotributista o exento, solo precios finales.
+        private void VerNotaCredito(int idVenta)
+        {
+            var notaCredito = NotaCreditoDAL.ObtenerPorVenta(idVenta);
+            if (notaCredito == null)
+            {
+                MostrarMensaje("Esa venta no tiene nota de crédito.", false);
+                return;
+            }
+
+            MostrarNotaCredito(notaCredito);
+        }
+
         private void MostrarFactura(Factura factura)
         {
             var venta = ComprobanteVentaDAL.ObtenerPorId(factura.IdVenta);
-            var lineas = DetalleComprobanteVentaDAL.ListarPorVenta(factura.IdVenta);
+            MostrarComprobante(factura, "Factura", "FACTURA", venta == null ? "" : ReferenciaVenta(venta), null);
+        }
+
+        // La nota de crédito se imprime con la misma hoja que la factura, con su título, la factura
+        // que anula (si la venta se había facturado) y el motivo.
+        private void MostrarNotaCredito(NotaCredito notaCredito)
+        {
+            var venta = ComprobanteVentaDAL.ObtenerPorId(notaCredito.IdVenta);
+            var referencia = (notaCredito.NumeroFactura != null ? "Anula la factura " + notaCredito.NumeroFactura + " · " : "Anula la ") +
+                             (venta == null ? "venta" : ReferenciaVenta(venta));
+            MostrarComprobante(notaCredito, "Nota de crédito", "NOTA DE CRÉDITO", referencia, notaCredito.Motivo);
+        }
+
+        private static string ReferenciaVenta(ComprobanteVenta venta)
+        {
+            return "Venta " + venta.NumeroComprobante + " · Orden de trabajo #" + venta.IdOrden + " · Vehículo " + venta.Patente;
+        }
+
+        // Arma la hoja de la factura o de la nota de crédito (las dos son IComprobanteImpreso). La A
+        // discrimina el IVA (precios y subtotales netos, IVA por alícuota); la B muestra precios
+        // finales e informa el IVA contenido (Ley 27.743); la C, de un emisor monotributista o
+        // exento, solo precios finales. Las líneas son las de la venta.
+        private void MostrarComprobante(IComprobanteImpreso comprobante, string nombre, string tituloHoja,
+                                        string referencia, string motivo)
+        {
+            var lineas = DetalleComprobanteVentaDAL.ListarPorVenta(comprobante.IdVenta);
             var totales = TotalesFactura.Calcular(lineas);
 
-            litTituloFactura.Text = "Factura " + Server.HtmlEncode(factura.Tipo + " " + factura.NumeroCompleto);
-            litEmisorNombre.Text = Server.HtmlEncode(factura.EmisorRazonSocial);
-            litEmisorDomicilio.Text = Server.HtmlEncode(factura.EmisorDomicilio);
-            litEmisorCondicion.Text = Server.HtmlEncode(factura.EmisorCondicionIva);
-            litFacturaLetra.Text = Server.HtmlEncode(factura.Tipo);
-            litFacturaCodigo.Text = factura.CodigoComprobante;
-            litFacturaNumero.Text = factura.NumeroCompleto;
-            litFacturaFecha.Text = factura.Fecha.ToString("dd/MM/yyyy");
-            litEmisorCuit.Text = Server.HtmlEncode(factura.EmisorCuitFormateado);
-            litEmisorIibb.Text = Server.HtmlEncode(factura.EmisorIngresosBrutos ?? "—");
-            litEmisorInicio.Text = Server.HtmlEncode(factura.EmisorInicioActividades ?? "—");
+            litTituloFactura.Text = Server.HtmlEncode(nombre + " " + comprobante.Tipo + " " + comprobante.NumeroCompleto);
+            litDocumentoTitulo.Text = Server.HtmlEncode(tituloHoja);
+            litEmisorNombre.Text = Server.HtmlEncode(comprobante.EmisorRazonSocial);
+            litEmisorDomicilio.Text = Server.HtmlEncode(comprobante.EmisorDomicilio);
+            litEmisorCondicion.Text = Server.HtmlEncode(comprobante.EmisorCondicionIva);
+            litFacturaLetra.Text = Server.HtmlEncode(comprobante.Tipo);
+            litFacturaCodigo.Text = comprobante.CodigoComprobante;
+            litFacturaNumero.Text = comprobante.NumeroCompleto;
+            litFacturaFecha.Text = comprobante.Fecha.ToString("dd/MM/yyyy");
+            litEmisorCuit.Text = Server.HtmlEncode(comprobante.EmisorCuitFormateado);
+            litEmisorIibb.Text = Server.HtmlEncode(comprobante.EmisorIngresosBrutos ?? "—");
+            litEmisorInicio.Text = Server.HtmlEncode(comprobante.EmisorInicioActividades ?? "—");
 
-            litReceptorNombre.Text = Server.HtmlEncode(factura.ReceptorNombre);
-            litReceptorDocumento.Text = Server.HtmlEncode(factura.ReceptorDocumento);
-            litReceptorCondicion.Text = Server.HtmlEncode(factura.ReceptorCondicionIva);
-            litReceptorDomicilio.Text = Server.HtmlEncode(factura.ReceptorDomicilio ?? "—");
-            litCondicionVenta.Text = Server.HtmlEncode(factura.CondicionVenta);
-            litReferencia.Text = venta == null
-                ? ""
-                : Server.HtmlEncode("Venta " + venta.NumeroComprobante + " · Orden de trabajo #" + venta.IdOrden +
-                                    " · Vehículo " + venta.Patente);
+            litReceptorNombre.Text = Server.HtmlEncode(comprobante.ReceptorNombre);
+            litReceptorDocumento.Text = Server.HtmlEncode(comprobante.ReceptorDocumento);
+            litReceptorCondicion.Text = Server.HtmlEncode(comprobante.ReceptorCondicionIva);
+            litReceptorDomicilio.Text = Server.HtmlEncode(comprobante.ReceptorDomicilio ?? "—");
+            litCondicionVenta.Text = Server.HtmlEncode(comprobante.CondicionVenta);
+            litReferencia.Text = Server.HtmlEncode(referencia);
+            phMotivoNotaCredito.Visible = motivo != null;
+            litMotivoNotaCredito.Text = motivo == null ? "" : Server.HtmlEncode(motivo);
 
-            litFacturaLineas.Text = ArmarLineas(factura, lineas);
-            litFacturaTotales.Text = ArmarTotales(factura, totales);
+            litFacturaLineas.Text = ArmarLineas(comprobante, lineas);
+            litFacturaTotales.Text = ArmarTotales(comprobante, totales);
 
-            pnlTransparencia.Visible = factura.InformaIvaContenido;
+            pnlTransparencia.Visible = comprobante.InformaIvaContenido;
             litIvaContenido.Text = totales.IvaTotal.ToString("N2");
 
             Interfaz.AbrirModal(this, IdModalFactura);
         }
 
-        private static string ArmarLineas(Factura factura, System.Collections.Generic.List<DetalleComprobanteVenta> lineas)
+        private static string ArmarLineas(IComprobanteImpreso comprobante, System.Collections.Generic.List<DetalleComprobanteVenta> lineas)
         {
-            var discrimina = factura.DiscriminaIva;
+            var discrimina = comprobante.DiscriminaIva;
             var html = new StringBuilder("<table class=\"factura-lineas\"><thead><tr>");
             html.Append("<th class=\"numero\">Cantidad</th><th>Descripción</th>")
                 .Append("<th class=\"numero\">").Append(discrimina ? "Precio unitario (neto)" : "Precio unitario").Append("</th>");
@@ -204,11 +287,11 @@ namespace LubricentroControl_2026
             return html.Append("</tbody></table>").ToString();
         }
 
-        private static string ArmarTotales(Factura factura, TotalesFactura totales)
+        private static string ArmarTotales(IComprobanteImpreso comprobante, TotalesFactura totales)
         {
             var html = new StringBuilder("<dl>");
 
-            if (factura.DiscriminaIva)
+            if (comprobante.DiscriminaIva)
             {
                 Fila(html, "Neto gravado", totales.NetoGravado, false);
                 foreach (var iva in totales.IvaPorAlicuota)

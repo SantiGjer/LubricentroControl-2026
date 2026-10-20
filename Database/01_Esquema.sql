@@ -33,6 +33,7 @@ DROP TABLE IF EXISTS MovimientoStock;
 DROP TABLE IF EXISTS CuentaCorrienteProveedor;
 DROP TABLE IF EXISTS CuentaCorrienteCliente;
 DROP TABLE IF EXISTS Pago;
+DROP TABLE IF EXISTS NotaCredito;
 DROP TABLE IF EXISTS Factura;
 DROP TABLE IF EXISTS Emisor;
 DROP TABLE IF EXISTS DetalleComprobanteVenta;
@@ -553,6 +554,54 @@ CREATE TABLE Factura (
 );
 GO
 
+/* Nota de crédito de una venta (§9.17, agregada el 2026-10-20): anula la venta completa, una
+   por venta. Lleva la letra de la factura que anula (o, si la venta no se había facturado, la
+   que le correspondería) y numera aparte de las facturas, por letra y punto de venta. Acredita
+   el total en la cuenta corriente del cliente (movimiento NotaCredito) y deja la venta sin saldo
+   pendiente. Como Factura, guarda los datos del comercio y del cliente del momento en que se
+   emitió. No repone stock: los insumos ya se usaron en el vehículo. */
+CREATE TABLE NotaCredito (
+    idNotaCredito            INT IDENTITY(1,1) NOT NULL,
+    idVenta                  INT               NOT NULL,
+    /* La factura que anula; NULL si la venta no estaba facturada */
+    idFactura                INT               NULL,
+    /* A | B | C */
+    tipo                     CHAR(1)           NOT NULL,
+    puntoVenta               INT               NOT NULL,
+    numero                   INT               NOT NULL,
+    fecha                    DATETIME          NOT NULL CONSTRAINT DF_NotaCredito_fecha DEFAULT (GETDATE()),
+    idUsuario                INT               NOT NULL,
+    motivo                   NVARCHAR(300)     NOT NULL,
+    /* Contado | Cuenta corriente: la de la factura que anula, o la que tendría */
+    condicionVenta           NVARCHAR(30)      NOT NULL,
+    /* Los importes de la venta que anula: neto, IVA contenido y total */
+    subtotal                 DECIMAL(12,2)     NOT NULL,
+    impuestos                DECIMAL(12,2)     NOT NULL,
+    total                    DECIMAL(12,2)     NOT NULL,
+    emisorRazonSocial        NVARCHAR(150)     NOT NULL,
+    emisorCuit               NVARCHAR(20)      NOT NULL,
+    emisorCondicionIva       NVARCHAR(30)      NOT NULL,
+    emisorDomicilio          NVARCHAR(300)     NULL,
+    emisorIngresosBrutos     NVARCHAR(30)      NULL,
+    emisorInicioActividades  NVARCHAR(20)      NULL,
+    receptorNombre           NVARCHAR(150)     NOT NULL,
+    receptorTipoDocumento    NVARCHAR(10)      NOT NULL,
+    receptorNumeroDocumento  NVARCHAR(20)      NOT NULL,
+    receptorCondicionIva     NVARCHAR(30)      NOT NULL,
+    receptorDomicilio        NVARCHAR(400)     NULL,
+    CONSTRAINT PK_NotaCredito PRIMARY KEY (idNotaCredito),
+    CONSTRAINT UQ_NotaCredito_venta UNIQUE (idVenta),
+    CONSTRAINT UQ_NotaCredito_numero UNIQUE (tipo, puntoVenta, numero),
+    CONSTRAINT FK_NotaCredito_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
+    CONSTRAINT FK_NotaCredito_Factura FOREIGN KEY (idFactura) REFERENCES Factura(idFactura),
+    CONSTRAINT FK_NotaCredito_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
+    CONSTRAINT CK_NotaCredito_tipo CHECK (tipo IN ('A','B','C')),
+    CONSTRAINT CK_NotaCredito_puntoVenta CHECK (puntoVenta BETWEEN 1 AND 99999),
+    CONSTRAINT CK_NotaCredito_numero CHECK (numero > 0),
+    CONSTRAINT CK_NotaCredito_importes CHECK (subtotal >= 0 AND impuestos >= 0 AND total >= 0)
+);
+GO
+
 /* Un pago es de cliente (tipo C) o de proveedor (tipo P). Puede imputarse a un
    comprobante puntual o quedar a cuenta (los ids de comprobante en NULL). */
 CREATE TABLE Pago (
@@ -588,7 +637,7 @@ CREATE TABLE CuentaCorrienteCliente (
     idMovimiento   INT IDENTITY(1,1) NOT NULL,
     idCliente      INT               NOT NULL,
     fecha          DATETIME          NOT NULL CONSTRAINT DF_CCCli_fecha DEFAULT (GETDATE()),
-    /* Venta | Pago | Ajuste */
+    /* Venta | Pago | Ajuste | NotaCredito */
     tipoMovimiento NVARCHAR(30)      NOT NULL,
     idVenta        INT               NULL,
     idPago         INT               NULL,
@@ -597,23 +646,26 @@ CREATE TABLE CuentaCorrienteCliente (
     saldo          DECIMAL(12,2)     NOT NULL,
     descripcion    NVARCHAR(300)     NULL,
     /* Nullable a propósito: los movimientos automáticos de Venta/Pago ya son trazables por otro
-       lado (Pago.idUsuario, o el usuario que cerró la orden) — solo Ajuste lo puebla. Agregada
-       en Fase 4 junto con el ajuste manual, mismo criterio que MovimientoStock.idUsuario. */
+       lado (Pago.idUsuario, o el usuario que cerró la orden) — solo Ajuste y NotaCredito lo
+       pueblan. Agregada en Fase 4 junto con el ajuste manual, mismo criterio que
+       MovimientoStock.idUsuario. */
     idUsuario      INT               NULL,
     CONSTRAINT PK_CuentaCorrienteCliente PRIMARY KEY (idMovimiento),
     CONSTRAINT FK_CCCli_Cliente FOREIGN KEY (idCliente) REFERENCES Cliente(idCliente),
     CONSTRAINT FK_CCCli_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
     CONSTRAINT FK_CCCli_Pago FOREIGN KEY (idPago) REFERENCES Pago(idPago),
     CONSTRAINT FK_CCCli_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
-    /* Agregados 2026-10-18. Un movimiento va al debe o al haber, nunca a los dos (0 y 0
-       vale: una venta de $0). Y cada tipo con su origen, como CK_MovStock_origen: una
-       Venta apunta a su venta, un Pago a su pago y un Ajuste a ninguno de los dos, pero
-       guarda quién lo hizo. Un tipo fuera de Venta/Pago/Ajuste ya queda rechazado. */
+    /* Agregados 2026-10-18 (NotaCredito, el 2026-10-20). Un movimiento va al debe o al haber,
+       nunca a los dos (0 y 0 vale: una venta de $0). Y cada tipo con su origen, como
+       CK_MovStock_origen: una Venta apunta a su venta, un Pago a su pago, una NotaCredito a la
+       venta que anula y guarda quién la emitió, y un Ajuste a ninguna de las dos pero guarda
+       quién lo hizo. Un tipo fuera de esos cuatro ya queda rechazado. */
     CONSTRAINT CK_CCCli_debeHaber CHECK (debe >= 0 AND haber >= 0 AND (debe = 0 OR haber = 0)),
     CONSTRAINT CK_CCCli_origen CHECK (
-        (tipoMovimiento = 'Venta'  AND idVenta IS NOT NULL AND idPago IS NULL) OR
-        (tipoMovimiento = 'Pago'   AND idPago IS NOT NULL AND idVenta IS NULL) OR
-        (tipoMovimiento = 'Ajuste' AND idVenta IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL))
+        (tipoMovimiento = 'Venta'       AND idVenta IS NOT NULL AND idPago IS NULL) OR
+        (tipoMovimiento = 'Pago'        AND idPago IS NOT NULL AND idVenta IS NULL) OR
+        (tipoMovimiento = 'NotaCredito' AND idVenta IS NOT NULL AND idPago IS NULL AND idUsuario IS NOT NULL) OR
+        (tipoMovimiento = 'Ajuste'      AND idVenta IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL))
 );
 GO
 

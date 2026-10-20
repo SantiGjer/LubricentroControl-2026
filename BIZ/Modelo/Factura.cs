@@ -7,7 +7,7 @@ namespace BIZ.Modelo
     // Ventas y es sin validez fiscal: no hay CAE de ARCA (la facturación electrónica real sigue
     // fuera de alcance, §10). Guarda los datos del comercio y del cliente de cuando se emitió; las
     // líneas y los importes son los de la venta, que no cambia.
-    public class Factura
+    public class Factura : IComprobanteImpreso
     {
         public const string TipoA = "A";
         public const string TipoB = "B";

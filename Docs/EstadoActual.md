@@ -201,6 +201,11 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   venta, y se ve e imprime en la misma pantalla. Sin validez fiscal (sin CAE). Los precios son
   finales: la venta guarda el IVA que contiene cada línea. Los datos del comercio que salen en la
   factura se editan en Administración > Datos del comercio (desde 2026-10-08).
+- **Nota de crédito** (desde 2026-10-20): "Anular con una nota de crédito" en el detalle de una venta
+  la anula completa, con motivo obligatorio. Toma la letra de la factura (o la que le
+  correspondería), numera aparte y se imprime como la factura. Acredita el total en la cuenta
+  corriente del cliente y deja la venta sin saldo; no repone stock. La lista marca las anuladas
+  (opción "Anuladas") y Ventas por período resta las notas de crédito.
 - **Roles y permisos** (desde 2026-10-07, en Administración): crear, renombrar y borrar roles y
   elegir para cada pantalla sin acceso / consulta / completo. Admin queda fijo con todo; Lectura no
   se borra.
@@ -227,6 +232,57 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-20 — Nota de crédito
+
+Alexis pidió agregar la nota de crédito ("algo esencial"): hasta acá una venta mal hecha solo se
+corregía con un ajuste en la cuenta corriente. Decisiones (las de negocio, en Requerimientos §9.17):
+
+- **Anula la venta completa, una por venta.** Es lo que se podía hacer y probar bien en un día; la
+  nota de crédito parcial (por líneas o por monto) queda pendiente (sección 4). Tabla nueva
+  `NotaCredito`, con la misma copia de datos del comercio y del cliente que `Factura` y
+  `UQ_NotaCredito_venta`.
+- **Letra:** la de la factura que anula; si la venta no se facturó, la que tendría su factura
+  (`Factura.DeterminarTipo`). Numera aparte de las facturas, por letra y punto de venta, con el
+  mismo `MAX + 1` bajo `UPDLOCK, HOLDLOCK`. Códigos de ARCA 03, 08 y 13.
+- **Cuenta corriente:** movimiento nuevo `NotaCredito` al haber por el total, con la venta y el
+  usuario (`CK_CCCli_origen` ampliado), y la venta queda con saldo 0. Si la venta estaba pagada en
+  parte, lo pagado queda a favor del cliente.
+- **No repone stock:** los insumos se usaron en el vehículo. Una devolución de algo sin usar va por
+  ajuste de stock.
+- **Impresión:** factura y nota de crédito implementan `IComprobanteImpreso` y `Ventas.aspx.cs` arma
+  la hoja una sola vez (`MostrarComprobante`).
+- **Una venta anulada no se factura** (`FacturaDAL.Emitir` la rechaza), la lista la muestra gris y
+  tachada, y Ventas por período resta las notas de crédito del período en que se emiten.
+- **Base existente: `Actualizar_2026-10-20_NotaCredito.sql`, obligatorio.** `ComprobanteVentaDAL`
+  hace `LEFT JOIN` con `NotaCredito`, así que sin la tabla fallan Ventas, Pagos, Órdenes (al cerrar)
+  y el reporte. El script reemplaza la versión anterior de `CK_CCCli_origen`, y el del 2026-10-18
+  quedó ajustado para aceptar `NotaCredito`, así que el orden de los dos no importa.
+
+**Verificación:**
+
+- **Compilación:** `MSBuild` de la solución y `aspnet_compiler`, sin errores.
+- **Instalación desde cero:** una base de prueba creada con `01` a `05` modificados corre sin
+  errores. Después los dos scripts de actualización no cambian nada, y las 17 pruebas de
+  restricciones del 2026-10-18 dan lo mismo.
+- **Programa de consola sobre `BIZ.dll`**, conectado con `lubricentro_app`: 19 de 19 OK.
+  - Venta pagada en parte: lo pagado queda a favor.
+  - Venta sin facturar: letra, motivo obligatorio y cuenta corriente; después no se puede facturar,
+    y emitir de nuevo devuelve la misma.
+  - Venta facturada: toma la letra y la referencia de la factura, con numeración correlativa.
+  - Dos hilos anulando la misma venta, 10 veces: siempre una sola nota de crédito.
+  - Listados y el CHECK nuevo.
+  - La prueba de regresión del 2026-10-18 sigue dando todo OK.
+- **Pantalla real:** IIS Express sobre una copia del sitio apuntada a la base de prueba, recorrida
+  con un script de PowerShell. 10 de 10:
+  - login y Ventas con la opción "Anuladas";
+  - emitir con motivo y sin motivo;
+  - la venta anulada en la lista;
+  - "Ver" y "Ver nota de crédito";
+  - Ventas por período, Cuenta corriente de clientes y Productos.
+- **Script de actualización:** sobre una copia de la base de Alexis, crea la tabla, reemplaza la
+  restricción y una segunda corrida no cambia nada.
+- **Base de Alexis:** se le aplicó el script, con un backup antes. Las bases de prueba se borraron.
 
 ### 2026-10-18 — Restricciones en ventas y cuenta corriente de clientes, y stock en relativo
 
@@ -2067,6 +2123,11 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   interruptor del cliente, no de si esa venta se pagó. (e) Cerrar la orden de un cliente sin cuenta
   corriente lleva a Pagos, pero nada obliga a completar el cobro. (f) El número `V-` tiene 6
   dígitos fijos (`RIGHT('000000' + id, 6)`): se repetiría desde la venta 1.000.000.
+- **Nota de crédito parcial (2026-10-20).** Hoy la nota de crédito anula la venta completa, servicio
+  incluido. Falta la nota de crédito por algunas líneas o por un monto (con su IVA proporcional),
+  para acreditar, por ejemplo, solo un producto devuelto y no el servicio; mientras tanto, un ajuste
+  en la cuenta corriente. Que la nota de crédito reponga stock se descartó (Alexis, 2026-10-20): lo
+  usado no se puede volver a vender y queda para uso interno del taller.
 
 - ~~**LocalDB no arranca en la máquina de Federico (2026-10-07).**~~ **Resuelto el mismo día.** Era
   el problema de Windows 11 con discos NVMe que informan sectores de más de 4 KB ("misaligned log

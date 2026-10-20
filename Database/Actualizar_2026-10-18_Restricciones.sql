@@ -12,8 +12,9 @@
        línea apunta al producto de su tipo, con cantidad mayor a cero e importes
        no negativos.
      - CK_CCCli_debeHaber y CK_CCCli_origen: en la cuenta corriente de clientes,
-       un movimiento va al debe o al haber, y cada tipo (Venta, Pago, Ajuste) con
-       su origen.
+       un movimiento va al debe o al haber, y cada tipo (Venta, Pago, Ajuste y,
+       desde el 2026-10-20, NotaCredito) con su origen. La tabla NotaCredito la
+       crea Actualizar_2026-10-20_NotaCredito.sql.
 
    Antes de cambiar nada cuenta las filas que no cumplirían cada restricción: si
    hay alguna, no toca la base y muestra cuáles son, para corregirlas a mano.
@@ -59,9 +60,10 @@ SELECT 'CK_CCCli_debeHaber', COUNT(*) FROM CuentaCorrienteCliente
 WHERE NOT (debe >= 0 AND haber >= 0 AND (debe = 0 OR haber = 0))
 UNION ALL
 SELECT 'CK_CCCli_origen', COUNT(*) FROM CuentaCorrienteCliente
-WHERE NOT ((tipoMovimiento = 'Venta'  AND idVenta IS NOT NULL AND idPago IS NULL) OR
-           (tipoMovimiento = 'Pago'   AND idPago IS NOT NULL AND idVenta IS NULL) OR
-           (tipoMovimiento = 'Ajuste' AND idVenta IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL));
+WHERE NOT ((tipoMovimiento = 'Venta'       AND idVenta IS NOT NULL AND idPago IS NULL) OR
+           (tipoMovimiento = 'Pago'        AND idPago IS NOT NULL AND idVenta IS NULL) OR
+           (tipoMovimiento = 'NotaCredito' AND idVenta IS NOT NULL AND idPago IS NULL AND idUsuario IS NOT NULL) OR
+           (tipoMovimiento = 'Ajuste'      AND idVenta IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL));
 
 IF EXISTS (SELECT 1 FROM @problemas WHERE filas > 0)
 BEGIN
@@ -104,9 +106,10 @@ IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_CCCli_debeHa
 
 IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_CCCli_origen')
     ALTER TABLE CuentaCorrienteCliente ADD CONSTRAINT CK_CCCli_origen CHECK (
-        (tipoMovimiento = 'Venta'  AND idVenta IS NOT NULL AND idPago IS NULL) OR
-        (tipoMovimiento = 'Pago'   AND idPago IS NOT NULL AND idVenta IS NULL) OR
-        (tipoMovimiento = 'Ajuste' AND idVenta IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL));
+        (tipoMovimiento = 'Venta'       AND idVenta IS NOT NULL AND idPago IS NULL) OR
+        (tipoMovimiento = 'Pago'        AND idPago IS NOT NULL AND idVenta IS NULL) OR
+        (tipoMovimiento = 'NotaCredito' AND idVenta IS NOT NULL AND idPago IS NULL AND idUsuario IS NOT NULL) OR
+        (tipoMovimiento = 'Ajuste'      AND idVenta IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL));
 
 COMMIT TRANSACTION;
 

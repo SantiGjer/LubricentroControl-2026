@@ -10,6 +10,7 @@ namespace BIZ.Modelo
         public const string TipoVenta = "Venta";
         public const string TipoPago = "Pago";
         public const string TipoAjuste = "Ajuste";
+        public const string TipoNotaCredito = "NotaCredito";
 
         public int IdMovimiento { get; set; }
         public int IdCliente { get; set; }
@@ -26,5 +27,11 @@ namespace BIZ.Modelo
         // Del JOIN; solo para mostrar, no se guardan.
         public string NombreCliente { get; set; }
         public string NombreUsuario { get; set; }
+
+        // El tipo como se muestra en el historial: "Nota de crédito" en vez de "NotaCredito".
+        public string TipoDescripcion
+        {
+            get { return TipoMovimiento == TipoNotaCredito ? "Nota de crédito" : TipoMovimiento; }
+        }
     }
 }

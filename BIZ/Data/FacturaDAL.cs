@@ -66,6 +66,11 @@ namespace BIZ.Data
             if (venta == null)
                 return ResultadoOperacion.Error("La venta no existe.");
 
+            // Una venta anulada por una nota de crédito (§9.17) ya no se factura.
+            if (venta.Anulada)
+                return ResultadoOperacion.Error("La venta está anulada por la nota de crédito " +
+                                                venta.NumeroNotaCredito + ": no se puede facturar.");
+
             var cliente = ClienteDAL.ObtenerPorId(venta.IdCliente);
             if (cliente == null)
                 return ResultadoOperacion.Error("El cliente de la venta no existe.");

@@ -58,6 +58,7 @@
     <Compile Include="Data\MenuDAL.cs" />
     <Compile Include="Data\MovimientoStockDAL.cs" />
     <Compile Include="Data\NivelDAL.cs" />
+    <Compile Include="Data\NotaCreditoDAL.cs" />
     <Compile Include="Data\OrdenDeTrabajoDAL.cs" />
     <Compile Include="Data\PagoDAL.cs" />
     <Compile Include="Data\ProductoDAL.cs" />
@@ -81,11 +82,13 @@
     <Compile Include="Modelo\Domicilio.cs" />
     <Compile Include="Modelo\Factura.cs" />
     <Compile Include="Modelo\FormatoTelefono.cs" />
+    <Compile Include="Modelo\IComprobanteImpreso.cs" />
     <Compile Include="Modelo\Imagen.cs" />
     <Compile Include="Modelo\ItemMenu.cs" />
     <Compile Include="Modelo\Iva.cs" />
     <Compile Include="Modelo\MovimientoStock.cs" />
     <Compile Include="Modelo\Nivel.cs" />
+    <Compile Include="Modelo\NotaCredito.cs" />
     <Compile Include="Modelo\OrdenDeTrabajo.cs" />
     <Compile Include="Modelo\Pago.cs" />
     <Compile Include="Modelo\Producto.cs" />

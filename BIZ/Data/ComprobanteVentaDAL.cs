@@ -13,16 +13,20 @@ namespace BIZ.Data
             SELECT v.idVenta, v.idOrden, v.idCliente, c.denominacion AS nombreCliente,
                    c.tipoDocumento, c.numeroDocumento,
                    ve.patente, v.numeroComprobante, v.fecha, v.subtotal, v.impuestos, v.total, v.saldoPendiente,
-                   f.tipo AS tipoFactura, f.puntoVenta, f.numero AS numeroFactura
+                   f.tipo AS tipoFactura, f.puntoVenta, f.numero AS numeroFactura,
+                   nc.tipo AS tipoNotaCredito, nc.puntoVenta AS puntoVentaNotaCredito,
+                   nc.numero AS numeroNotaCredito
             FROM ComprobanteVenta v
             INNER JOIN Cliente c ON c.idCliente = v.idCliente
             INNER JOIN OrdenDeTrabajo o ON o.idOrden = v.idOrden
             INNER JOIN Vehiculo ve ON ve.idVehiculo = o.idVehiculo
-            LEFT JOIN Factura f ON f.idVenta = v.idVenta";
+            LEFT JOIN Factura f ON f.idVenta = v.idVenta
+            LEFT JOIN NotaCredito nc ON nc.idVenta = v.idVenta";
 
         private static ComprobanteVenta Mapear(DataRow fila)
         {
             var tipoFactura = AccesoDatos.LeerString(fila, "tipoFactura");
+            var tipoNotaCredito = AccesoDatos.LeerString(fila, "tipoNotaCredito");
 
             return new ComprobanteVenta
             {
@@ -42,7 +46,11 @@ namespace BIZ.Data
                 NumeroFactura = tipoFactura == null
                     ? null
                     : Factura.FormatearNumero(tipoFactura, AccesoDatos.LeerInt(fila, "puntoVenta"),
-                                              AccesoDatos.LeerInt(fila, "numeroFactura"))
+                                              AccesoDatos.LeerInt(fila, "numeroFactura")),
+                NumeroNotaCredito = tipoNotaCredito == null
+                    ? null
+                    : NotaCredito.FormatearNumero(tipoNotaCredito, AccesoDatos.LeerInt(fila, "puntoVentaNotaCredito"),
+                                                  AccesoDatos.LeerInt(fila, "numeroNotaCredito"))
             };
         }
 

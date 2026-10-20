@@ -31,6 +31,12 @@
             <button type="button" class="opcion" data-valor="si">Facturadas</button>
             <button type="button" class="opcion" data-valor="no">Sin facturar</button>
         </div>
+        <div class="grupo-opciones" data-atributo="estado">
+            <span class="titulo-opciones">Estado</span>
+            <button type="button" class="opcion" data-valor="">Todas</button>
+            <button type="button" class="opcion" data-valor="vigente">Vigentes</button>
+            <button type="button" class="opcion" data-valor="anulada">Anuladas</button>
+        </div>
     </div>
 
     <asp:GridView ID="gvVentas" runat="server" CssClass="tabla-abm" data-filtro="filtroVentas"
@@ -51,6 +57,9 @@
             <asp:TemplateField HeaderText="Factura">
                 <ItemTemplate><%#: Eval("NumeroFactura") ?? "—" %></ItemTemplate>
             </asp:TemplateField>
+            <asp:TemplateField HeaderText="Nota de crédito" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
+                <ItemTemplate><%#: Eval("NumeroNotaCredito") ?? "—" %></ItemTemplate>
+            </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
                     <asp:LinkButton runat="server" CssClass="accion-ver"
@@ -59,10 +68,13 @@
                     <asp:LinkButton runat="server" Visible='<%# (bool)Eval("Facturada") %>'
                         CommandName="VerFactura" CommandArgument='<%# Eval("IdVenta") %>'
                         CausesValidation="false">Factura</asp:LinkButton>
-                    <asp:LinkButton runat="server" Visible='<%# !(bool)Eval("Facturada") && PuedeEscribir %>'
+                    <asp:LinkButton runat="server" Visible='<%# (bool)Eval("Anulada") %>'
+                        CommandName="VerNotaCredito" CommandArgument='<%# Eval("IdVenta") %>'
+                        CausesValidation="false">Nota de crédito</asp:LinkButton>
+                    <asp:LinkButton runat="server" Visible='<%# !(bool)Eval("Facturada") && !(bool)Eval("Anulada") && PuedeEscribir %>'
                         CommandName="Facturar" CommandArgument='<%# Eval("IdVenta") %>'
                         CausesValidation="false"
-                        OnClientClick="return confirm('¿Emitir la factura de esta venta? Toma el número siguiente y después no se puede anular.');">Facturar</asp:LinkButton>
+                        OnClientClick="return confirm('¿Emitir la factura de esta venta? Toma el número siguiente y después solo se anula con una nota de crédito.');">Facturar</asp:LinkButton>
                 </ItemTemplate>
             </asp:TemplateField>
         </Columns>
@@ -91,6 +103,7 @@
                         <dt>Total</dt><dd><asp:Literal ID="litTotalInfo" runat="server" /></dd>
                         <dt>Saldo pendiente</dt><dd><asp:Literal ID="litSaldoInfo" runat="server" /></dd>
                         <dt>Factura</dt><dd><asp:Literal ID="litFacturaInfo" runat="server" /></dd>
+                        <dt>Nota de crédito</dt><dd><asp:Literal ID="litNotaCreditoInfo" runat="server" /></dd>
                     </dl>
 
                     <h3 class="mt-4">Líneas</h3>
@@ -107,6 +120,28 @@
                             <asp:BoundField DataField="Subtotal" HeaderText="Subtotal" DataFormatString="{0:N2}" />
                         </Columns>
                     </asp:GridView>
+
+                    <%-- Anular la venta completa (Requerimientos §9.17). Solo para quien puede escribir en
+                         Ventas y si la venta todavía no tiene nota de crédito. --%>
+                    <asp:Panel ID="pnlEmitirNotaCredito" runat="server" CssClass="seccion-modal mt-4">
+                        <h3>Anular con una nota de crédito</h3>
+                        <p class="texto-nota"><small>Anula la venta completa y acredita el total en la cuenta corriente del
+                            cliente: lo que debía de esta venta se cancela y lo que ya pagó le queda a favor. No repone
+                            stock (si el cliente devuelve algo, se registra con un ajuste en Productos). No se puede
+                            deshacer.</small></p>
+                        <div class="row campos-formulario">
+                            <div class="col-12 campo">
+                                <asp:Label runat="server" AssociatedControlID="txtMotivoNotaCredito">Motivo</asp:Label>
+                                <asp:TextBox ID="txtMotivoNotaCredito" runat="server" MaxLength="300" TextMode="MultiLine" Rows="2" />
+                                <asp:RequiredFieldValidator runat="server" ControlToValidate="txtMotivoNotaCredito"
+                                    CssClass="text-danger small" Display="Dynamic" ValidationGroup="NotaCredito"
+                                    ErrorMessage="El motivo es obligatorio." />
+                            </div>
+                        </div>
+                        <asp:Button ID="btnEmitirNotaCredito" runat="server" CssClass="boton-rojo" Text="Emitir nota de crédito"
+                            OnClick="btnEmitirNotaCredito_Click" ValidationGroup="NotaCredito"
+                            OnClientClick="if (typeof Page_ClientValidate === 'function') { if (!Page_ClientValidate('NotaCredito')) return false; } return confirm('¿Anular esta venta con una nota de crédito? Toma el número siguiente y no se puede deshacer.');" />
+                    </asp:Panel>
                 </div>
 
                 <div class="modal-footer">
@@ -115,7 +150,9 @@
                             OnClick="btnVerFactura_Click" CausesValidation="false" />
                         <asp:Button ID="btnFacturar" runat="server" CssClass="boton-rojo" Text="Generar factura"
                             OnClick="btnFacturar_Click" CausesValidation="false"
-                            OnClientClick="return confirm('¿Emitir la factura de esta venta? Toma el número siguiente y después no se puede anular.');" />
+                            OnClientClick="return confirm('¿Emitir la factura de esta venta? Toma el número siguiente y después solo se anula con una nota de crédito.');" />
+                        <asp:Button ID="btnVerNotaCredito" runat="server" CssClass="boton-rojo" Text="Ver nota de crédito"
+                            OnClick="btnVerNotaCredito_Click" CausesValidation="false" />
                     </span>
                     <button type="button" class="boton-gris" data-bs-dismiss="modal">Cerrar</button>
                 </div>
@@ -123,8 +160,9 @@
         </div>
     </div>
 
-    <%-- La factura, con el formato de una factura argentina. "Imprimir" saca solo la hoja (ver
-         @media print en Site.css); desde el diálogo de impresión también se guarda como PDF. --%>
+    <%-- La factura, con el formato de una factura argentina; la nota de crédito usa la misma hoja
+         con otro título y el motivo. "Imprimir" saca solo la hoja (ver @media print en Site.css);
+         desde el diálogo de impresión también se guarda como PDF. --%>
     <div class="modal fade" id="modalFactura" tabindex="-1" aria-labelledby="tituloModalFactura" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
@@ -147,7 +185,7 @@
                                 <span>COD. <asp:Literal ID="litFacturaCodigo" runat="server" /></span>
                             </div>
                             <div class="factura-comprobante">
-                                <div class="factura-comprobante-titulo">FACTURA</div>
+                                <div class="factura-comprobante-titulo"><asp:Literal ID="litDocumentoTitulo" runat="server" /></div>
                                 <p><b>N.º</b> <asp:Literal ID="litFacturaNumero" runat="server" /></p>
                                 <p><b>Fecha de emisión:</b> <asp:Literal ID="litFacturaFecha" runat="server" /></p>
                                 <p><b>CUIT:</b> <asp:Literal ID="litEmisorCuit" runat="server" /></p>
@@ -163,6 +201,9 @@
                             <p><b>Domicilio:</b> <asp:Literal ID="litReceptorDomicilio" runat="server" /></p>
                             <p><b>Condición de venta:</b> <asp:Literal ID="litCondicionVenta" runat="server" /></p>
                             <p><b>Referencia:</b> <asp:Literal ID="litReferencia" runat="server" /></p>
+                            <asp:PlaceHolder ID="phMotivoNotaCredito" runat="server" Visible="false">
+                                <p><b>Motivo:</b> <asp:Literal ID="litMotivoNotaCredito" runat="server" /></p>
+                            </asp:PlaceHolder>
                         </div>
 
                         <asp:Literal ID="litFacturaLineas" runat="server" />

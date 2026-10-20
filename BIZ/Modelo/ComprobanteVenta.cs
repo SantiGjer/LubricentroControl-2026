@@ -28,6 +28,9 @@ namespace BIZ.Modelo
         // "B 00001-00000012" si ya se le emitió la factura; null si no.
         public string NumeroFactura { get; set; }
 
+        // "NC B 00001-00000003" si la anuló una nota de crédito (§9.17); null si no.
+        public string NumeroNotaCredito { get; set; }
+
         public string DocumentoCliente
         {
             get { return Cliente.FormatearDocumento(TipoDocumentoCliente, NumeroDocumentoCliente); }
@@ -36,6 +39,11 @@ namespace BIZ.Modelo
         public bool Facturada
         {
             get { return NumeroFactura != null; }
+        }
+
+        public bool Anulada
+        {
+            get { return NumeroNotaCredito != null; }
         }
     }
 }
