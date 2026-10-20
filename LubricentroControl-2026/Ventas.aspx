@@ -37,6 +37,16 @@
             <button type="button" class="opcion" data-valor="vigente">Vigentes</button>
             <button type="button" class="opcion" data-valor="anulada">Anuladas</button>
         </div>
+        <%-- Trazabilidad: un botón por cada usuario que emitió alguna factura (CargarGrilla). --%>
+        <div class="grupo-opciones" data-columna="Facturó">
+            <span class="titulo-opciones">Facturó</span>
+            <button type="button" class="opcion" data-valor="">Todas</button>
+            <asp:Repeater ID="rptCajeros" runat="server">
+                <ItemTemplate>
+                    <button type="button" class="opcion" data-valor="<%#: Container.DataItem %>"><%#: Container.DataItem %></button>
+                </ItemTemplate>
+            </asp:Repeater>
+        </div>
     </div>
 
     <asp:GridView ID="gvVentas" runat="server" CssClass="tabla-abm" data-filtro="filtroVentas"
@@ -60,7 +70,7 @@
             <asp:TemplateField HeaderText="Nota de crédito" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
                 <ItemTemplate><%#: Eval("NumeroNotaCredito") ?? "—" %></ItemTemplate>
             </asp:TemplateField>
-            <asp:TemplateField HeaderText="Facturó" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
+            <asp:TemplateField HeaderText="Facturó">
                 <ItemTemplate><%#: Eval("NombreUsuarioFactura") ?? "—" %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Anuló" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">

@@ -201,7 +201,7 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   venta, y se ve e imprime en la misma pantalla. Sin validez fiscal (sin CAE). Los precios son
   finales: la venta guarda el IVA que contiene cada línea. Los datos del comercio que salen en la
   factura se editan en Administración > Datos del comercio (desde 2026-10-08). La factura muestra el
-  operador que la emitió, y el buscador de Ventas encuentra también por quién facturó o anuló
+  operador que la emitió, y Ventas tiene el filtro "Facturó" para ver las ventas de cada cajero
   (desde 2026-10-20).
 - **Nota de crédito** (desde 2026-10-20): "Anular con una nota de crédito" en el detalle de una venta
   la anula completa, con motivo obligatorio. Toma la letra de la factura (o la que le
@@ -247,10 +247,15 @@ particular, y que la factura muestre el cajero u operador que la hizo. Solo en V
   nombre, los comprobantes viejos muestran el nombre nuevo.
 - **Hoja impresa:** `IComprobanteImpreso.NombreUsuario` y la línea "Operador" en
   `MostrarComprobante`, así que la nota de crédito también lo muestra.
-- **Lista de Ventas:** columnas ocultas "Facturó" y "Anuló", como "Registró" en Pagos; el buscador de
-  `Lubricentro.js` arma el texto de cada fila con todas las columnas menos Acciones, ocultas incluidas,
-  así que escribir el nombre filtra. Van antes de Acciones para no correr el índice de las columnas
-  que ya estaban (el orden elegido se guarda por índice). El detalle de la venta dice "emitida por".
+- **Lista de Ventas:** columna "Facturó" y filtro "Facturó" con un botón por cada usuario que emitió
+  alguna factura (`CargarGrilla` los arma con LINQ en el `Repeater` `rptCajeros`; filtra
+  `Lubricentro.js` por `data-columna`, como Saldo, Factura y Estado). "Anuló" queda como columna
+  oculta, como "Registró" en Pagos: el buscador arma el texto de cada fila con todas las columnas
+  menos Acciones, ocultas incluidas. Las dos van antes de Acciones para no correr el índice de las
+  columnas que ya estaban (el orden elegido se guarda por índice). El detalle dice "emitida por".
+- **Datos de ejemplo en la base de Alexis** (no en los scripts, con backup previo): cinco ventas
+  hechas y facturadas por Juan Empleado y María Encargada, una anulada por María, para mostrar la
+  trazabilidad.
 - La venta en sí no guarda quién cerró la orden (`OrdenDeTrabajoDAL.Cerrar` no recibe el usuario):
   agregarlo cambia la base y toca Órdenes, así que no entró.
 
@@ -258,7 +263,7 @@ Verificado con MSBuild, `aspnet_compiler`, base creada con `01` a `05`, un progr
 `BIZ.dll` (un usuario factura y otro anula: cada comprobante y la lista traen el nombre correcto, una
 venta sin facturar no trae ninguno y los `JOIN` no duplican ventas), la regresión de los arreglos del
 2026-10-18 y la pantalla en IIS Express (lista, búsqueda, hoja de la factura y de la nota de crédito, y
-detalle).
+detalle; en el navegador, elegir un cajero en el filtro deja solo sus ventas).
 
 ### 2026-10-20 — Nota de crédito
 

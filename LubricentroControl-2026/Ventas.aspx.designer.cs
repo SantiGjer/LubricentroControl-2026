@@ -14,6 +14,9 @@ namespace LubricentroControl_2026
         /// <summary>Control litMensaje.</summary>
         protected global::System.Web.UI.WebControls.Literal litMensaje;
 
+        /// <summary>Control rptCajeros.</summary>
+        protected global::System.Web.UI.WebControls.Repeater rptCajeros;
+
         /// <summary>Control gvVentas.</summary>
         protected global::System.Web.UI.WebControls.GridView gvVentas;
 

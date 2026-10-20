@@ -411,8 +411,9 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
   en `Web.config` (claves `Emisor.*`) y no se podían cambiar desde la aplicación. La factura guarda
   una copia de esos datos y de los del cliente al emitirse, para no cambiar si después se editan.
 - **Quién la emitió** (desde 2026-10-20): la factura y la nota de crédito muestran el **operador**,
-  el usuario que la generó, y la lista de Ventas busca también por quién facturó o anuló, para
-  revisar lo que hizo un usuario. Sale del usuario que el comprobante ya guardaba: no es una copia
+  el usuario que la generó. La lista de Ventas muestra quién facturó cada venta y tiene el filtro
+  **Facturó**, con un botón por usuario, para ver las ventas de un cajero y revisar lo que hizo; quién
+  anuló entra en la búsqueda por texto. Sale del usuario que el comprobante ya guardaba: no es una copia
   como los datos del cliente, así que si el usuario cambia de nombre se ve el nombre nuevo.
 
 ### 9.11 Roles y permisos editables (confirmado 2026-10-07)

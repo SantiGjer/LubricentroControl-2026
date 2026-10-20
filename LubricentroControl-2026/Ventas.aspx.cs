@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 using System.Web;
 using System.Web.UI.WebControls;
@@ -34,13 +35,22 @@ namespace LubricentroControl_2026
                 Seleccionar(LeerIdOculto(Request.QueryString["ver"]));
         }
 
-        // El filtro por texto y las opciones (saldo, factura) los hace la tabla en el navegador
-        // (Lubricentro.js). El texto incluye las columnas ocultas, así que también encuentra las
-        // ventas por quién las facturó o las anuló.
+        // El filtro por texto y las opciones (saldo, factura, estado y quién facturó) los hace la
+        // tabla en el navegador (Lubricentro.js). El texto incluye las columnas ocultas, así que
+        // también encuentra las ventas por quién las anuló.
         private void CargarGrilla()
         {
-            gvVentas.DataSource = ComprobanteVentaDAL.Listar();
+            var ventas = ComprobanteVentaDAL.Listar();
+            gvVentas.DataSource = ventas;
             gvVentas.DataBind();
+
+            // Trazabilidad: un botón del filtro "Facturó" por cada usuario que emitió alguna factura.
+            rptCajeros.DataSource = ventas.Where(v => v.NombreUsuarioFactura != null)
+                                          .Select(v => v.NombreUsuarioFactura)
+                                          .Distinct()
+                                          .OrderBy(nombre => nombre)
+                                          .ToList();
+            rptCajeros.DataBind();
         }
 
         protected void gvVentas_RowDataBound(object sender, GridViewRowEventArgs e)
