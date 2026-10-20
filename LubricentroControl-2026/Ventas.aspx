@@ -15,7 +15,7 @@
 
     <div class="barra-herramientas">
         <input type="search" id="filtroVentas" class="filtro-tabla-texto"
-            placeholder="Buscar por número, factura, cliente, documento, patente o fecha" aria-label="Buscar ventas" />
+            placeholder="Buscar por número, factura, cliente, documento, patente, fecha o usuario" aria-label="Buscar ventas" />
     </div>
 
     <div class="opciones-tabla" id="opcionesVentas">
@@ -59,6 +59,12 @@
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Nota de crédito" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
                 <ItemTemplate><%#: Eval("NumeroNotaCredito") ?? "—" %></ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Facturó" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
+                <ItemTemplate><%#: Eval("NombreUsuarioFactura") ?? "—" %></ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Anuló" HeaderStyle-CssClass="oculta" ItemStyle-CssClass="oculta">
+                <ItemTemplate><%#: Eval("NombreUsuarioNotaCredito") ?? "—" %></ItemTemplate>
             </asp:TemplateField>
             <asp:TemplateField HeaderText="Acciones" HeaderStyle-CssClass="sin-orden">
                 <ItemTemplate>
@@ -201,6 +207,7 @@
                             <p><b>Domicilio:</b> <asp:Literal ID="litReceptorDomicilio" runat="server" /></p>
                             <p><b>Condición de venta:</b> <asp:Literal ID="litCondicionVenta" runat="server" /></p>
                             <p><b>Referencia:</b> <asp:Literal ID="litReferencia" runat="server" /></p>
+                            <p><b>Operador:</b> <asp:Literal ID="litOperador" runat="server" /></p>
                             <asp:PlaceHolder ID="phMotivoNotaCredito" runat="server" Visible="false">
                                 <p><b>Motivo:</b> <asp:Literal ID="litMotivoNotaCredito" runat="server" /></p>
                             </asp:PlaceHolder>

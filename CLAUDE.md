@@ -402,6 +402,11 @@ Estas no se ven leyendo un solo archivo:
   `NotaCredito`, con la venta y el usuario) y deja la venta con `saldoPendiente = 0`. No repone
   stock. Una venta anulada no se factura (`FacturaDAL.Emitir` lo rechaza), y `ComprobanteVenta.Anulada`
   sale del `LEFT JOIN` con `NotaCredito` en `ComprobanteVentaDAL`.
+- **La factura y la nota de crédito muestran quién las emitió** (desde 2026-10-20): `NombreUsuario`
+  sale del `JOIN` con `Usuario` por el `idUsuario` que cada una ya guardaba (no es una copia, a
+  diferencia de los datos del comercio y del cliente). La lista de Ventas lo trae como
+  `NombreUsuarioFactura` y `NombreUsuarioNotaCredito`, en las columnas ocultas "Facturó" y "Anuló",
+  que el buscador de la tabla también recorre.
 - **El vínculo Turno–Orden es opcional:** una orden puede nacer de un turno previo o de un walk-in
   (cliente que llega sin turno, se da de alta en el momento).
 - Clientes **y** proveedores pueden quedar con saldo pendiente; la cuenta corriente funciona en

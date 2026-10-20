@@ -3,9 +3,9 @@ using System;
 namespace BIZ.Modelo
 {
     // Lo que tienen en común la factura y la nota de crédito para imprimirse con el mismo formato
-    // (Ventas.aspx): letra, número, código de ARCA, fecha y los datos del comercio y del cliente del
-    // momento en que se emitió. Las dos se generan desde una venta, cuyas líneas son las que se
-    // imprimen.
+    // (Ventas.aspx): letra, número, código de ARCA, fecha, los datos del comercio y del cliente del
+    // momento en que se emitió y quién la emitió. Las dos se generan desde una venta, cuyas líneas
+    // son las que se imprimen.
     public interface IComprobanteImpreso
     {
         int IdVenta { get; }
@@ -28,5 +28,8 @@ namespace BIZ.Modelo
         string ReceptorDocumento { get; }
         string ReceptorCondicionIva { get; }
         string ReceptorDomicilio { get; }
+
+        // Nombre y apellido del usuario que lo emitió (el operador).
+        string NombreUsuario { get; }
     }
 }

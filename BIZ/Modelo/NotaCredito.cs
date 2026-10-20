@@ -40,6 +40,9 @@ namespace BIZ.Modelo
         // había facturado. Solo para mostrar.
         public string NumeroFactura { get; set; }
 
+        // Del JOIN con Usuario: nombre y apellido de quien la emitió (el operador). Solo para mostrar.
+        public string NombreUsuario { get; set; }
+
         // "00001-00000012": punto de venta de 5 dígitos y número de 8.
         public string NumeroCompleto
         {

@@ -200,7 +200,9 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   la condición frente al IVA del comercio y del cliente, con numeración propia por letra y punto de
   venta, y se ve e imprime en la misma pantalla. Sin validez fiscal (sin CAE). Los precios son
   finales: la venta guarda el IVA que contiene cada línea. Los datos del comercio que salen en la
-  factura se editan en Administración > Datos del comercio (desde 2026-10-08).
+  factura se editan en Administración > Datos del comercio (desde 2026-10-08). La factura muestra el
+  operador que la emitió, y el buscador de Ventas encuentra también por quién facturó o anuló
+  (desde 2026-10-20).
 - **Nota de crédito** (desde 2026-10-20): "Anular con una nota de crédito" en el detalle de una venta
   la anula completa, con motivo obligatorio. Toma la letra de la factura (o la que le
   correspondería), numera aparte y se imprime como la factura. Acredita el total en la cuenta
@@ -232,6 +234,31 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-20 (cont.) — Quién emitió la factura y la nota de crédito
+
+Alexis pidió poder buscar las ventas por usuario, para encontrar los errores de alguien en
+particular, y que la factura muestre el cajero u operador que la hizo. Solo en Ventas.
+
+- **Sin cambios en la base.** `Factura.idUsuario` y `NotaCredito.idUsuario` ya existían (NOT NULL):
+  `FacturaDAL` y `NotaCreditoDAL` traen el nombre con `INNER JOIN Usuario` (el `SELECT` de
+  `FacturaDAL` pasó a usar el alias `f`, porque `idUsuario` quedaba ambiguo), y
+  `ComprobanteVentaDAL` con dos `LEFT JOIN` (`uf`, `unc`). No es una copia: si el usuario cambia de
+  nombre, los comprobantes viejos muestran el nombre nuevo.
+- **Hoja impresa:** `IComprobanteImpreso.NombreUsuario` y la línea "Operador" en
+  `MostrarComprobante`, así que la nota de crédito también lo muestra.
+- **Lista de Ventas:** columnas ocultas "Facturó" y "Anuló", como "Registró" en Pagos; el buscador de
+  `Lubricentro.js` arma el texto de cada fila con todas las columnas menos Acciones, ocultas incluidas,
+  así que escribir el nombre filtra. Van antes de Acciones para no correr el índice de las columnas
+  que ya estaban (el orden elegido se guarda por índice). El detalle de la venta dice "emitida por".
+- La venta en sí no guarda quién cerró la orden (`OrdenDeTrabajoDAL.Cerrar` no recibe el usuario):
+  agregarlo cambia la base y toca Órdenes, así que no entró.
+
+Verificado con MSBuild, `aspnet_compiler`, base creada con `01` a `05`, un programa de consola sobre
+`BIZ.dll` (un usuario factura y otro anula: cada comprobante y la lista traen el nombre correcto, una
+venta sin facturar no trae ninguno y los `JOIN` no duplican ventas), la regresión de los arreglos del
+2026-10-18 y la pantalla en IIS Express (lista, búsqueda, hoja de la factura y de la nota de crédito, y
+detalle).
 
 ### 2026-10-20 — Nota de crédito
 

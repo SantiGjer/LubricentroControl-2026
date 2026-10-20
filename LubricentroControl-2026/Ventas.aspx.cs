@@ -35,7 +35,8 @@ namespace LubricentroControl_2026
         }
 
         // El filtro por texto y las opciones (saldo, factura) los hace la tabla en el navegador
-        // (Lubricentro.js).
+        // (Lubricentro.js). El texto incluye las columnas ocultas, así que también encuentra las
+        // ventas por quién las facturó o las anuló.
         private void CargarGrilla()
         {
             gvVentas.DataSource = ComprobanteVentaDAL.Listar();
@@ -101,8 +102,12 @@ namespace LubricentroControl_2026
             litImpuestosInfo.Text = venta.Impuestos.ToString("N2");
             litTotalInfo.Text = venta.Total.ToString("N2");
             litSaldoInfo.Text = venta.SaldoPendiente.ToString("N2");
-            litFacturaInfo.Text = venta.Facturada ? Server.HtmlEncode(venta.NumeroFactura) : "Sin facturar";
-            litNotaCreditoInfo.Text = venta.Anulada ? Server.HtmlEncode(venta.NumeroNotaCredito) : "—";
+            litFacturaInfo.Text = venta.Facturada
+                ? Server.HtmlEncode(venta.NumeroFactura + " · emitida por " + venta.NombreUsuarioFactura)
+                : "Sin facturar";
+            litNotaCreditoInfo.Text = venta.Anulada
+                ? Server.HtmlEncode(venta.NumeroNotaCredito + " · emitida por " + venta.NombreUsuarioNotaCredito)
+                : "—";
 
             // Una venta anulada no se factura ni se vuelve a anular.
             btnVerFactura.Visible = venta.Facturada;
@@ -250,6 +255,7 @@ namespace LubricentroControl_2026
             litReceptorDomicilio.Text = Server.HtmlEncode(comprobante.ReceptorDomicilio ?? "—");
             litCondicionVenta.Text = Server.HtmlEncode(comprobante.CondicionVenta);
             litReferencia.Text = Server.HtmlEncode(referencia);
+            litOperador.Text = Server.HtmlEncode(comprobante.NombreUsuario);
             phMotivoNotaCredito.Visible = motivo != null;
             litMotivoNotaCredito.Text = motivo == null ? "" : Server.HtmlEncode(motivo);
 

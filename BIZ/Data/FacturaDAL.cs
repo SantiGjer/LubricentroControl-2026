@@ -9,11 +9,12 @@ namespace BIZ.Data
     public static class FacturaDAL
     {
         private const string SelectBase = @"
-            SELECT idFactura, idVenta, tipo, puntoVenta, numero, fecha, idUsuario, condicionVenta,
-                   emisorRazonSocial, emisorCuit, emisorCondicionIva, emisorDomicilio, emisorIngresosBrutos,
-                   emisorInicioActividades, receptorNombre, receptorTipoDocumento, receptorNumeroDocumento,
-                   receptorCondicionIva, receptorDomicilio
-            FROM Factura";
+            SELECT f.idFactura, f.idVenta, f.tipo, f.puntoVenta, f.numero, f.fecha, f.idUsuario, f.condicionVenta,
+                   f.emisorRazonSocial, f.emisorCuit, f.emisorCondicionIva, f.emisorDomicilio, f.emisorIngresosBrutos,
+                   f.emisorInicioActividades, f.receptorNombre, f.receptorTipoDocumento, f.receptorNumeroDocumento,
+                   f.receptorCondicionIva, f.receptorDomicilio, u.nombre + ' ' + u.apellido AS nombreUsuario
+            FROM Factura f
+            INNER JOIN Usuario u ON u.idUsuario = f.idUsuario";
 
         private static Factura Mapear(DataRow fila)
         {
@@ -37,14 +38,15 @@ namespace BIZ.Data
                 ReceptorTipoDocumento = AccesoDatos.LeerString(fila, "receptorTipoDocumento"),
                 ReceptorNumeroDocumento = AccesoDatos.LeerString(fila, "receptorNumeroDocumento"),
                 ReceptorCondicionIva = AccesoDatos.LeerString(fila, "receptorCondicionIva"),
-                ReceptorDomicilio = AccesoDatos.LeerString(fila, "receptorDomicilio")
+                ReceptorDomicilio = AccesoDatos.LeerString(fila, "receptorDomicilio"),
+                NombreUsuario = AccesoDatos.LeerString(fila, "nombreUsuario")
             };
         }
 
         public static Factura ObtenerPorVenta(int idVenta)
         {
             var tabla = AccesoDatos.Consultar(
-                SelectBase + " WHERE idVenta = @idVenta",
+                SelectBase + " WHERE f.idVenta = @idVenta",
                 AccesoDatos.Param("@idVenta", idVenta));
 
             return tabla.Rows.Count == 0 ? null : Mapear(tabla.Rows[0]);

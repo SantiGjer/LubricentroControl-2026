@@ -22,6 +22,9 @@ una base que ya tiene lo del 2026-10-18, correr `Database\Actualizar_2026-10-20_
 - Acredita el total en la cuenta corriente del cliente (movimiento "Nota de crédito") y deja la venta
   sin saldo pendiente. No repone stock. Una venta anulada no se factura.
 - Ventas distingue las anuladas (opción "Anuladas"); Ventas por período resta las notas de crédito.
+- La factura y la nota de crédito muestran el operador que las emitió, y el buscador de Ventas
+  encuentra también por quién facturó o anuló (columnas ocultas "Facturó" y "Anuló"). Esto no cambia
+  la base: sale del usuario que cada comprobante ya guardaba.
 
 Verificado con MSBuild, `aspnet_compiler`, base creada con `01` a `05`, 19 pruebas sobre `BIZ.dll`
 (con dos emisiones simultáneas de la misma venta) y el recorrido de la pantalla en IIS Express.

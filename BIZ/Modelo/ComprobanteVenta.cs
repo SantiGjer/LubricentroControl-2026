@@ -31,6 +31,11 @@ namespace BIZ.Modelo
         // "NC B 00001-00000003" si la anuló una nota de crédito (§9.17); null si no.
         public string NumeroNotaCredito { get; set; }
 
+        // Del JOIN con Usuario: nombre y apellido de quien emitió la factura y la nota de crédito (el
+        // operador); null si no tiene. La lista de Ventas los usa para buscar por usuario.
+        public string NombreUsuarioFactura { get; set; }
+        public string NombreUsuarioNotaCredito { get; set; }
+
         public string DocumentoCliente
         {
             get { return Cliente.FormatearDocumento(TipoDocumentoCliente, NumeroDocumentoCliente); }

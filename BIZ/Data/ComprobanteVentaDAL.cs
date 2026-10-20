@@ -15,13 +15,17 @@ namespace BIZ.Data
                    ve.patente, v.numeroComprobante, v.fecha, v.subtotal, v.impuestos, v.total, v.saldoPendiente,
                    f.tipo AS tipoFactura, f.puntoVenta, f.numero AS numeroFactura,
                    nc.tipo AS tipoNotaCredito, nc.puntoVenta AS puntoVentaNotaCredito,
-                   nc.numero AS numeroNotaCredito
+                   nc.numero AS numeroNotaCredito,
+                   uf.nombre + ' ' + uf.apellido AS nombreUsuarioFactura,
+                   unc.nombre + ' ' + unc.apellido AS nombreUsuarioNotaCredito
             FROM ComprobanteVenta v
             INNER JOIN Cliente c ON c.idCliente = v.idCliente
             INNER JOIN OrdenDeTrabajo o ON o.idOrden = v.idOrden
             INNER JOIN Vehiculo ve ON ve.idVehiculo = o.idVehiculo
             LEFT JOIN Factura f ON f.idVenta = v.idVenta
-            LEFT JOIN NotaCredito nc ON nc.idVenta = v.idVenta";
+            LEFT JOIN NotaCredito nc ON nc.idVenta = v.idVenta
+            LEFT JOIN Usuario uf ON uf.idUsuario = f.idUsuario
+            LEFT JOIN Usuario unc ON unc.idUsuario = nc.idUsuario";
 
         private static ComprobanteVenta Mapear(DataRow fila)
         {
@@ -50,7 +54,9 @@ namespace BIZ.Data
                 NumeroNotaCredito = tipoNotaCredito == null
                     ? null
                     : NotaCredito.FormatearNumero(tipoNotaCredito, AccesoDatos.LeerInt(fila, "puntoVentaNotaCredito"),
-                                                  AccesoDatos.LeerInt(fila, "numeroNotaCredito"))
+                                                  AccesoDatos.LeerInt(fila, "numeroNotaCredito")),
+                NombreUsuarioFactura = AccesoDatos.LeerString(fila, "nombreUsuarioFactura"),
+                NombreUsuarioNotaCredito = AccesoDatos.LeerString(fila, "nombreUsuarioNotaCredito")
             };
         }
 

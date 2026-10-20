@@ -128,6 +128,9 @@ namespace LubricentroControl_2026
         /// <summary>Control litReferencia.</summary>
         protected global::System.Web.UI.WebControls.Literal litReferencia;
 
+        /// <summary>Control litOperador.</summary>
+        protected global::System.Web.UI.WebControls.Literal litOperador;
+
         /// <summary>Control phMotivoNotaCredito.</summary>
         protected global::System.Web.UI.WebControls.PlaceHolder phMotivoNotaCredito;
 

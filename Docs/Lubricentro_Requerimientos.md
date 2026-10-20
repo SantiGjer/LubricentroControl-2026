@@ -410,6 +410,10 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
   (Administración) y se guardan en la tabla `Emisor`, de una sola fila. Hasta el 2026-10-08 iban
   en `Web.config` (claves `Emisor.*`) y no se podían cambiar desde la aplicación. La factura guarda
   una copia de esos datos y de los del cliente al emitirse, para no cambiar si después se editan.
+- **Quién la emitió** (desde 2026-10-20): la factura y la nota de crédito muestran el **operador**,
+  el usuario que la generó, y la lista de Ventas busca también por quién facturó o anuló, para
+  revisar lo que hizo un usuario. Sale del usuario que el comprobante ya guardaba: no es una copia
+  como los datos del cliente, así que si el usuario cambia de nombre se ve el nombre nuevo.
 
 ### 9.11 Roles y permisos editables (confirmado 2026-10-07)
 
@@ -519,7 +523,7 @@ ajuste en la cuenta corriente.
 - **Letra y numeración:** la letra de la factura que anula; si la venta no se había facturado, la que
   le correspondería (mismo criterio que §9.10). Numera aparte de las facturas, correlativa por letra
   y punto de venta. Códigos de ARCA: 03 (A), 08 (B) y 13 (C). Se imprime con el mismo formato que la
-  factura, con la referencia a lo que anula y el motivo, y también es sin validez fiscal.
+  factura, con la referencia a lo que anula, el motivo y el operador, y también es sin validez fiscal.
 - **Plata:** acredita el total de la venta en la cuenta corriente del cliente (movimiento "Nota de
   crédito", al haber) y deja la venta sin saldo pendiente. Lo que el cliente debía de esa venta se
   cancela, y lo que ya había pagado le queda a favor (se aplica solo a la próxima venta, §6.7). Si

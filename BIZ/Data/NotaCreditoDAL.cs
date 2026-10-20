@@ -18,9 +18,11 @@ namespace BIZ.Data
                    nc.emisorIngresosBrutos, nc.emisorInicioActividades, nc.receptorNombre,
                    nc.receptorTipoDocumento, nc.receptorNumeroDocumento, nc.receptorCondicionIva,
                    nc.receptorDomicilio,
-                   f.tipo AS tipoFactura, f.puntoVenta AS puntoVentaFactura, f.numero AS numeroFactura
+                   f.tipo AS tipoFactura, f.puntoVenta AS puntoVentaFactura, f.numero AS numeroFactura,
+                   u.nombre + ' ' + u.apellido AS nombreUsuario
             FROM NotaCredito nc
-            LEFT JOIN Factura f ON f.idFactura = nc.idFactura";
+            LEFT JOIN Factura f ON f.idFactura = nc.idFactura
+            INNER JOIN Usuario u ON u.idUsuario = nc.idUsuario";
 
         private static NotaCredito Mapear(DataRow fila)
         {
@@ -52,6 +54,7 @@ namespace BIZ.Data
                 ReceptorNumeroDocumento = AccesoDatos.LeerString(fila, "receptorNumeroDocumento"),
                 ReceptorCondicionIva = AccesoDatos.LeerString(fila, "receptorCondicionIva"),
                 ReceptorDomicilio = AccesoDatos.LeerString(fila, "receptorDomicilio"),
+                NombreUsuario = AccesoDatos.LeerString(fila, "nombreUsuario"),
                 NumeroFactura = tipoFactura == null
                     ? null
                     : Factura.FormatearNumero(tipoFactura, AccesoDatos.LeerInt(fila, "puntoVentaFactura"),
