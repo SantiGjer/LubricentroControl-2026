@@ -8,6 +8,8 @@
 
    Idempotente: se puede correr varias veces. Borra y recrea todas las tablas,
    por lo que PIERDE LOS DATOS. Correr 02_DatosIniciales.sql a continuación.
+   Al final crea el usuario de SQL Server con el que entra la aplicación
+   (lubricentro_app); hay que correrlo con un usuario administrador.
 
    Uso:
      sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i Database\01_Esquema.sql
@@ -205,16 +207,37 @@ CREATE TABLE Vehiculo (
 );
 GO
 
+/* Datos fiscales, de contacto, domicilio y cuenta para transferencias agregados el
+   2026-10-13 (§9.14): todos opcionales salvo la condición frente al IVA. */
 CREATE TABLE Proveedor (
-    idProveedor INT IDENTITY(1,1) NOT NULL,
-    razonSocial NVARCHAR(150)     NOT NULL,
-    cuit        NVARCHAR(20)      NOT NULL,
-    telefono    NVARCHAR(30)      NULL,
-    email       NVARCHAR(150)     NULL,
-    direccion   NVARCHAR(200)     NULL,
-    activo      BIT               NOT NULL CONSTRAINT DF_Proveedor_activo DEFAULT (1),
+    idProveedor      INT IDENTITY(1,1) NOT NULL,
+    razonSocial      NVARCHAR(150)     NOT NULL,
+    /* Cómo se lo conoce, si no es la razón social */
+    nombreFantasia   NVARCHAR(150)     NULL,
+    /* Sin guiones */
+    cuit             NVARCHAR(20)      NOT NULL,
+    /* Responsable Inscripto | Monotributista | Exento */
+    condicionIva     NVARCHAR(30)      NOT NULL CONSTRAINT DF_Proveedor_condicionIva DEFAULT ('Responsable Inscripto'),
+    /* Qué le vende al lubricentro (texto libre) */
+    rubro            NVARCHAR(100)     NULL,
+    telefono         NVARCHAR(30)      NULL,
+    email            NVARCHAR(150)     NULL,
+    /* Persona con la que se trata (vendedor o representante) y su teléfono */
+    contacto         NVARCHAR(100)     NULL,
+    telefonoContacto NVARCHAR(30)      NULL,
+    direccion        NVARCHAR(200)     NULL,
+    localidad        NVARCHAR(100)     NULL,
+    provincia        NVARCHAR(60)      NULL,
+    codigoPostal     NVARCHAR(10)      NULL,
+    /* CBU o CVU (22 dígitos) y alias, para pagarle por transferencia */
+    cbu              NVARCHAR(22)      NULL,
+    alias            NVARCHAR(20)      NULL,
+    observaciones    NVARCHAR(500)     NULL,
+    activo           BIT               NOT NULL CONSTRAINT DF_Proveedor_activo DEFAULT (1),
     CONSTRAINT PK_Proveedor PRIMARY KEY (idProveedor),
-    CONSTRAINT UQ_Proveedor_cuit UNIQUE (cuit)
+    CONSTRAINT UQ_Proveedor_cuit UNIQUE (cuit),
+    CONSTRAINT CK_Proveedor_condicionIva CHECK (
+        condicionIva IN ('Responsable Inscripto','Monotributista','Exento'))
 );
 GO
 
@@ -645,5 +668,39 @@ CREATE INDEX IX_MovStock_idInsumo         ON MovimientoStock(idInsumo);
 CREATE INDEX IX_MovStock_fecha            ON MovimientoStock(fecha);
 GO
 
+/* ==========================================================================
+   USUARIO DE LA APLICACIÓN
+   La aplicación entra a la base con este usuario de SQL Server (la cadena
+   LubricentroDB de Web.config), no con el usuario de Windows: así el mismo
+   Web.config sirve en cualquier máquina que arme la base con estos scripts, y
+   es el que hace falta para entrar desde otra PC a un SQL Server compartido,
+   donde el usuario de Windows de cada máquina no existe.
+   Solo lee y escribe datos (db_datareader + db_datawriter): no puede crear ni
+   borrar tablas. Los scripts se siguen corriendo con un usuario administrador.
+   El login es del servidor y sobrevive a este script: si ya existe se deja con
+   su clave (en un servidor compartido se cambia, ver Web.config) y solo se
+   vuelve a enlazar con el usuario de la base.
+   ========================================================================== */
+USE master;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.server_principals WHERE name = N'lubricentro_app')
+    CREATE LOGIN lubricentro_app WITH PASSWORD = N'Lubricentro.2026', DEFAULT_DATABASE = LubricentroControl,
+        CHECK_EXPIRATION = OFF;
+GO
+
+USE LubricentroControl;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'lubricentro_app')
+    CREATE USER lubricentro_app FOR LOGIN lubricentro_app;
+ELSE
+    ALTER USER lubricentro_app WITH LOGIN = lubricentro_app;
+
+ALTER ROLE db_datareader ADD MEMBER lubricentro_app;
+ALTER ROLE db_datawriter ADD MEMBER lubricentro_app;
+GO
+
 PRINT 'Esquema creado correctamente.';
+PRINT 'Usuario de la aplicación: lubricentro_app / Lubricentro.2026 (si ya existía, conserva su clave).';
 GO

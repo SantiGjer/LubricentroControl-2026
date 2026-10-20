@@ -102,6 +102,7 @@
     <Content Include="AccesoDenegado.aspx" />
     <Content Include="CambiarClave.aspx" />
     <Content Include="Clientes.aspx" />
+    <Content Include="CodigoPostal.ashx" />
     <Content Include="Compras.aspx" />
     <Content Include="CuentaCorrienteClientes.aspx" />
     <Content Include="CuentaCorrienteProveedores.aspx" />
@@ -207,6 +208,9 @@
   <ItemGroup>
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="CodigoPostal.ashx.cs">
+      <DependentUpon>CodigoPostal.ashx</DependentUpon>
+    </Compile>
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>

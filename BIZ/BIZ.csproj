@@ -68,6 +68,7 @@
     <Compile Include="Data\UsuarioDAL.cs" />
     <Compile Include="Data\VehiculoDAL.cs" />
     <Compile Include="Modelo\Cliente.cs" />
+    <Compile Include="Modelo\CodigosPostales.cs" />
     <Compile Include="Modelo\ComprobanteCompra.cs" />
     <Compile Include="Modelo\ComprobanteVenta.cs" />
     <Compile Include="Modelo\CuentaCorrienteCliente.cs" />
@@ -77,6 +78,7 @@
     <Compile Include="Modelo\DetalleComprobanteVenta.cs" />
     <Compile Include="Modelo\DetalleOrdenInsumo.cs" />
     <Compile Include="Modelo\DetalleOrdenServicio.cs" />
+    <Compile Include="Modelo\Domicilio.cs" />
     <Compile Include="Modelo\Factura.cs" />
     <Compile Include="Modelo\FormatoTelefono.cs" />
     <Compile Include="Modelo\Imagen.cs" />
@@ -96,6 +98,9 @@
     <Compile Include="Modelo\Vehiculo.cs" />
     <Compile Include="Negocio\PasswordHasher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Modelo\CodigosPostales.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

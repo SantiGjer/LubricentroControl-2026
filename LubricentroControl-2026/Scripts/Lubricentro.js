@@ -17,6 +17,9 @@
       cualquiera de los dos. data-inicial elige la opción con que arranca la pantalla.
       Columnas: el botón "Columnas" deja elegir qué columnas se ven; la elección se recuerda en
       este navegador. Las columnas con clase "oculta" arrancan escondidas.
+      Ancho: la tabla se achica de a pasos para entrar en la pantalla (ver ajustarAncho). Si ni
+      así entra, se desplaza de costado dentro de su marco, sin mover la página; y una columna que
+      la haría desbordar no se puede sumar desde "Columnas".
       Ver: un enlace .accion-ver con data-ver-detalle en la fila abre una ventana con todos los
       datos de la fila, incluidas las columnas escondidas; los elementos .accion-detalle de la
       fila aparecen como botones en el pie de esa ventana. Las celdas con clase "celda-titulo"
@@ -33,7 +36,8 @@
    4. Barra lateral: Lubricentro.restaurarMenu() reabre los grupos del menú que el usuario dejó
       abiertos (se recuerda en este navegador).
    5. Campo de imagen (.campo-imagen): muestra la imagen elegida antes de guardarla y descarta la
-      que no sirve (ver iniciarCampoImagen). */
+      que no sirve (ver iniciarCampoImagen).
+   6. Código postal: completa la provincia y la localidad del domicilio (ver iniciarCodigoPostal). */
 (function () {
     'use strict';
 
@@ -304,6 +308,14 @@
             tabla.parentNode.insertBefore(t.paginador, tabla.nextSibling);
         }
 
+        // El marco va solo alrededor de la tabla (el filtro y el paginador quedan afuera): es lo
+        // que se desplaza de costado si la tabla no entra.
+        t.marco = document.createElement('div');
+        t.marco.className = 'marco-tabla';
+        tabla.parentNode.insertBefore(t.marco, tabla);
+        t.marco.appendChild(tabla);
+        observarAncho(t);
+
         aplicar(t);
     }
 
@@ -395,7 +407,66 @@
                 : visibles.length + ' de ' + t.datos.length;
         }
 
+        // Otra página u otro filtro pueden traer un texto más largo: la tabla se sigue achicando si
+        // hace falta, pero no se agranda (la letra no cambiaría de tamaño con cada tecla).
+        ajustarAncho(t, false);
+
         guardarEstado(t.clave, { f: t.filtro, c: t.columna, d: t.direccion, p: t.pagina, o: t.opciones });
+    }
+
+    // --- Que la tabla entre en el ancho de la pantalla ------------------------------------------
+    // Con muchas columnas a la vista la tabla no entra: se achica de a un paso (clases ajuste-1 a
+    // ajuste-3 de Site.css: menos relleno, letra más chica, encabezados en dos renglones y, al
+    // final, las acciones una debajo de la otra) hasta que entra en su marco. Si ni así entra, el
+    // marco la desplaza de costado.
+
+    var PasosDeAjuste = 3;
+
+    function desborda(t) {
+        return t.tabla.offsetWidth > t.marco.clientWidth + 1;
+    }
+
+    // Con reiniciar vuelve a medir desde el tamaño normal (cambiaron las columnas o el ancho de la
+    // pantalla); si no, solo sigue achicando. Devuelve si la tabla entra.
+    function ajustarAncho(t, reiniciar) {
+        if (!t.marco) return true;
+        var clases = t.tabla.classList;
+        if (reiniciar || t.paso === undefined) {
+            for (var paso = 1; paso <= PasosDeAjuste; paso++) clases.remove('ajuste-' + paso);
+            t.paso = 0;
+        }
+
+        // Escondida (en un modal cerrado): no hay ancho que medir; se ajusta cuando aparezca.
+        if (!t.marco.clientWidth) return true;
+
+        while (t.paso < PasosDeAjuste && desborda(t)) {
+            t.paso++;
+            clases.add('ajuste-' + t.paso);
+        }
+
+        var entra = !desborda(t);
+        t.marco.classList.toggle('tabla-desborda', !entra);
+        return entra;
+    }
+
+    // Vuelve a ajustar la tabla cuando cambia el ancho de su marco: la ventana, la barra lateral o
+    // un modal que se abre. Se ajusta en el cuadro siguiente: hacerlo adentro del aviso cambiaría
+    // el alto del marco mientras el navegador todavía lo está midiendo.
+    function observarAncho(t) {
+        if (!window.ResizeObserver) return;
+
+        var ancho = t.marco.clientWidth;
+        var pendiente = false;
+        new ResizeObserver(function () {
+            if (pendiente) return;
+            pendiente = true;
+            window.requestAnimationFrame(function () {
+                pendiente = false;
+                if (t.marco.clientWidth === ancho) return;
+                ancho = t.marco.clientWidth;
+                ajustarAncho(t, true);
+            });
+        }).observe(t.marco);
     }
 
     function mostrarFilaVacia(t, mostrar) {
@@ -546,6 +617,12 @@
         titulo.textContent = 'Columnas visibles';
         panel.appendChild(titulo);
 
+        var aviso = document.createElement('p');
+        aviso.className = 'panel-columnas-aviso';
+        aviso.setAttribute('role', 'status');
+        aviso.hidden = true;
+        panel.appendChild(aviso);
+
         columnas.forEach(function (columna, indice) {
             var etiqueta = document.createElement('label');
             var casilla = document.createElement('input');
@@ -558,9 +635,23 @@
                     casilla.checked = true; // siempre queda al menos una columna
                     return;
                 }
+                aviso.hidden = true;
                 if (casilla.checked) ocultas = ocultas.filter(function (n) { return n !== columna.nombre; });
                 else if (ocultas.indexOf(columna.nombre) < 0) ocultas.push(columna.nombre);
                 aplicarColumnas(t, ocultas);
+
+                // Una columna con la que la tabla no entra en la pantalla, ni achicada, no se suma.
+                // Sacar columnas siempre se puede.
+                if (!ajustarAncho(t, true) && casilla.checked) {
+                    ocultas.push(columna.nombre);
+                    aplicarColumnas(t, ocultas);
+                    ajustarAncho(t, true);
+                    casilla.checked = false;
+                    aviso.textContent = 'No entra otra columna en el ancho de la pantalla: sacá alguna para mostrar «' +
+                        columna.texto + '».';
+                    aviso.hidden = false;
+                    return;
+                }
                 guardarPreferencia(claveColumnas(t), ocultas);
             });
             etiqueta.appendChild(casilla);
@@ -577,7 +668,9 @@
             Array.prototype.forEach.call(panel.querySelectorAll('input'), function (casilla, i) {
                 casilla.checked = ocultas.indexOf(columnas[i].nombre) < 0;
             });
+            aviso.hidden = true;
             aplicarColumnas(t, ocultas);
+            ajustarAncho(t, true);
             guardarPreferencia(claveColumnas(t), null);
         });
         panel.appendChild(restaurar);
@@ -587,6 +680,7 @@
 
         var cerrar = function () {
             panel.hidden = true;
+            aviso.hidden = true;
             boton.setAttribute('aria-expanded', 'false');
         };
         boton.addEventListener('click', function () {
@@ -676,7 +770,7 @@
             lista.appendChild(dd);
         });
 
-        // Las acciones de la fila (Editar, Cambiar dueño…) también desde la ventana.
+        // Las acciones de la fila (Editar…) también desde la ventana.
         var acciones = modalDetalle.querySelector('.acciones-secundarias');
         acciones.innerHTML = '';
         Array.prototype.forEach.call(fila.querySelectorAll('.accion-detalle'), function (accion) {
@@ -1055,6 +1149,121 @@
             if (!campos[i].hasAttribute('data-campo-iniciado')) iniciarCampoImagen(campos[i]);
     }
 
+    // --- Código postal: completa la provincia y la localidad ----------------------------------
+    // El campo del código lleva data-completa-provincia="idDesplegable" y
+    // data-completa-localidad="idTexto". Con un código completo (1638 o B1638ABC) le pide al
+    // servidor (CodigoPostal.ashx; la dirección la publica el Site.Master en el <body>) la provincia
+    // y las localidades del código: elige la provincia, escribe la localidad principal y deja todas
+    // las del código como sugerencias del campo de localidad. Una localidad escrita a mano no se
+    // pisa, salvo que el código nuevo sea de otra provincia (era la de otro lugar).
+
+    var FormatoCodigoPostal = /^(\d{4}|[A-Z]\d{4}[A-Z]{3})$/;
+
+    function iniciarCodigoPostal(campo) {
+        campo.setAttribute('data-codigo-postal-iniciado', '');
+
+        var url = document.body.getAttribute('data-url-codigo-postal');
+        var provincia = document.getElementById(campo.getAttribute('data-completa-provincia'));
+        var localidad = document.getElementById(campo.getAttribute('data-completa-localidad'));
+        if (!url || !window.fetch || (!provincia && !localidad)) return;
+
+        var sugerencias = null;
+        if (localidad) {
+            sugerencias = document.createElement('datalist');
+            sugerencias.id = localidad.id + '_sugerencias';
+            localidad.parentNode.appendChild(sugerencias);
+            localidad.setAttribute('list', sugerencias.id);
+        }
+
+        // El código que había al abrir el formulario no se consulta: lo cargado no se toca.
+        var codigoConsultado = codigoEscrito();
+        var sugerenciasDe = null;  // el código de las sugerencias que hay en la lista
+        var completada = null;     // la última localidad que escribió este campo
+        var espera = null;
+
+        function codigoEscrito() {
+            return campo.value.trim().toUpperCase();
+        }
+
+        function buscar(codigo, alResponder) {
+            window.fetch(url + '?codigo=' + encodeURIComponent(codigo), { credentials: 'same-origin' })
+                .then(function (respuesta) { return respuesta.ok ? respuesta.json() : null; })
+                .then(function (lugar) {
+                    // Si mientras tanto se siguió escribiendo, la respuesta ya no sirve.
+                    if (lugar && codigoEscrito() === codigo) alResponder(lugar);
+                })
+                .catch(function () { /* sin respuesta: se completan a mano */ });
+        }
+
+        function mostrarSugerencias(codigo, lugar) {
+            if (!sugerencias) return;
+            sugerencias.innerHTML = '';
+            (lugar.localidades || []).forEach(function (nombre) {
+                var opcion = document.createElement('option');
+                opcion.value = nombre;
+                sugerencias.appendChild(opcion);
+            });
+            sugerenciasDe = codigo;
+        }
+
+        function completar(codigo, lugar) {
+            mostrarSugerencias(codigo, lugar);
+            if (!lugar.provincia) return;  // código que no se conoce: queda lo que había
+
+            var provinciaAnterior = provincia ? provincia.value : '';
+            if (provincia) {
+                var existe = Array.prototype.some.call(provincia.options, function (o) { return o.value === lugar.provincia; });
+                if (existe && provincia.value !== lugar.provincia) {
+                    provincia.value = lugar.provincia;
+                    provincia.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+
+            if (!localidad) return;
+            var actual = localidad.value.trim();
+            var delCodigo = (lugar.localidades || []).some(function (n) { return normalizar(n) === normalizar(actual); });
+            var deOtraProvincia = !!provinciaAnterior && provinciaAnterior !== lugar.provincia && !delCodigo;
+            if (!actual || actual === completada || deOtraProvincia) {
+                localidad.value = lugar.localidad || '';
+                completada = localidad.value;
+            }
+        }
+
+        function consultar() {
+            var codigo = codigoEscrito();
+            if (codigo === codigoConsultado || !FormatoCodigoPostal.test(codigo)) return;
+            codigoConsultado = codigo;
+            buscar(codigo, function (lugar) { completar(codigo, lugar); });
+        }
+
+        campo.addEventListener('input', function () {
+            clearTimeout(espera);
+            espera = setTimeout(consultar, 250);
+        });
+
+        // Se guarda en mayúsculas (el CPA lleva letras).
+        campo.addEventListener('change', function () {
+            campo.value = codigoEscrito();
+            consultar();
+        });
+
+        // Editando un domicilio ya cargado, las sugerencias del código se traen recién al entrar a
+        // la localidad.
+        if (localidad) {
+            localidad.addEventListener('focus', function () {
+                var codigo = codigoEscrito();
+                if (codigo !== sugerenciasDe && FormatoCodigoPostal.test(codigo))
+                    buscar(codigo, function (lugar) { mostrarSugerencias(codigo, lugar); });
+            });
+        }
+    }
+
+    function iniciarCodigosPostales(raiz) {
+        var campos = raiz.querySelectorAll('[data-completa-provincia], [data-completa-localidad]');
+        for (var i = 0; i < campos.length; i++)
+            if (!campos[i].hasAttribute('data-codigo-postal-iniciado')) iniciarCodigoPostal(campos[i]);
+    }
+
     // Roles: pone todas las pantallas de la matriz en el mismo acceso (las fijas, como Inicio,
     // vienen deshabilitadas y no se tocan).
     Lubricentro.marcarPermisos = function (acceso) {
@@ -1114,6 +1323,7 @@
         iniciarSelectores(document);
         iniciarCondicionales(document);
         iniciarCamposImagen(document);
+        iniciarCodigosPostales(document);
     }
 
     // Sys.Application.add_load corre al cargar la página y otra vez después de cada postback

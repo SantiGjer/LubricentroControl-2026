@@ -128,7 +128,8 @@ la ve Admin.
 - **Al cargar la orden, el stock de los insumos usados se descuenta automáticamente.**
 
 ### 6.5 Proveedores, Insumos y Compras
-- ABM de proveedores (razón social, CUIT, teléfono, dirección).
+- ABM de proveedores (razón social, CUIT, teléfono, dirección). Desde el 2026-10-13, también datos
+  fiscales, de contacto, domicilio completo y cuenta para transferencias (§9.14).
 - ABM de insumos/productos (nombre, marca, unidad de medida, stock actual, stock mínimo, precio de venta).
   Desde el 2026-10-07 servicios e insumos se cargan juntos como **productos** (§9.9), con SKU,
   código de barras e IVA.
@@ -221,7 +222,7 @@ Detalles menores que se resuelven con una propuesta razonable, pendientes de val
 - **Patente (`Vehiculo.patente`):** acepta **ambos formatos** vigentes en Argentina —
   el viejo (3 letras + 3 números, ej. `ABC123`) y el Mercosur (2 letras + 3 números + 2 letras,
   ej. `AB123CD`). Se guarda en mayúsculas.
-- **Teléfono (`Cliente.telefono`, `Proveedor.telefono`, agregado 2026-10-07):** opcional. Solo
+- **Teléfono (`Cliente.telefono`, `Proveedor.telefono` y `telefonoContacto`, agregado 2026-10-07):** opcional. Solo
   números y los separadores habituales (espacios, guiones, puntos, paréntesis y un `+` adelante),
   con entre 6 y 15 dígitos. Desde el 2026-10-08 se guarda **sin los separadores** (solo los
   dígitos, y el `+` si lo tenía), igual que el DNI y el CUIT, para que todos se vean iguales:
@@ -367,7 +368,8 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
   Una empresa, y cualquiera que no sea consumidor final, se identifica con CUIT (lo exige también
   la base, `CK_Cliente_cuit`).
 - **Domicilio:** dirección, localidad, provincia (lista fija de las 23 provincias y CABA) y código
-  postal (4 dígitos, o el CPA de 8 caracteres). Todos opcionales.
+  postal (4 dígitos, o el CPA de 8 caracteres). Todos opcionales. Desde el 2026-10-13, el código
+  postal completa la provincia y la localidad (§9.15).
 
 ### 9.9 Productos: servicios e insumos como subcategorías (confirmado 2026-10-07)
 
@@ -422,8 +424,10 @@ ABM de Usuarios. Dos decisiones nuevas, relacionadas entre sí:
 
 ### 9.12 Cambio de dueño de un vehículo (confirmado 2026-10-07)
 
-- Acción **Cambiar dueño** en la lista y en la edición del vehículo (editando, el dueño se ve fijo
-  y solo se cambia por ahí), con el atajo "Nuevo cliente" si el nuevo dueño todavía no existe.
+- Botón **Cambiar dueño** en la edición del vehículo (editando, el dueño se ve fijo y solo se
+  cambia por ahí), con el atajo "Nuevo cliente" si el nuevo dueño todavía no existe. Hasta el
+  2026-10-13 también estaba en cada fila de la lista; se sacó a pedido del usuario (pendiente de
+  confirmar si también quiere sacarlo de la edición).
 - El historial no se mueve: cada turno, orden y venta guarda su propio cliente, así que lo hecho
   para el dueño anterior queda a su nombre.
 - No se permite mientras el vehículo tenga una orden en el taller (Abierta o En proceso) o un turno
@@ -448,6 +452,59 @@ pendientes de confirmar:
 - Los productos de ejemplo traen ilustraciones propias, sin derechos de terceros
   (`Database\05_ImagenesDemo.sql`, opcional). Para los productos reales, fotos propias o del
   catálogo del distribuidor.
+
+### 9.14 Datos del proveedor (2026-10-13)
+
+Pedido del usuario: "más campos coherentes" para el proveedor. Elegidos con criterio propio,
+pendientes de confirmar:
+
+- **Datos fiscales:** razón social y CUIT (como hasta ahora), **nombre de fantasía** (cómo se lo
+  conoce, si no es la razón social) y **condición frente al IVA**: Responsable Inscripto,
+  Monotributista o Exento, las de quien factura (define si le entrega al lubricentro factura A o
+  C). Es el único dato nuevo obligatorio; por defecto, Responsable Inscripto.
+- **Rubro:** qué le vende al lubricentro (lubricantes, filtros, baterías…), texto libre.
+- **Contacto:** teléfono y mail del proveedor (como hasta ahora) y **persona de contacto** (el
+  vendedor o representante) con **su teléfono**, con las mismas reglas que los demás teléfonos
+  (§9.1).
+- **Domicilio completo:** dirección, localidad, provincia y código postal, como el del cliente
+  (§9.8), con el mismo autocompletado (§9.15).
+- **Datos para transferencias:** **CBU o CVU** (22 dígitos; se acepta con espacios o guiones y se
+  guarda solo con los dígitos; no se valida el dígito verificador, igual que el CUIT) y **alias** (de
+  6 a 20 letras, números, puntos o guiones; se guarda en mayúsculas).
+- **Observaciones:** días de visita o de entrega, pedido mínimo, condiciones, hasta 500
+  caracteres.
+- Todos opcionales salvo la condición frente al IVA. En la lista, las columnas principales a la
+  vista y el resto para sumar con "Columnas" o ver en "Ver"; una opción nueva filtra por condición
+  frente al IVA. El selector de proveedor de Compras y Pagos muestra también el nombre de fantasía.
+
+### 9.15 Código postal que completa provincia y localidad (2026-10-13)
+
+- Al escribir el código postal de un cliente o de un proveedor, en cuanto está completo (`1638` o
+  `B1638ABC`) se eligen la **provincia** y la **localidad principal** del código, y las demás
+  localidades del código quedan como sugerencias del campo Localidad. Una localidad escrita a mano
+  no se pisa, salvo que el código nuevo sea de otra provincia. Abriendo un registro ya cargado no
+  cambia nada hasta que se cambia el código.
+- Con el CPA, la provincia sale de la letra (C es la Ciudad Autónoma de Buenos Aires, B la provincia
+  de Buenos Aires, X Córdoba, etc.). Los códigos del 1000 al 1499 son de la Ciudad Autónoma.
+- **Fuente:** los datos de GeoNames (www.geonames.org, licencia Creative Commons Attribution 4.0),
+  limpios de estafetas, sucursales, barrios y parajes y con los acentos recuperados. No hay una base
+  oficial abierta con los códigos de 4 dígitos. GeoNames no trae todos los códigos: para uno que no
+  está se completa la provincia si los códigos vecinos son de la misma, y la localidad queda para
+  escribir.
+- Es una ayuda para cargar: lo que se guarda es lo que queda en los campos, y se puede corregir.
+
+### 9.16 Acceso a la base con usuario y contraseña (2026-10-13)
+
+- La aplicación entra a la base con un usuario de SQL Server (`lubricentro_app`), que crea
+  `Database\01_Esquema.sql` con la misma clave en cualquier máquina. Solo lee y escribe datos: no
+  puede crear ni borrar tablas (los scripts se corren con un usuario administrador).
+- Con LocalDB la base es local de cada PC: el usuario permite que el mismo `Web.config` sirva en
+  todas, pero no que una PC use la base de otra. Para compartirla por la VPN Radmin hace falta un
+  SQL Server (Express o Developer) en la PC que haga de servidor, con conexiones TCP/IP y
+  autenticación de SQL Server habilitadas y el puerto abierto, y en las demás el `Data Source` con su
+  IP de Radmin.
+- El repositorio es público: en un servidor compartido, cambiar la clave de `lubricentro_app` y
+  ponerla en el `Web.config` de cada PC sin subirla al repositorio.
 
 ---
 

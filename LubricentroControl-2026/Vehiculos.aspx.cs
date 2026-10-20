@@ -10,8 +10,8 @@ namespace LubricentroControl_2026
     // ABM de vehículos. Acceso completo para Admin, Encargado y Empleado (Requerimientos §5);
     // Lectura, solo consulta. El formulario se abre en un modal sobre la lista. El dueño se elige
     // con un selector con búsqueda (Scripts\Lubricentro.js, .selector-busqueda) en el alta; después
-    // se cambia con "Cambiar dueño" (VehiculoDAL.CambiarDueno, Requerimientos §9.12), que tiene su
-    // propio modal y su propio atajo "Nuevo cliente".
+    // se cambia con el botón "Cambiar dueño" de la edición (VehiculoDAL.CambiarDueno,
+    // Requerimientos §9.12), que tiene su propio modal y su propio atajo "Nuevo cliente".
     public partial class Vehiculos : PaginaSegura
     {
         private const string IdModal = "modalVehiculo";
@@ -297,12 +297,9 @@ namespace LubricentroControl_2026
         protected void gvVehiculos_RowCommand(object sender, GridViewCommandEventArgs e)
         {
             if (EsSoloLectura) return;
+            if (e.CommandName != "Editar") return;
 
-            var idVehiculo = LeerIdOculto(Convert.ToString(e.CommandArgument));
-            if (e.CommandName == "Editar")
-                Seleccionar(idVehiculo);
-            else if (e.CommandName == "CambiarDueno")
-                PrepararCambioDueno(idVehiculo, 0);
+            Seleccionar(LeerIdOculto(Convert.ToString(e.CommandArgument)));
         }
 
         private void Seleccionar(int idVehiculo)

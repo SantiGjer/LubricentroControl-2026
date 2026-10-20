@@ -16,9 +16,13 @@ namespace LubricentroControl_2026.Utilidades
             return cliente.Denominacion + " — " + cliente.Documento;
         }
 
+        // Con el nombre de fantasía, si tiene: así también se lo encuentra por ese nombre.
         public static string TextoProveedor(Proveedor proveedor)
         {
-            return proveedor.RazonSocial + " — CUIT " + Proveedor.FormatearCuit(proveedor.Cuit);
+            var nombre = string.IsNullOrEmpty(proveedor.NombreFantasia)
+                ? proveedor.RazonSocial
+                : proveedor.RazonSocial + " (" + proveedor.NombreFantasia + ")";
+            return nombre + " — CUIT " + Proveedor.FormatearCuit(proveedor.Cuit);
         }
 
         // Solo los activos: a uno dado de baja no se le cargan vehículos, turnos, órdenes,

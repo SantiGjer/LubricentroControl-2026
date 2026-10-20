@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 8 de octubre de 2026
+**Última actualización:** 13 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -59,7 +59,9 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   `MovimientoStock` (kardex de stock, agregada en Fase 2), `Producto` (supertipo de Servicio e
   Insumo) y `Factura`, las dos del 2026-10-07, y `Emisor` (datos del comercio) e `ImagenProducto`
   (imagen de cada producto), las dos del 2026-10-08 — 27 tablas en total hoy, contando `MenuNivel`.
-- Capa `BIZ/Data` funcionando de punta a punta contra SQL Server.
+- Capa `BIZ/Data` funcionando de punta a punta contra SQL Server. Desde el 2026-10-13 la
+  aplicación entra con un usuario de SQL Server (`lubricentro_app`, lo crea `01_Esquema.sql`), no con
+  el de Windows.
 - **Interfaz común de las pantallas de gestión (desde 2026-10-07):** barra lateral fija a la
   izquierda con el menú del rol (grupos desplegables que se recuerdan, el isotipo del ingreso y el
   usuario abajo; en un celular se abre desde una barra superior). Cada lista va a todo el ancho con
@@ -68,23 +70,28 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
   navegador (`Scripts/Lubricentro.js`). Cada fila tiene "Ver" (todos sus datos, también para quien
   solo consulta; también con clic en el nombre). Alta, edición y detalle se abren en un modal. Para
   elegir cliente, dueño o proveedor hay selectores con búsqueda, y la edición de un registro dado
-  de baja ofrece "Reactivar".
+  de baja ofrece "Reactivar". Desde el 2026-10-13 las tablas entran en la pantalla: con muchas
+  columnas a la vista se achican de a pasos, y una columna con la que ya no entrarían no se suma.
 - **ABM de Clientes**: alta, baja lógica, edición y reactivación. Persona física o empresa (razón
   social), tipo de identificación (DNI, CUIT, CUIL, LE, LC, pasaporte), condición frente al IVA y
-  domicilio completo con provincia y código postal (desde 2026-10-07). El buscador encuentra también
+  domicilio completo con provincia y código postal (desde 2026-10-07); desde el 2026-10-13, al
+  escribir el código postal se completan la provincia y la localidad. El buscador encuentra también
   por la patente de sus vehículos. **Cuenta corriente opcional** por cliente, con un interruptor en
   el formulario.
 - **ABM de Vehículos**: alta, baja lógica, edición y reactivación; filtro por patente, marca, modelo
-  o dueño. Selector de dueño con búsqueda en el alta y **"Cambiar dueño"** después (no con una
-  orden o un turno en curso), validación de formato de patente y del año (desde 1900), y dropdown
-  fijo de tipo de combustible.
+  o dueño. Selector de dueño con búsqueda en el alta y **"Cambiar dueño"** después, desde la edición
+  (no con una orden o un turno en curso; desde el 2026-10-13 ya no está en cada fila de la lista),
+  validación de formato de patente y del año (desde 1900), y dropdown fijo de tipo de combustible.
 - **"Nuevo cliente" desde Vehículos**: si al cargar un vehículo el dueño todavía no existe como
   cliente, se puede crear sin perder los datos del vehículo ya tipeados; al crearlo se vuelve
   automáticamente con ese cliente ya seleccionado como dueño.
 - **ABM de Proveedores**: alta/baja lógica/edición, búsqueda por razón social o CUIT (tolera
-  guiones en ambos sentidos), CUIT formateado en la grilla. Primera pantalla real en modo
-  **solo consulta para el rol Empleado**: se le esconde el formulario entero y la columna de
-  acciones de la grilla, no solo los botones — solo ve el buscador y los resultados.
+  guiones en ambos sentidos), CUIT formateado en la grilla. Desde el 2026-10-13, además: nombre de
+  fantasía, condición frente al IVA, rubro, persona de contacto y su teléfono, domicilio completo
+  (con el mismo autocompletado por código postal que Clientes), CBU o CVU y alias para pagarle por
+  transferencia, y observaciones. Primera pantalla real en modo
+  **solo consulta para el rol Empleado**: se le esconde el formulario entero y "Editar" (desde el
+  2026-10-07 la columna de acciones queda por "Ver").
 - **ABM de Productos + kardex de stock** (desde 2026-10-07 reemplaza a Insumos y Servicios):
   servicios e insumos en una sola lista, con opciones para ver uno u otro. Cada producto con SKU,
   código de barras, precio final y tipo de IVA/alícuota; un insumo suma marca, unidad, stock mínimo
@@ -220,6 +227,76 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-13 — Código postal que completa el domicilio, más datos de proveedores, usuario de la base, tablas que entran en la pantalla y stock bajo de ejemplo
+
+Pedido del usuario en seis puntos, en esta máquina, después de traer los cambios del 2026-10-08 y
+recrear la base. Decisiones (las de negocio, en Requerimientos §9.12 y §9.14 a §9.16):
+
+- **El código postal completa la provincia y la localidad.** No hay datos oficiales abiertos: los
+  de GeoNames (licencia CC BY 4.0) son los únicos con los códigos de 4 dígitos y sus localidades,
+  pero vienen en mayúsculas, sin acentos, mezclados con estafetas, barrios y parajes, y sin la CABA
+  (1000 a 1499) ni algunos códigos del conurbano (1638). Se limpiaron una vez, con un script fuera
+  del repo, cruzándolos con el nomenclador de GeoNames, que trae acentos, población y cabeceras. La
+  localidad principal de cada código es la que tiene varias oficinas de correo o, si no, la más
+  poblada o la cabecera de partido o departamento: 1870 → Avellaneda, 1640 → Martínez,
+  5000 → Córdoba, 9410 → Ushuaia. En 823 de los 2.105 grupos ninguna se destaca: se completa la
+  provincia y las localidades quedan como sugerencias.
+- **La guía va como recurso embebido en `BIZ.dll`** (`Modelo/CodigosPostales.txt`, 280 KB), no en
+  la base: son datos de consulta que no se editan, como la lista de provincias, y así anda sin
+  correr ningún script. La lee `CodigosPostales.Buscar`, que además resuelve la CABA (por rango y
+  por la letra C del CPA), hace que la letra del CPA mande sobre la provincia (E2000ABC es de Entre
+  Ríos aunque el 2000 sea Rosario) y, para un código que no está, toma la provincia de los códigos
+  vecinos si coinciden (1638 → Buenos Aires, sin localidad).
+- **En la pantalla, sin postback.** `Lubricentro.js` le pide a `CodigoPostal.ashx` (exige sesión)
+  la provincia y las localidades mientras se escribe el código: elige la provincia, escribe la
+  localidad principal y deja las demás como sugerencias del campo (`datalist`). Una localidad
+  escrita a mano no se pisa, salvo que el código nuevo sea de otra provincia. Editando, no se
+  consulta nada hasta que se cambia el código. `Domicilio` (Modelo) junta lo que comparten Cliente
+  y Proveedor: provincias, formato del código postal y el domicilio en una línea, que ya no repite
+  "Ciudad Autónoma de Buenos Aires" cuando es localidad y provincia a la vez.
+- **Proveedores con más datos:** nombre de fantasía, condición frente al IVA (Responsable
+  Inscripto, Monotributista o Exento: las de quien factura, `Iva.CondicionesDeQuienFactura`, que
+  ahora usa también Datos del comercio), rubro, persona de contacto y su teléfono, domicilio
+  completo, CBU o CVU y alias, y observaciones. El CBU se valida como el CUIT: 22 dígitos, sin
+  dígito verificador. El selector de proveedor de Compras y Pagos muestra el nombre de fantasía, así
+  que también se lo encuentra por ese nombre. En el demo, Correas y Filtros del Norte pasó a ser el
+  nombre de fantasía de un monotributista, para que haya uno.
+- **Usuario y contraseña de la base.** `01_Esquema.sql` crea el login `lubricentro_app` (solo
+  `db_datareader` y `db_datawriter`: no puede crear ni borrar tablas) y `Web.config` entra con él.
+  LocalDB acepta usuarios de SQL Server (está en modo mixto), así que el mismo `Web.config` sirve en
+  cualquier máquina que arme la base con los scripts. Lo que el usuario preguntaba —conectarse desde
+  otra PC— **no se puede con LocalDB**, que solo acepta conexiones de la misma máquina: hace falta
+  un SQL Server (Express o Developer) en la PC que haga de servidor, con TCP/IP y modo mixto, el
+  puerto abierto en el firewall y, en las demás, el `Data Source` con su IP de Radmin. El login es
+  justo lo que necesita ese caso, porque el usuario de Windows de una PC no existe en la otra. Si el
+  login ya existe, `01` no le cambia la clave, para no pisar la de un servidor compartido. En esta
+  PC está instalada una instancia completa (`MSSQLSERVER`), detenida.
+- **"Cambiar dueño" se sacó de cada fila de Vehículos** (y de "Ver"); sigue en Editar, al lado del
+  dueño. Se interpretó así porque el cambio de dueño lo pidió el mismo usuario el 2026-10-07:
+  pendiente de confirmar (sección 4).
+- **Tablas que entran en la pantalla.** `Lubricentro.js` envuelve cada tabla en un marco, mide si
+  entra y la achica de a pasos (`ajuste-1` a `ajuste-3` en Site.css: relleno, letra, encabezados en
+  dos renglones, "Ver" y "Editar" uno debajo del otro). Una columna con la que no entra ni achicada
+  no se suma desde "Columnas", con un aviso en el panel: el límite sale del ancho real, no es un
+  número fijo (a 1366 px entran casi todas las de Clientes; a 1920, todas). Si ni con las de siempre
+  entra (pantalla angosta, celular), se desplaza la tabla dentro de su marco y no la página. Se
+  vuelve a medir al cambiar el ancho (`ResizeObserver`), también cuando se abre un modal con tablas.
+  El documento, el CUIT y el teléfono no se parten nunca: en la primera prueba, el último paso los
+  dejaba partir y el CUIT quedaba en tres renglones, cortado en los guiones.
+- **Stock bajo de ejemplo:** 6 insumos nuevos (filtro de habitáculo, lámpara H4, escobillas,
+  aceite de caja ATF, grasa y aditivo) que terminan por debajo del mínimo: entran con poco stock,
+  las órdenes abiertas del demo usan algunos (no tienen venta todavía, así que no cambia ningún
+  total) y el ATF se da de baja por envases dañados con un ajuste manual. Tienen sus ilustraciones,
+  dibujadas con el mismo estilo que las otras 20 y cargadas por `05_ImagenesDemo.sql`.
+
+Verificado: MSBuild y `aspnet_compiler` sin errores; base recreada con `01` a `05` (kardex
+coherente, 6 insumos en stock bajo, 26 imágenes); `lubricentro_app` entra, lee y escribe, y no
+puede crear una tabla. En Chrome sin ventana (puppeteer-core, en el scratchpad): 42 pruebas de los
+cambios (el handler con 11 códigos, el autocompletado en Clientes y Proveedores, alta y edición de un
+proveedor con todos los datos, Vehículos, el reporte de stock bajo y el Inicio, y las columnas a
+1100, 1366 y 1920 px y en un celular) y el recorrido de las 18 pantallas con Admin, Empleado y
+Lectura sin errores de JavaScript ni desplazamiento horizontal de la página (47 pruebas).
 
 ### 2026-10-08 (cont. 2) — Imagen de cada producto e imágenes de ejemplo
 
@@ -1942,7 +2019,22 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
 - **Cambiar la contraseña del administrador.** Hoy es la sembrada por el script (`Admin123!`).
 - **Borrar los usuarios de prueba** (`encargado@lubricentro.com`, `empleado@lubricentro.com`,
   `lectura@lubricentro.com`) y el script `03_UsuariosDePrueba.sql` de la entrega final.
-- **Conmutar a la VPN Radmin:** cambiar la cadena `LubricentroDB` en `Web.config`.
+- **Conmutar a la VPN Radmin:** cambiar la cadena `LubricentroDB` en `Web.config`. Desde el
+  2026-10-13 ya entra con usuario y clave (`lubricentro_app`), que es lo que hace falta desde otra
+  PC. Falta el servidor: LocalDB no acepta conexiones de otra máquina, así que en la PC que haga de
+  servidor va un SQL Server (Express o Developer) con TCP/IP y modo mixto, el puerto 1433 abierto en
+  el firewall y los scripts `01` a `05` corridos ahí; en las demás, el `Data Source` con su IP de
+  Radmin. En esa base, cambiar la clave de `lubricentro_app` (el repo es público) y ponerla en el
+  `Web.config` de cada PC sin commitearla. En la PC de Federico hay una instancia `MSSQLSERVER`
+  instalada, detenida.
+- **Confirmar "Cambiar dueño" (2026-10-13):** el usuario pidió sacar el botón de Vehículos; se sacó
+  de cada fila de la lista y quedó en la edición del vehículo. Si quería sacar la función entera,
+  falta quitar ese botón, su modal, el regreso desde Clientes (`cambioDueno=1`) y
+  `VehiculoDAL.CambiarDueno`.
+- **Guía de códigos postales incompleta:** los datos de GeoNames no traen algunos códigos (1638,
+  Vicente López) ni la ciudad de otros (9100 Trelew, 2800 Zárate: solo barrios o parajes). Con
+  esos se completa solo la provincia. Se puede mejorar con otra fuente o agregando a mano esas
+  filas en `BIZ\Modelo\CodigosPostales.txt`.
 - **Salida real de mails — mecanismo listo, falta decidir el estado final.** `<system.net>/
   <mailSettings>` ya está configurado (Gmail + contraseña de aplicación, ver sesión
   2026-09-15 cont.), con las credenciales en `Web.MailSettings.config` (gitignoreado). Hoy

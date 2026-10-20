@@ -63,9 +63,6 @@
                     <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir %>'
                         CommandName="Editar" CommandArgument='<%# Eval("IdVehiculo") %>'
                         CausesValidation="false">Editar</asp:LinkButton>
-                    <asp:LinkButton runat="server" CssClass="accion-detalle" Visible='<%# PuedeEscribir && (bool)Eval("Activo") %>'
-                        CommandName="CambiarDueno" CommandArgument='<%# Eval("IdVehiculo") %>'
-                        CausesValidation="false">Cambiar dueño</asp:LinkButton>
                 </ItemTemplate>
             </asp:TemplateField>
         </Columns>

@@ -26,6 +26,11 @@ namespace BIZ.Modelo
         public static readonly string[] Condiciones =
             { ConsumidorFinal, ResponsableInscripto, Monotributista, SujetoExento };
 
+        // Las de quien emite facturas, el comercio (DatosEmisor) o un proveedor: un consumidor
+        // final no factura.
+        public static readonly string[] CondicionesDeQuienFactura =
+            { ResponsableInscripto, Monotributista, SujetoExento };
+
         public static bool EsTipoValido(string tipoIva)
         {
             return Array.IndexOf(Tipos, tipoIva) >= 0;

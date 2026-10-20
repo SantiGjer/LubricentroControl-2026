@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using BIZ.Modelo;
 
 namespace BIZ.Data
@@ -7,7 +8,9 @@ namespace BIZ.Data
     public static class ProveedorDAL
     {
         private const string SelectBase = @"
-            SELECT idProveedor, razonSocial, cuit, telefono, email, direccion, activo
+            SELECT idProveedor, razonSocial, nombreFantasia, cuit, condicionIva, rubro, telefono, email,
+                   contacto, telefonoContacto, direccion, localidad, provincia, codigoPostal, cbu, alias,
+                   observaciones, activo
             FROM Proveedor";
 
         private static Proveedor Mapear(DataRow fila)
@@ -16,11 +19,46 @@ namespace BIZ.Data
             {
                 IdProveedor = AccesoDatos.LeerInt(fila, "idProveedor"),
                 RazonSocial = AccesoDatos.LeerString(fila, "razonSocial"),
+                NombreFantasia = AccesoDatos.LeerString(fila, "nombreFantasia"),
                 Cuit = AccesoDatos.LeerString(fila, "cuit"),
+                CondicionIva = AccesoDatos.LeerString(fila, "condicionIva"),
+                Rubro = AccesoDatos.LeerString(fila, "rubro"),
                 Telefono = AccesoDatos.LeerString(fila, "telefono"),
                 Email = AccesoDatos.LeerString(fila, "email"),
+                Contacto = AccesoDatos.LeerString(fila, "contacto"),
+                TelefonoContacto = AccesoDatos.LeerString(fila, "telefonoContacto"),
                 Direccion = AccesoDatos.LeerString(fila, "direccion"),
+                Localidad = AccesoDatos.LeerString(fila, "localidad"),
+                Provincia = AccesoDatos.LeerString(fila, "provincia"),
+                CodigoPostal = AccesoDatos.LeerString(fila, "codigoPostal"),
+                Cbu = AccesoDatos.LeerString(fila, "cbu"),
+                Alias = AccesoDatos.LeerString(fila, "alias"),
+                Observaciones = AccesoDatos.LeerString(fila, "observaciones"),
                 Activo = AccesoDatos.LeerBool(fila, "activo")
+            };
+        }
+
+        private static List<SqlParameter> ParametrosDe(Proveedor proveedor)
+        {
+            return new List<SqlParameter>
+            {
+                AccesoDatos.Param("@razonSocial", proveedor.RazonSocial),
+                AccesoDatos.Param("@nombreFantasia", proveedor.NombreFantasia),
+                AccesoDatos.Param("@cuit", proveedor.Cuit),
+                AccesoDatos.Param("@condicionIva", proveedor.CondicionIva),
+                AccesoDatos.Param("@rubro", proveedor.Rubro),
+                AccesoDatos.Param("@telefono", proveedor.Telefono),
+                AccesoDatos.Param("@email", proveedor.Email),
+                AccesoDatos.Param("@contacto", proveedor.Contacto),
+                AccesoDatos.Param("@telefonoContacto", proveedor.TelefonoContacto),
+                AccesoDatos.Param("@direccion", proveedor.Direccion),
+                AccesoDatos.Param("@localidad", proveedor.Localidad),
+                AccesoDatos.Param("@provincia", proveedor.Provincia),
+                AccesoDatos.Param("@codigoPostal", proveedor.CodigoPostal),
+                AccesoDatos.Param("@cbu", proveedor.Cbu),
+                AccesoDatos.Param("@alias", proveedor.Alias),
+                AccesoDatos.Param("@observaciones", proveedor.Observaciones),
+                AccesoDatos.Param("@activo", proveedor.Activo)
             };
         }
 
@@ -58,17 +96,15 @@ namespace BIZ.Data
         private static int Insertar(Proveedor proveedor)
         {
             const string sql = @"
-                INSERT INTO Proveedor (razonSocial, cuit, telefono, email, direccion, activo)
-                VALUES (@razonSocial, @cuit, @telefono, @email, @direccion, @activo);
+                INSERT INTO Proveedor (razonSocial, nombreFantasia, cuit, condicionIva, rubro, telefono, email,
+                                       contacto, telefonoContacto, direccion, localidad, provincia, codigoPostal,
+                                       cbu, alias, observaciones, activo)
+                VALUES (@razonSocial, @nombreFantasia, @cuit, @condicionIva, @rubro, @telefono, @email,
+                        @contacto, @telefonoContacto, @direccion, @localidad, @provincia, @codigoPostal,
+                        @cbu, @alias, @observaciones, @activo);
                 SELECT CAST(SCOPE_IDENTITY() AS INT);";
 
-            var id = AccesoDatos.Escalar(sql,
-                AccesoDatos.Param("@razonSocial", proveedor.RazonSocial),
-                AccesoDatos.Param("@cuit", proveedor.Cuit),
-                AccesoDatos.Param("@telefono", proveedor.Telefono),
-                AccesoDatos.Param("@email", proveedor.Email),
-                AccesoDatos.Param("@direccion", proveedor.Direccion),
-                AccesoDatos.Param("@activo", proveedor.Activo));
+            var id = AccesoDatos.Escalar(sql, ParametrosDe(proveedor).ToArray());
 
             return System.Convert.ToInt32(id);
         }
@@ -99,18 +135,16 @@ namespace BIZ.Data
 
             const string sql = @"
                 UPDATE Proveedor
-                SET razonSocial = @razonSocial, cuit = @cuit, telefono = @telefono,
-                    email = @email, direccion = @direccion, activo = @activo
+                SET razonSocial = @razonSocial, nombreFantasia = @nombreFantasia, cuit = @cuit,
+                    condicionIva = @condicionIva, rubro = @rubro, telefono = @telefono, email = @email,
+                    contacto = @contacto, telefonoContacto = @telefonoContacto, direccion = @direccion,
+                    localidad = @localidad, provincia = @provincia, codigoPostal = @codigoPostal,
+                    cbu = @cbu, alias = @alias, observaciones = @observaciones, activo = @activo
                 WHERE idProveedor = @idProveedor";
 
-            AccesoDatos.Ejecutar(sql,
-                AccesoDatos.Param("@razonSocial", proveedor.RazonSocial),
-                AccesoDatos.Param("@cuit", proveedor.Cuit),
-                AccesoDatos.Param("@telefono", proveedor.Telefono),
-                AccesoDatos.Param("@email", proveedor.Email),
-                AccesoDatos.Param("@direccion", proveedor.Direccion),
-                AccesoDatos.Param("@activo", proveedor.Activo),
-                AccesoDatos.Param("@idProveedor", proveedor.IdProveedor));
+            var parametros = ParametrosDe(proveedor);
+            parametros.Add(AccesoDatos.Param("@idProveedor", proveedor.IdProveedor));
+            AccesoDatos.Ejecutar(sql, parametros.ToArray());
 
             return ResultadoOperacion.Ok("Proveedor actualizado.");
         }

@@ -116,8 +116,8 @@ namespace LubricentroControl_2026
             }
         }
 
-        // Listas fijas de los desplegables (Cliente.TiposCliente, TiposDocumento, Provincias e
-        // Iva.Condiciones).
+        // Listas fijas de los desplegables (Cliente.TiposCliente y TiposDocumento, Iva.Condiciones y
+        // Domicilio.Provincias).
         private void CargarListas()
         {
             rblTipoCliente.Items.Clear();
@@ -134,7 +134,7 @@ namespace LubricentroControl_2026
 
             ddlProvincia.Items.Clear();
             ddlProvincia.Items.Add(new ListItem("(sin especificar)", ""));
-            foreach (var provincia in Cliente.Provincias)
+            foreach (var provincia in Domicilio.Provincias)
                 ddlProvincia.Items.Add(new ListItem(provincia, provincia));
         }
 
@@ -263,7 +263,7 @@ namespace LubricentroControl_2026
 
         protected void valCodigoPostal_ServerValidate(object source, ServerValidateEventArgs args)
         {
-            args.IsValid = Cliente.EsCodigoPostalValido(args.Value);
+            args.IsValid = Domicilio.EsCodigoPostalValido(args.Value);
         }
 
         protected void btnGuardar_Click(object sender, EventArgs e)

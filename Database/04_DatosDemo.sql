@@ -2,7 +2,8 @@
    LubricentroControl 2026 — Datos de ejemplo (demo)
 
    Carga 10 filas de ejemplo en cada entidad de negocio (Clientes, Vehículos,
-   Proveedores, Servicios, Insumos, Turnos, Órdenes de trabajo) más el circuito
+   Proveedores, Servicios, Turnos, Órdenes de trabajo; de Insumos, 16, 6 de
+   ellos con el stock por debajo del mínimo) más el circuito
    de dinero y stock derivado (Compras, Ventas generadas al cerrar una orden,
    Pagos, Cuentas corrientes de Cliente/Proveedor y kardex de MovimientoStock),
    armado a mano respetando las mismas reglas que aplican los DAL reales de
@@ -101,18 +102,54 @@ DECLARE @vehSofia INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'AG567D
 DECLARE @vehAgroDiaz INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'PQR987');
 DECLARE @vehValentina INT = (SELECT idVehiculo FROM Vehiculo WHERE patente = 'AH890FG');
 
-/* --- 3. Proveedores (10) --------------------------------------------------- */
-INSERT INTO Proveedor (razonSocial, cuit, telefono, email, direccion) VALUES
-    ('YPF Lubricantes S.A.', '30711234561', '1150001001', 'ventas@ypflubricantes.com.ar', 'Av. del Libertador 1000, CABA'),
-    ('Shell Argentina S.R.L.', '30711234562', '1150001002', 'contacto@shellargentina.com.ar', 'Av. Leandro N. Alem 2000, CABA'),
-    ('Distribuidora Filtros del Sur S.A.', '30711234563', '1150001003', 'ventas@filtrosdelsur.com.ar', 'Av. Hipólito Yrigoyen 3400, Lanús'),
-    ('Repuestos Mercedes S.R.L.', '30711234564', '1150001004', 'info@repuestosmercedes.com.ar', 'Av. Mitre 4500, San Justo'),
-    ('Neumáticos del Plata S.A.', '30711234565', '1150001005', 'ventas@neumaticosdelplata.com.ar', 'Camino Gral. Belgrano 5600, Quilmes'),
-    ('Baterías Moura Argentina S.A.', '30711234566', '1150001006', 'comercial@baterismoura.com.ar', 'Ruta 8 Km 45, Pilar'),
-    ('Autopartes San Martín S.R.L.', '30711234567', '1150001007', 'ventas@autopartessm.com.ar', 'Av. San Martín 6700, CABA'),
-    ('Lubricantes Total Argentina S.A.', '30711234568', '1150001008', 'info@totalargentina.com.ar', 'Av. Córdoba 7800, CABA'),
-    ('Distribuidora Bosch Repuestos S.A.', '30711234569', '1150001009', 'ventas@boschrepuestos.com.ar', 'Av. Boulogne Sur Mer 8900, San Isidro'),
-    ('Correas y Filtros del Norte S.R.L.', '30711234570', '1150001010', 'contacto@correasfiltrosnorte.com.ar', 'Panamericana Km 32, Tigre');
+/* --- 3. Proveedores (10) ---------------------------------------------------
+   Con los datos de §9.14: nombre de fantasía, condición frente al IVA, rubro,
+   persona de contacto, domicilio completo y, en algunos, la cuenta para pagarles
+   por transferencia. Los CBU (999…) y los alias son de ejemplo, no de cuentas
+   reales. Correas y Filtros del Norte es el nombre de fantasía de un
+   monotributista (le entrega factura C); el resto son responsables inscriptos. */
+INSERT INTO Proveedor (razonSocial, nombreFantasia, cuit, condicionIva, rubro, telefono, email, contacto, telefonoContacto,
+                       direccion, localidad, provincia, codigoPostal, cbu, alias, observaciones) VALUES
+    (N'YPF Lubricantes S.A.', NULL, '30711234561', 'Responsable Inscripto', N'Lubricantes',
+     '1150001001', 'ventas@ypflubricantes.com.ar', N'Martín Acosta', '1155550101',
+     N'Av. del Libertador 1000', N'Ciudad Autónoma de Buenos Aires', N'Ciudad Autónoma de Buenos Aires', '1112',
+     '9990001000000000000001', 'YPF.LUBRI.DEMO', N'Visita los martes. Pedido mínimo: 20 litros.'),
+    (N'Shell Argentina S.R.L.', NULL, '30711234562', 'Responsable Inscripto', N'Lubricantes',
+     '1150001002', 'contacto@shellargentina.com.ar', N'Lucía Benítez', '1155550102',
+     N'Av. Leandro N. Alem 2000', N'Ciudad Autónoma de Buenos Aires', N'Ciudad Autónoma de Buenos Aires', '1001',
+     '9990001000000000000002', 'SHELL.LUB.DEMO', NULL),
+    (N'Distribuidora Filtros del Sur S.A.', N'Filtros del Sur', '30711234563', 'Responsable Inscripto', N'Filtros',
+     '1150001003', 'ventas@filtrosdelsur.com.ar', N'Gustavo Ríos', '1155550103',
+     N'Av. Hipólito Yrigoyen 3400', N'Lanús', N'Buenos Aires', '1824',
+     '9990001000000000000003', 'FILTROS.SUR.PAGOS', N'Entrega en 48 horas. Cuenta corriente a 30 días.'),
+    (N'Repuestos Mercedes S.R.L.', N'Repuestos Mercedes', '30711234564', 'Responsable Inscripto', N'Repuestos',
+     '1150001004', 'info@repuestosmercedes.com.ar', N'Carlos Medina', '1155550104',
+     N'Av. Mitre 4500', N'San Justo', N'Buenos Aires', '1754',
+     '9990001000000000000004', 'REPUESTOS.MERCEDES', NULL),
+    (N'Neumáticos del Plata S.A.', N'Neumáticos del Plata', '30711234565', 'Responsable Inscripto', N'Neumáticos',
+     '1150001005', 'ventas@neumaticosdelplata.com.ar', N'Paula Sosa', '1155550105',
+     N'Camino Gral. Belgrano 5600', N'Quilmes', N'Buenos Aires', '1878',
+     NULL, NULL, N'Solo vende al contado.'),
+    (N'Baterías Moura Argentina S.A.', N'Moura', '30711234566', 'Responsable Inscripto', N'Baterías',
+     '1150001006', 'comercial@baterismoura.com.ar', N'Diego Paz', '1155550106',
+     N'Ruta 8 Km 45', N'Pilar', N'Buenos Aires', '1629',
+     '9990001000000000000006', 'MOURA.BATERIAS.AR', N'Retira las baterías usadas para reciclarlas.'),
+    (N'Autopartes San Martín S.R.L.', N'Autopartes SM', '30711234567', 'Responsable Inscripto', N'Autopartes',
+     '1150001007', 'ventas@autopartessm.com.ar', N'Jorge Villalba', '1155550107',
+     N'Av. San Martín 6700', N'Ciudad Autónoma de Buenos Aires', N'Ciudad Autónoma de Buenos Aires', '1419',
+     NULL, NULL, NULL),
+    (N'Lubricantes Total Argentina S.A.', N'Total', '30711234568', 'Responsable Inscripto', N'Lubricantes',
+     '1150001008', 'info@totalargentina.com.ar', N'Florencia Gil', '1155550108',
+     N'Av. Córdoba 7800', N'Ciudad Autónoma de Buenos Aires', N'Ciudad Autónoma de Buenos Aires', '1414',
+     '9990001000000000000008', 'TOTAL.LUB.DEMO', NULL),
+    (N'Distribuidora Bosch Repuestos S.A.', N'Bosch Repuestos', '30711234569', 'Responsable Inscripto', N'Repuestos y encendido',
+     '1150001009', 'ventas@boschrepuestos.com.ar', N'Ricardo Luna', '1155550109',
+     N'Av. Boulogne Sur Mer 8900', N'Boulogne', N'Buenos Aires', '1609',
+     '9990001000000000000009', 'BOSCH.REP.DEMO', N'Cuenta corriente a 15 días.'),
+    (N'Héctor Gómez', N'Correas y Filtros del Norte', '20287654329', 'Monotributista', N'Correas y filtros',
+     '1150001010', 'contacto@correasfiltrosnorte.com.ar', N'Héctor Gómez', '1155550110',
+     N'Panamericana Km 32', N'Tigre', N'Buenos Aires', '1648',
+     NULL, NULL, N'Atiende de lunes a viernes de 8 a 16.');
 
 DECLARE @provYPF INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234561');
 DECLARE @provShell INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234562');
@@ -123,12 +160,14 @@ DECLARE @provMoura INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '307112
 DECLARE @provSanMartin INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234567');
 DECLARE @provTotal INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234568');
 DECLARE @provBosch INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234569');
-DECLARE @provNorte INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '30711234570');
+DECLARE @provNorte INT = (SELECT idProveedor FROM Proveedor WHERE cuit = '20287654329');
 
-/* --- 4. Productos (20): 10 servicios y 10 insumos ---------------------------
+/* --- 4. Productos (26): 10 servicios y 16 insumos ---------------------------
    Supertipo Producto con lo común (precio final con IVA, SKU, código de barras
    e IVA) y la fila del subtipo con el mismo id, igual que ProductoDAL.Crear.
-   Los servicios no llevan código de barras; los insumos, un EAN-13 de ejemplo. */
+   Los servicios no llevan código de barras; los insumos, un EAN-13 de ejemplo.
+   Los últimos 6 insumos quedan con el stock por debajo del mínimo, para el
+   reporte de stock bajo y el Inicio (ver más abajo). */
 INSERT INTO Producto (tipo, nombre, descripcion, sku, codigoBarras, precio, tipoIva, alicuotaIva) VALUES
     ('Servicio', N'Cambio de aceite y filtro', N'Cambio de aceite de motor y filtro de aceite', 'SRV-ACEITE', NULL, 15000, 'Gravado', 21),
     ('Servicio', N'Rotación de neumáticos', N'Rotación de las cuatro ruedas', 'SRV-ROTACION', NULL, 8000, 'Gravado', 21),
@@ -149,7 +188,13 @@ INSERT INTO Producto (tipo, nombre, descripcion, sku, codigoBarras, precio, tipo
     ('Insumo', N'Refrigerante', N'Refrigerante orgánico listo para usar', 'REFRIGERANTE-1L', '7790123000072', 3800, 'Gravado', 21),
     ('Insumo', N'Correa de distribución', NULL, 'CORREA-DIST', '7790123000089', 18000, 'Gravado', 21),
     ('Insumo', N'Batería 12V 65Ah', NULL, 'BAT-12V-65AH', '7790123000096', 55000, 'Gravado', 21),
-    ('Insumo', N'Bujías (caja x4)', NULL, 'BUJIAS-X4', '7790123000102', 9000, 'Gravado', 21);
+    ('Insumo', N'Bujías (caja x4)', NULL, 'BUJIAS-X4', '7790123000102', 9000, 'Gravado', 21),
+    ('Insumo', N'Filtro de habitáculo', N'Filtro de aire del habitáculo (antipolen)', 'FIL-HABITACULO', '7790123000119', 7500, 'Gravado', 21),
+    ('Insumo', N'Lámpara H4 12V', N'Lámpara halógena para faros, 60/55 W', 'LAMP-H4', '7790123000126', 3200, 'Gravado', 21),
+    ('Insumo', N'Escobillas limpiaparabrisas (par)', NULL, 'ESCOBILLAS-PAR', '7790123000133', 12000, 'Gravado', 21),
+    ('Insumo', N'Aceite de caja ATF', N'Fluido para cajas automáticas y dirección hidráulica', 'ATF-DEXRON-1L', '7790123000140', 6800, 'Gravado', 21),
+    ('Insumo', N'Grasa multipropósito', N'Grasa de litio, pote de 500 g', 'GRASA-500G', '7790123000157', 4800, 'Gravado', 21),
+    ('Insumo', N'Aditivo limpia inyectores', NULL, 'ADIT-INYECT', '7790123000164', 5500, 'Gravado', 21);
 
 INSERT INTO Servicio (idServicio)
 SELECT idProducto FROM Producto WHERE tipo = 'Servicio';
@@ -169,7 +214,13 @@ FROM (VALUES
     (N'Refrigerante', N'Genérico', N'Litro', 5),
     (N'Correa de distribución', N'Gates', N'Unidad', 3),
     (N'Batería 12V 65Ah', N'Moura', N'Unidad', 2),
-    (N'Bujías (caja x4)', N'NGK', N'Caja', 5)
+    (N'Bujías (caja x4)', N'NGK', N'Caja', 5),
+    (N'Filtro de habitáculo', N'Mann', N'Unidad', 6),
+    (N'Lámpara H4 12V', N'Philips', N'Unidad', 10),
+    (N'Escobillas limpiaparabrisas (par)', N'Bosch', N'Par', 4),
+    (N'Aceite de caja ATF', N'Shell', N'Litro', 8),
+    (N'Grasa multipropósito', N'YPF', N'Unidad', 5),
+    (N'Aditivo limpia inyectores', N'Liqui Moly', N'Unidad', 6)
 ) AS v(nombre, marca, unidad, minimo)
 JOIN Producto p ON p.nombre = v.nombre AND p.tipo = 'Insumo';
 
@@ -194,10 +245,20 @@ DECLARE @insRefrigerante INT = (SELECT idProducto FROM Producto WHERE tipo = 'In
 DECLARE @insCorrea INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Correa de distribución');
 DECLARE @insBateria INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Batería 12V 65Ah');
 DECLARE @insBujias INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Bujías (caja x4)');
+DECLARE @insFiltroHabitaculo INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Filtro de habitáculo');
+DECLARE @insLamparaH4 INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Lámpara H4 12V');
+DECLARE @insEscobillas INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Escobillas limpiaparabrisas (par)');
+DECLARE @insAtf INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Aceite de caja ATF');
+DECLARE @insGrasa INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Grasa multipropósito');
+DECLARE @insAditivo INT = (SELECT idProducto FROM Producto WHERE tipo = 'Insumo' AND nombre = N'Aditivo limpia inyectores');
 
 /* Stock corriente de cada insumo: arranca en el stock inicial y se va
    actualizando en línea con cada línea de Orden/Compra más abajo — con solo
-   10 insumos alcanza con una variable por insumo, sin cursores. */
+   16 insumos alcanza con una variable por insumo, sin cursores.
+   Los 6 últimos arrancan con poco stock y terminan por debajo del mínimo:
+   las órdenes abiertas usan escobillas, lámparas, grasa y aditivo, y el aceite
+   de caja se da de baja por envases dañados (ajuste manual), así que se agota.
+   El filtro de habitáculo ya entra por debajo de su mínimo. */
 DECLARE @stockAceite15 DECIMAL(12,2) = 100;
 DECLARE @stockAceite5w30 DECIMAL(12,2) = 80;
 DECLARE @stockFiltroAceite DECIMAL(12,2) = 50;
@@ -208,6 +269,12 @@ DECLARE @stockRefrigerante DECIMAL(12,2) = 25;
 DECLARE @stockCorrea DECIMAL(12,2) = 15;
 DECLARE @stockBateria DECIMAL(12,2) = 10;
 DECLARE @stockBujias DECIMAL(12,2) = 20;
+DECLARE @stockFiltroHabitaculo DECIMAL(12,2) = 3;
+DECLARE @stockLamparaH4 DECIMAL(12,2) = 6;
+DECLARE @stockEscobillas DECIMAL(12,2) = 2;
+DECLARE @stockAtf DECIMAL(12,2) = 4;
+DECLARE @stockGrasa DECIMAL(12,2) = 3;
+DECLARE @stockAditivo DECIMAL(12,2) = 5;
 
 INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion) VALUES
     (@insAceite15, 'AjusteManual', NULL, NULL, @admin, @stockAceite15, 0, @stockAceite15, 'Alta de insumo — stock inicial'),
@@ -219,7 +286,20 @@ INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsua
     (@insRefrigerante, 'AjusteManual', NULL, NULL, @admin, @stockRefrigerante, 0, @stockRefrigerante, 'Alta de insumo — stock inicial'),
     (@insCorrea, 'AjusteManual', NULL, NULL, @admin, @stockCorrea, 0, @stockCorrea, 'Alta de insumo — stock inicial'),
     (@insBateria, 'AjusteManual', NULL, NULL, @admin, @stockBateria, 0, @stockBateria, 'Alta de insumo — stock inicial'),
-    (@insBujias, 'AjusteManual', NULL, NULL, @admin, @stockBujias, 0, @stockBujias, 'Alta de insumo — stock inicial');
+    (@insBujias, 'AjusteManual', NULL, NULL, @admin, @stockBujias, 0, @stockBujias, 'Alta de insumo — stock inicial'),
+    (@insFiltroHabitaculo, 'AjusteManual', NULL, NULL, @admin, @stockFiltroHabitaculo, 0, @stockFiltroHabitaculo, 'Alta de insumo — stock inicial'),
+    (@insLamparaH4, 'AjusteManual', NULL, NULL, @admin, @stockLamparaH4, 0, @stockLamparaH4, 'Alta de insumo — stock inicial'),
+    (@insEscobillas, 'AjusteManual', NULL, NULL, @admin, @stockEscobillas, 0, @stockEscobillas, 'Alta de insumo — stock inicial'),
+    (@insAtf, 'AjusteManual', NULL, NULL, @admin, @stockAtf, 0, @stockAtf, 'Alta de insumo — stock inicial'),
+    (@insGrasa, 'AjusteManual', NULL, NULL, @admin, @stockGrasa, 0, @stockGrasa, 'Alta de insumo — stock inicial'),
+    (@insAditivo, 'AjusteManual', NULL, NULL, @admin, @stockAditivo, 0, @stockAditivo, 'Alta de insumo — stock inicial');
+
+/* Aceite de caja: los 4 litros se dan de baja por envases dañados (ajuste
+   manual con salida, como MovimientoStockDAL.RegistrarAjusteManual con una
+   cantidad negativa, que guarda el motivo como descripción): queda agotado. */
+SET @stockAtf = @stockAtf - 4;
+INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+VALUES (@insAtf, 'AjusteManual', NULL, NULL, @encargado, 0, 4, @stockAtf, N'Envases dañados en el depósito');
 
 UPDATE Insumo SET stockActual = @stockAceite15 WHERE idInsumo = @insAceite15;
 UPDATE Insumo SET stockActual = @stockAceite5w30 WHERE idInsumo = @insAceite5w30;
@@ -231,6 +311,12 @@ UPDATE Insumo SET stockActual = @stockRefrigerante WHERE idInsumo = @insRefriger
 UPDATE Insumo SET stockActual = @stockCorrea WHERE idInsumo = @insCorrea;
 UPDATE Insumo SET stockActual = @stockBateria WHERE idInsumo = @insBateria;
 UPDATE Insumo SET stockActual = @stockBujias WHERE idInsumo = @insBujias;
+UPDATE Insumo SET stockActual = @stockFiltroHabitaculo WHERE idInsumo = @insFiltroHabitaculo;
+UPDATE Insumo SET stockActual = @stockLamparaH4 WHERE idInsumo = @insLamparaH4;
+UPDATE Insumo SET stockActual = @stockEscobillas WHERE idInsumo = @insEscobillas;
+UPDATE Insumo SET stockActual = @stockAtf WHERE idInsumo = @insAtf;
+UPDATE Insumo SET stockActual = @stockGrasa WHERE idInsumo = @insGrasa;
+UPDATE Insumo SET stockActual = @stockAditivo WHERE idInsumo = @insAditivo;
 
 /* --- 6. Turnos (10, uno por cliente) ---------------------------------------
    Los que van a derivar en una Orden de trabajo (más abajo) quedan
@@ -391,7 +477,7 @@ INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsua
 VALUES (@insCorrea, 'Orden', NULL, @orden4, @empleado, 0, 1, @stockCorrea, 'Orden de trabajo #' + CAST(@orden4 AS VARCHAR(10)));
 UPDATE Insumo SET stockActual = @stockCorrea WHERE idInsumo = @insCorrea;
 
--- Orden 5: Agropecuaria Díaz S.A. / PQR987 — Abierta (batería, sin cerrar)
+-- Orden 5: Agropecuaria Díaz S.A. / PQR987 — Abierta (batería y grasa para los bornes, sin cerrar)
 INSERT INTO OrdenDeTrabajo (idTurno, idCliente, idVehiculo, idUsuario, fecha, kilometraje, observaciones, estado)
 VALUES (@turnoAgroDiaz, @cliAgroDiaz, @vehAgroDiaz, @empleado, DATEADD(DAY, -5, GETDATE()), 120000, 'Batería descargada', 'Abierta');
 DECLARE @orden5 INT = SCOPE_IDENTITY();
@@ -404,14 +490,26 @@ INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsua
 VALUES (@insBateria, 'Orden', NULL, @orden5, @empleado, 0, 1, @stockBateria, 'Orden de trabajo #' + CAST(@orden5 AS VARCHAR(10)));
 UPDATE Insumo SET stockActual = @stockBateria WHERE idInsumo = @insBateria;
 
--- Orden 6: Juan Pérez / ABC123 — walk-in, Abierta (rotación, sin insumos)
+INSERT INTO DetalleOrdenInsumo (idOrden, idInsumo, cantidad, precioUnitario) VALUES (@orden5, @insGrasa, 1, 4800);
+SET @stockGrasa = @stockGrasa - 1;
+INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+VALUES (@insGrasa, 'Orden', NULL, @orden5, @empleado, 0, 1, @stockGrasa, 'Orden de trabajo #' + CAST(@orden5 AS VARCHAR(10)));
+UPDATE Insumo SET stockActual = @stockGrasa WHERE idInsumo = @insGrasa;
+
+-- Orden 6: Juan Pérez / ABC123 — walk-in, Abierta (rotación y escobillas nuevas)
 INSERT INTO OrdenDeTrabajo (idTurno, idCliente, idVehiculo, idUsuario, fecha, kilometraje, observaciones, estado)
 VALUES (NULL, @cliJuan, @vehJuan, @empleado, DATEADD(DAY, -3, GETDATE()), 60000, 'Walk-in: rotación de neumáticos', 'Abierta');
 DECLARE @orden6 INT = SCOPE_IDENTITY();
 
 INSERT INTO DetalleOrdenServicio (idOrden, idServicio, cantidad, precioAplicado) VALUES (@orden6, @svcRotacion, 1, 8000);
 
--- Orden 7: Luis Fernández / JKL321 — walk-in, En proceso (líquido de frenos)
+INSERT INTO DetalleOrdenInsumo (idOrden, idInsumo, cantidad, precioUnitario) VALUES (@orden6, @insEscobillas, 1, 12000);
+SET @stockEscobillas = @stockEscobillas - 1;
+INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+VALUES (@insEscobillas, 'Orden', NULL, @orden6, @empleado, 0, 1, @stockEscobillas, 'Orden de trabajo #' + CAST(@orden6 AS VARCHAR(10)));
+UPDATE Insumo SET stockActual = @stockEscobillas WHERE idInsumo = @insEscobillas;
+
+-- Orden 7: Luis Fernández / JKL321 — walk-in, En proceso (líquido de frenos y dos lámparas quemadas)
 INSERT INTO OrdenDeTrabajo (idTurno, idCliente, idVehiculo, idUsuario, fecha, kilometraje, observaciones, estado)
 VALUES (NULL, @cliLuis, @vehLuis, @empleado, DATEADD(DAY, -6, GETDATE()), 150000, 'Walk-in: cambio de líquido de frenos', 'En proceso');
 DECLARE @orden7 INT = SCOPE_IDENTITY();
@@ -423,6 +521,12 @@ SET @stockLiquidoFrenos = @stockLiquidoFrenos - 2;
 INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
 VALUES (@insLiquidoFrenos, 'Orden', NULL, @orden7, @empleado, 0, 2, @stockLiquidoFrenos, 'Orden de trabajo #' + CAST(@orden7 AS VARCHAR(10)));
 UPDATE Insumo SET stockActual = @stockLiquidoFrenos WHERE idInsumo = @insLiquidoFrenos;
+
+INSERT INTO DetalleOrdenInsumo (idOrden, idInsumo, cantidad, precioUnitario) VALUES (@orden7, @insLamparaH4, 2, 3200);
+SET @stockLamparaH4 = @stockLamparaH4 - 2;
+INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+VALUES (@insLamparaH4, 'Orden', NULL, @orden7, @empleado, 0, 2, @stockLamparaH4, 'Orden de trabajo #' + CAST(@orden7 AS VARCHAR(10)));
+UPDATE Insumo SET stockActual = @stockLamparaH4 WHERE idInsumo = @insLamparaH4;
 
 -- Orden 8: Laura Martínez / AF234BC — walk-in, se cancela (repone el stock cargado, OrdenDeTrabajoDAL.Cancelar)
 INSERT INTO OrdenDeTrabajo (idTurno, idCliente, idVehiculo, idUsuario, fecha, kilometraje, observaciones, estado)
@@ -443,7 +547,7 @@ VALUES (@insFiltroComb, 'CancelacionOrden', NULL, @orden8, @empleado, 1, 0, @sto
 UPDATE Insumo SET stockActual = @stockFiltroComb WHERE idInsumo = @insFiltroComb;
 UPDATE OrdenDeTrabajo SET estado = 'Cancelada' WHERE idOrden = @orden8;
 
--- Orden 9: Sofía Romero / AG567DE — walk-in, En proceso
+-- Orden 9: Sofía Romero / AG567DE — walk-in, En proceso (filtro de combustible y aditivo)
 INSERT INTO OrdenDeTrabajo (idTurno, idCliente, idVehiculo, idUsuario, fecha, kilometraje, observaciones, estado)
 VALUES (NULL, @cliSofia, @vehSofia, @empleado, DATEADD(DAY, -4, GETDATE()), 40000, 'Walk-in: cambio de filtro de combustible', 'En proceso');
 DECLARE @orden9 INT = SCOPE_IDENTITY();
@@ -455,6 +559,12 @@ SET @stockFiltroComb = @stockFiltroComb - 1;
 INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
 VALUES (@insFiltroComb, 'Orden', NULL, @orden9, @empleado, 0, 1, @stockFiltroComb, 'Orden de trabajo #' + CAST(@orden9 AS VARCHAR(10)));
 UPDATE Insumo SET stockActual = @stockFiltroComb WHERE idInsumo = @insFiltroComb;
+
+INSERT INTO DetalleOrdenInsumo (idOrden, idInsumo, cantidad, precioUnitario) VALUES (@orden9, @insAditivo, 1, 5500);
+SET @stockAditivo = @stockAditivo - 1;
+INSERT INTO MovimientoStock (idInsumo, tipoMovimiento, idCompra, idOrden, idUsuario, entrada, salida, stockResultante, descripcion)
+VALUES (@insAditivo, 'Orden', NULL, @orden9, @empleado, 0, 1, @stockAditivo, 'Orden de trabajo #' + CAST(@orden9 AS VARCHAR(10)));
+UPDATE Insumo SET stockActual = @stockAditivo WHERE idInsumo = @insAditivo;
 
 -- Orden 10: Valentina Torres / AH890FG — walk-in, se cierra
 INSERT INTO OrdenDeTrabajo (idTurno, idCliente, idVehiculo, idUsuario, fecha, kilometraje, observaciones, estado)
@@ -772,7 +882,7 @@ VALUES (@provYPF, 'Pago', NULL, @pago10, 0, 10000,
 
 GO
 
-PRINT 'Datos de ejemplo cargados: 10 Clientes, 10 Vehículos, 10 Proveedores, 20 Productos (10 Servicios y 10 Insumos), 10 Turnos, 10 Órdenes de trabajo (4 Cerrada con venta generada, 3 En proceso, 2 Abierta, 1 Cancelada), 10 Compras (6 Contado, 4 Cuenta corriente), 10 Pagos.';
+PRINT 'Datos de ejemplo cargados: 10 Clientes, 10 Vehículos, 10 Proveedores, 26 Productos (10 Servicios y 16 Insumos, 6 con stock bajo), 10 Turnos, 10 Órdenes de trabajo (4 Cerrada con venta generada, 3 En proceso, 2 Abierta, 1 Cancelada), 10 Compras (6 Contado, 4 Cuenta corriente), 10 Pagos.';
 
 SELECT 'Clientes' AS tabla, COUNT(*) AS filas FROM Cliente
 UNION ALL SELECT 'Vehiculos', COUNT(*) FROM Vehiculo
@@ -798,6 +908,14 @@ JOIN Producto p ON p.idProducto = i.idInsumo
 JOIN MovimientoStock m ON m.idInsumo = i.idInsumo
 GROUP BY i.idInsumo, p.nombre, i.stockActual
 HAVING i.stockActual <> SUM(m.entrada) - SUM(m.salida);
+
+/* Stock bajo (stockActual < stockMinimo, como ProductoDAL.ListarStockBajo): los
+   6 insumos agregados para el reporte. */
+SELECT p.nombre, i.stockActual, i.stockMinimo, i.stockMinimo - i.stockActual AS faltante
+FROM Insumo i
+JOIN Producto p ON p.idProducto = i.idInsumo
+WHERE i.stockActual < i.stockMinimo
+ORDER BY faltante DESC;
 
 /* Invariante de ventas: el total es la suma de las líneas, y neto + IVA = total.
    Tampoco debería devolver filas. */

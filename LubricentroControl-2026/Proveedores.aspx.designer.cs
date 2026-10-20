@@ -44,14 +44,47 @@ namespace LubricentroControl_2026
         /// <summary>Control txtCuit.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtCuit;
 
+        /// <summary>Control txtNombreFantasia.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtNombreFantasia;
+
+        /// <summary>Control ddlCondicionIva.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlCondicionIva;
+
+        /// <summary>Control txtRubro.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtRubro;
+
         /// <summary>Control txtTelefono.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtTelefono;
 
         /// <summary>Control txtEmail.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtEmail;
 
+        /// <summary>Control txtContacto.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtContacto;
+
+        /// <summary>Control txtTelefonoContacto.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtTelefonoContacto;
+
         /// <summary>Control txtDireccion.</summary>
         protected global::System.Web.UI.WebControls.TextBox txtDireccion;
+
+        /// <summary>Control txtCodigoPostal.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtCodigoPostal;
+
+        /// <summary>Control txtLocalidad.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtLocalidad;
+
+        /// <summary>Control ddlProvincia.</summary>
+        protected global::System.Web.UI.WebControls.DropDownList ddlProvincia;
+
+        /// <summary>Control txtCbu.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtCbu;
+
+        /// <summary>Control txtAlias.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtAlias;
+
+        /// <summary>Control txtObservaciones.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtObservaciones;
 
         /// <summary>Control btnBorrar.</summary>
         protected global::System.Web.UI.WebControls.Button btnBorrar;

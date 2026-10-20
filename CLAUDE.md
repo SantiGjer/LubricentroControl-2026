@@ -40,6 +40,14 @@ Ventas; **cambio de dueño** de un vehículo; los turnos de hoy primero; el cier
 cliente con cuenta corriente pregunta si el saldo va a la cuenta o se cobra; y **roles y permisos
 editables** (`~/Roles`).
 
+**Pedido del 2026-10-13 (6 puntos, ver Requerimientos §9.12 y §9.14 a §9.16):** el **código
+postal completa la provincia y la localidad** (Clientes y Proveedores); **proveedores con más
+datos** (nombre de fantasía, condición frente al IVA, rubro, contacto, domicilio completo, CBU y
+alias, observaciones); la aplicación entra a la base con **usuario y contraseña de SQL Server**
+(`lubricentro_app`); "Cambiar dueño" solo desde la edición del vehículo; las **tablas se achican
+para entrar en la pantalla** y no se suma una columna que no entra; y 6 insumos de ejemplo con
+stock bajo.
+
 Fuera de las 6 fases del Roadmap se agregó un **cuarto rol, Lectura** (`Nivel.Lectura = 4`,
 jerarquía por debajo de Empleado): solo consulta en absolutamente todas las pantallas de negocio
 (incluidas las que a Empleado le dan alta/edición completa — Clientes, Vehículos, Turnos, Órdenes,
@@ -141,9 +149,19 @@ abiertas están en `Docs/EstadoActual.md`, sección 4.
   una base anterior la app falla apenas se inicia sesión, porque el menú lee `Menu.icono`. Volvió
   a cambiar el 2026-10-08 (tabla `Emisor`): sin ella fallan "Facturar" y Datos del comercio, y la
   pantalla no aparece en el menú. Y otra vez el mismo día (tabla `ImagenProducto`): sin ella falla
-  todo lo que lista productos (Productos, Inicio, Órdenes, Compras, Stock bajo). `01` borra los
-  datos; `03`, `04` y `05` son opcionales (`04` usa al admin si faltan los usuarios de `03`; `05`
-  carga las imágenes de los productos de `04`).
+  todo lo que lista productos (Productos, Inicio, Órdenes, Compras, Stock bajo). Y el 2026-10-13
+  (columnas nuevas de `Proveedor` y el usuario `lubricentro_app`): con una base anterior la
+  aplicación ni siquiera entra a la base. `01` borra los datos; `03`, `04` y `05` son opcionales
+  (`04` usa al admin si faltan los usuarios de `03`; `05` carga las imágenes de los productos de
+  `04`).
+- **La aplicación entra a la base con usuario y clave, no con Windows** (desde 2026-10-13):
+  `lubricentro_app` / `Lubricentro.2026`, que crea `01_Esquema.sql` (solo lee y escribe datos). Los
+  scripts se siguen corriendo con el usuario de Windows (administrador de LocalDB). **LocalDB no
+  acepta conexiones desde otra PC**: para compartir una base por VPN Radmin hace falta un SQL
+  Server (Express o Developer) con TCP/IP y modo mixto en la PC servidor, el puerto abierto, y en
+  las demás el `Data Source` con su IP de Radmin. El repo es público: en un servidor compartido,
+  cambiar la clave ahí y en el `Web.config` de cada PC, sin commitearla (`01` no le cambia la clave
+  a un login que ya existe).
 - **Los datos de ejemplo se fechan al correr `04`.** Turnos, órdenes, compras y pagos salen de
   `GETDATE()`, y dos turnos quedan para ese mismo día (10:30 y 17:00). Con la base recreada otro
   día, "hoy" sale vacío en Turnos y en el Inicio: no es un bug, se vuelven a correr `01` a `04`.
@@ -189,9 +207,12 @@ requerimientos §4 — no partir `BIZ`):
 - `Modelo/` — entidades (`Usuario`, `Nivel` + `PermisoPantalla`, `Url`, `ItemMenu`,
   `RecuperacionClave`, `ResultadoOperacion`, `Cliente`, `Vehiculo`, `Proveedor`, `Producto`,
   `MovimientoStock`, `Turno`, `OrdenDeTrabajo`, `DetalleOrdenServicio`, `DetalleOrdenInsumo`,
-  `ComprobanteVenta`, `Factura` + `TotalesFactura` + `DatosEmisor`, etc.) y dos clases estáticas de
-  reglas de formato: `FormatoTelefono` e `Iva` (tipos, alícuotas, condiciones frente al IVA y el
-  cálculo del IVA contenido). `Imagen` es la imagen de un producto con sus reglas: qué archivo se
+  `ComprobanteVenta`, `Factura` + `TotalesFactura` + `DatosEmisor`, etc.) y clases estáticas de
+  reglas: `FormatoTelefono`, `Iva` (tipos, alícuotas, condiciones frente al IVA y el cálculo del IVA
+  contenido), `Domicilio` (provincias, formato del código postal y el domicilio en una línea, de
+  Cliente y Proveedor) y `CodigosPostales` (provincia y localidades de un código postal, desde
+  2026-10-13: lee `CodigosPostales.txt`, recurso embebido en `BIZ.dll`, armado con datos de
+  GeoNames, CC BY 4.0). `Imagen` es la imagen de un producto con sus reglas: qué archivo se
   acepta y cómo se achica y se arma la miniatura (`Imagen.Preparar`, con `System.Drawing`).
 - `Data/` — el DAL **y las reglas de negocio**, juntos en la misma clase por entidad (ej.
   `UsuarioDAL`, `RecuperacionClaveDAL`, `MenuDAL`, `NivelDAL`, `ClienteDAL`, `VehiculoDAL`,
@@ -250,6 +271,14 @@ Reglas transversales de la capa web:
     `HeaderStyle-CssClass="sin-orden"` en la columna de Acciones y `data-estatica` para una tabla
     con el estilo pero sin orden (la matriz de Roles). El estado sobrevive a los postbacks en
     `hdnEstadoTablas` (Site.Master).
+  - **La tabla entra en la pantalla (desde 2026-10-13):** `Lubricentro.js` la envuelve en un
+    `div.marco-tabla`, mide si entra y la achica de a pasos (`ajuste-1` a `ajuste-3` en Site.css,
+    que se suman: relleno, letra, encabezados en dos renglones, acciones una debajo de la otra)
+    hasta que entra. Desde "Columnas" no se suma una columna con la que no entra ni achicada (avisa
+    en el panel). Si ni con las de siempre entra (pantalla angosta), el marco la desplaza de costado
+    (`tabla-desborda`) y la página no se mueve. Las celdas `sin-corte` (documento, CUIT, teléfono)
+    no se parten nunca. Se vuelve a medir con cada cambio de ancho (`ResizeObserver`; dentro de un
+    modal, al abrirse). No hace falta nada en el markup.
   - **Opciones de filtro (desde 2026-10-07):** un `<div class="opciones-tabla" id="opcionesX">`
     justo debajo de la barra, con grupos `.grupo-opciones` de botones `.opcion data-valor="…"`
     (`""` = todos, `"A|B"` = cualquiera de los dos), y `data-opciones-tabla="opcionesX"` en el
@@ -273,6 +302,14 @@ Reglas transversales de la capa web:
     botón + HiddenField con el id), con las opciones en `data-opciones="<%: OpcionesClientes %>"`
     (`Utilidades/Selectores.cs`). Con `data-postback="true"` elegir dispara el `OnValueChanged`
     del HiddenField (va adentro de un `UpdatePanel`).
+  - **Código postal (desde 2026-10-13):** el TextBox del código lleva
+    `data-completa-localidad="txtLocalidad" data-completa-provincia="ddlProvincia"` y esos dos
+    controles, `ClientIDMode="Static"`. Mientras se escribe, `Lubricentro.js` le pide a
+    `CodigoPostal.ashx` (la dirección la publica el `<body>` del Site.Master en
+    `data-url-codigo-postal`) la provincia y las localidades: elige la provincia, escribe la
+    localidad principal y deja las demás como sugerencias (`datalist`). No pisa una localidad
+    escrita a mano salvo que el código nuevo sea de otra provincia. El servidor valida igual
+    (`Domicilio.EsCodigoPostalValido`, `EsProvinciaValida`).
 - **Imágenes (desde 2026-10-08, hoy solo de productos).** El archivo va en la base
   (`ImagenProducto`, con su miniatura), no en una carpeta del sitio: la base es compartida y cada
   máquina corre su propio IIS. Las pantallas lo piden aparte a `ImagenProducto.ashx` (exige
@@ -319,6 +356,8 @@ Estas no se ven leyendo un solo archivo:
   después no la cambia) y es sin validez fiscal (sin CAE).
 - **Cambiar el dueño de un vehículo es `VehiculoDAL.CambiarDueno`**, no la edición (`Actualizar`
   ya no toca `idCliente`): se rechaza con una orden en el taller o un turno pendiente del vehículo.
+  En la pantalla es el botón "Cambiar dueño" de la edición; desde el 2026-10-13 ya no está en cada
+  fila de la lista.
 - **Stock automático en los dos sentidos:** baja al agregar una línea de insumo a una orden de
   trabajo (`DetalleOrdenInsumoDAL.Agregar`, Fase 3, ya implementado), sube al registrar una compra
   a proveedor (`ComprobanteCompraDAL.Crear`, Fase 4). **Cancelar una orden de trabajo repone el stock
@@ -399,9 +438,18 @@ hasta 800 px de lado) y su `miniatura` de 120 px en `VARBINARY(MAX)`, con el tip
 (`ProductoDAL` solo lee la fecha). `05_ImagenesDemo.sql` carga las de los productos de ejemplo,
 con cada binario partido en renglones con `\` al final (T-SQL une las partes).
 
-Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`). Para pasar al
-SQL Server del lubricentro por VPN Radmin alcanza con cambiar la cadena `LubricentroDB` en
-`Web.config`; los scripts corren igual.
+El 2026-10-13 `Proveedor` sumó `nombreFantasia`, `condicionIva` (la única obligatoria, con
+`CK_Proveedor_condicionIva`: Responsable Inscripto, Monotributista o Exento), `rubro`, `contacto`,
+`telefonoContacto`, `localidad`, `provincia`, `codigoPostal`, `cbu`, `alias` y `observaciones`. Y
+`01_Esquema.sql` crea, al final, el login de SQL Server `lubricentro_app` (si no existe) y su
+usuario en la base, con `db_datareader` y `db_datawriter`: la aplicación no necesita más (no hace
+DDL). Un script nuevo que necesite crear o borrar tablas se corre con un usuario administrador,
+no con ese.
+
+Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`), con el usuario
+`lubricentro_app`. Para pasar al SQL Server del lubricentro por VPN Radmin alcanza con cambiar el
+`Data Source` de la cadena `LubricentroDB` en `Web.config` (y la clave, ver «Al levantar el
+proyecto en otra máquina»); los scripts corren igual.
 
 Usuario inicial que siembra `02_DatosIniciales.sql`: **admin@lubricentro.com / Admin123!**
 
@@ -508,10 +556,12 @@ Desde 2026-10-07, además:
 
 | Campo | Regla | Dónde vive |
 |---|---|---|
-| `Cliente.telefono`, `Proveedor.telefono` | opcional; se escribe con números, espacios, guiones, puntos, paréntesis y "+" inicial, 6 a 15 dígitos; se guarda y se muestra solo con los dígitos (y el "+"), desde 2026-10-08 | `Modelo/FormatoTelefono.cs` (`EsValido` y `Normalizar`; clase aparte: la propiedad `Telefono` de las entidades taparía el nombre) |
+| `Cliente.telefono`, `Proveedor.telefono` y `telefonoContacto` | opcional; se escribe con números, espacios, guiones, puntos, paréntesis y "+" inicial, 6 a 15 dígitos; se guarda y se muestra solo con los dígitos (y el "+"), desde 2026-10-08 | `Modelo/FormatoTelefono.cs` (`EsValido` y `Normalizar`; clase aparte: la propiedad `Telefono` de las entidades taparía el nombre) |
 | `Vehiculo.anio` | opcional; de 1900 al año que viene | `Vehiculo.AnioMinimo`/`AnioMaximo`; la pantalla usa un `RangeValidator` con esos límites puestos desde el código |
-| `Cliente.codigoPostal` | opcional; 4 dígitos o CPA (`C1406GZA`), en mayúsculas | `Cliente.EsCodigoPostalValido` |
-| `Cliente.provincia` | opcional; una de las 23 provincias o CABA | `Cliente.Provincias` (lista fija del desplegable) |
+| `Cliente.codigoPostal`, `Proveedor.codigoPostal` | opcional; 4 dígitos o CPA (`C1406GZA`), en mayúsculas | `Domicilio.EsCodigoPostalValido` (desde 2026-10-13; antes en `Cliente`) |
+| `Cliente.provincia`, `Proveedor.provincia` | opcional; una de las 23 provincias o CABA | `Domicilio.Provincias` (lista fija del desplegable) |
+| `Proveedor.cbu` (desde 2026-10-13) | opcional; CBU o CVU de 22 dígitos, se acepta con espacios o guiones y se guarda solo con los dígitos; sin dígito verificador | `Proveedor.EsCbuValido` |
+| `Proveedor.alias` (desde 2026-10-13) | opcional; de 6 a 20 letras, números, puntos o guiones; en mayúsculas | `Proveedor.EsAliasValido` |
 | `Producto.sku`, `Producto.codigoBarras` | opcionales; letras, números y guiones; únicos; el SKU en mayúsculas | `Producto.EsCodigoValido` + `ProductoDAL` (unicidad) |
 | `Producto.alicuotaIva` | 21, 10,5, 27, 5 o 2,5 si es gravado; 0 si es exento o no gravado | `Iva.Alicuotas`; en un desplegable, el valor va en formato invariante `"0.##"` (la base la devuelve como `10.50`) |
 | Imagen de un producto (`ImagenProducto`, desde 2026-10-08) | opcional; PNG o JPG de hasta 5 MB, reconocido por sus primeros bytes y no por la extensión; se guarda en el mismo formato, a lo sumo de 800 px de lado, con una miniatura de 120 px | `Modelo/Imagen.cs` (`Preparar`); los límites llegan a la pantalla desde ahí |
@@ -927,3 +977,28 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   **Las imágenes de ejemplo son propias.** Las fotos de productos de marca tienen derechos de sus
   dueños y los bancos libres ponen condiciones (Pixabay no deja usar marcas en un uso comercial):
   las de `Database\ImagenesDemo` se dibujaron para el proyecto.
+
+- **Código postal, proveedores, usuario de la base y tablas que entran (sesión 2026-10-13).**
+  Detalle en `Docs/EstadoActual.md` y Requerimientos §9.14 a §9.16. Lo que deja precedente:
+
+  **Datos de consulta grandes que no se editan: recurso embebido en `BIZ`, no tabla.** La guía de
+  códigos postales (2.105 grupos, 280 KB) va en `BIZ\Modelo\CodigosPostales.txt` como
+  `EmbeddedResource` y `CodigosPostales` la lee una vez (`Lazy`). Es la misma idea que
+  `Domicilio.Provincias`, más grande: no hay que correr un script para que ande y no cambia entre
+  máquinas. Datos de terceros: GeoNames, CC BY 4.0, con la atribución y los cambios en el
+  encabezado del archivo. Si hay que corregir un código, se edita el archivo y se recompila.
+
+  **Una ayuda de carga no reemplaza la validación.** El autocompletado es solo del navegador; el
+  servidor valida el código y la provincia igual, y lo que se guarda es lo que quedó en los campos.
+
+  **Una regla compartida por dos entidades va en una clase estática propia** (`Domicilio`, como
+  `FormatoTelefono`): `Proveedor` no llama a `Cliente` para validar su domicilio.
+
+  **La aplicación entra con un login de SQL Server de permisos mínimos.** `db_datareader` +
+  `db_datawriter` alcanzan porque ningún DAL hace DDL; si alguno lo necesitara, es un cambio de
+  diseño, no un permiso más. El login se crea solo si no existe, para no pisar la clave de un
+  servidor compartido.
+
+  **El límite de columnas depende del ancho real, no de un número fijo.** Se mide la tabla en el
+  navegador: con un número fijo, en un monitor ancho sobrarían columnas y en uno chico faltarían.
+  Las celdas que no se pueden partir (documento, CUIT, teléfono) mandan sobre el ajuste.

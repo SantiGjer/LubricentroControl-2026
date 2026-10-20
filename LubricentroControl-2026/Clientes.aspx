@@ -218,9 +218,12 @@
                             <asp:TextBox ID="txtDireccion" runat="server" MaxLength="200" placeholder="Calle y número" />
                         </div>
 
+                        <%-- Al escribir el código postal se completan la provincia y la localidad
+                             (Lubricentro.js, data-completa-localidad / data-completa-provincia). --%>
                         <div class="col-md-4 campo">
                             <asp:Label runat="server" AssociatedControlID="txtCodigoPostal">Código postal</asp:Label>
-                            <asp:TextBox ID="txtCodigoPostal" runat="server" MaxLength="8" placeholder="1638 o C1406GZA" />
+                            <asp:TextBox ID="txtCodigoPostal" runat="server" MaxLength="8" placeholder="1638 o C1406GZA"
+                                data-completa-localidad="txtLocalidad" data-completa-provincia="ddlProvincia" />
                             <asp:CustomValidator runat="server" ControlToValidate="txtCodigoPostal"
                                 OnServerValidate="valCodigoPostal_ServerValidate"
                                 CssClass="text-danger small" Display="Dynamic" ValidationGroup="Cliente"
@@ -229,12 +232,17 @@
 
                         <div class="col-md-6 campo">
                             <asp:Label runat="server" AssociatedControlID="txtLocalidad">Localidad</asp:Label>
-                            <asp:TextBox ID="txtLocalidad" runat="server" MaxLength="100" />
+                            <asp:TextBox ID="txtLocalidad" runat="server" MaxLength="100" ClientIDMode="Static" autocomplete="off" />
                         </div>
 
                         <div class="col-md-6 campo">
                             <asp:Label runat="server" AssociatedControlID="ddlProvincia">Provincia</asp:Label>
-                            <asp:DropDownList ID="ddlProvincia" runat="server" />
+                            <asp:DropDownList ID="ddlProvincia" runat="server" ClientIDMode="Static" />
+                        </div>
+
+                        <div class="col-12">
+                            <p class="texto-ayuda">Con el código postal se completan la provincia y la localidad; si el código
+                                tiene varias localidades, aparecen al escribir en Localidad.</p>
                         </div>
 
                         <div class="col-12 campo">

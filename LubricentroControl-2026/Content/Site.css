@@ -922,6 +922,18 @@ body.sin-menu .pie-pagina {
     accent-color: #c0272d;
 }
 
+/* "No entra otra columna": la columna que se quiso sumar no entra en el ancho de la pantalla. */
+.pantalla-abm .panel-columnas-aviso {
+    margin: 0 0.4rem 0.4rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    background: #f8e3e4;
+    color: #8f1d22;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    max-width: 260px;
+}
+
 .pantalla-abm .panel-columnas-restaurar {
     display: block;
     width: 100%;
@@ -1571,6 +1583,44 @@ body.sin-menu .pie-pagina {
 .pantalla-abm .tabla-compacta td {
     padding: 0.6rem 0.5rem;
     font-size: 0.85rem;
+}
+
+/* Ajuste al ancho (Lubricentro.js, ajustarAncho): con muchas columnas a la vista la tabla se
+   achica de a un paso hasta entrar en la pantalla. Los pasos se suman: con ajuste-3 la tabla
+   también tiene ajuste-1 y ajuste-2. */
+.pantalla-abm .tabla-abm.ajuste-1 th,
+.pantalla-abm .tabla-abm.ajuste-1 td {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+/* Segundo paso: letra más chica y los encabezados largos ("Condición IVA") en dos renglones. */
+.pantalla-abm .tabla-abm.ajuste-2 th,
+.pantalla-abm .tabla-abm.ajuste-2 td {
+    padding: 0.5rem 0.4rem;
+    font-size: 0.8rem;
+}
+
+.pantalla-abm .tabla-abm.ajuste-2 th.ordenable {
+    white-space: normal;
+}
+
+/* Último paso: la letra más chica que se sigue leyendo bien, y las acciones de la fila (Ver,
+   Editar) una debajo de la otra. Las palabras no se cortan, y las celdas sin-corte (documento,
+   CUIT, teléfono) tampoco: partido en los guiones, un CUIT no se lee. */
+.pantalla-abm .tabla-abm.ajuste-3 th,
+.pantalla-abm .tabla-abm.ajuste-3 td {
+    padding: 0.45rem 0.3rem;
+    font-size: 0.75rem;
+}
+
+.pantalla-abm .tabla-abm.ajuste-3 td:last-child:has(.accion-ver) {
+    white-space: normal;
+}
+
+/* Si ni achicada entra (una pantalla angosta), se desplaza de costado la tabla y no la página. */
+.pantalla-abm .marco-tabla.tabla-desborda {
+    overflow-x: auto;
 }
 
 /* Encabezados ordenables (Lubricentro.js): flecha doble apagada, o la del sentido elegido. */

@@ -13,8 +13,7 @@ namespace BIZ.Modelo
 
         // Un consumidor final no factura: el comercio es responsable inscripto, monotributista o
         // exento. La condición define la letra (Factura.DeterminarTipo).
-        public static readonly string[] Condiciones =
-            { Iva.ResponsableInscripto, Iva.Monotributista, Iva.SujetoExento };
+        public static readonly string[] Condiciones = Iva.CondicionesDeQuienFactura;
 
         public string RazonSocial { get; set; }
         public string Cuit { get; set; }

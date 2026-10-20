@@ -18,11 +18,13 @@
 
 </head>
 <%-- Los separadores del formato regional del servidor, para que Lubricentro.js ordene bien
-     las columnas con importes (N2 sale "1.234,50" o "1,234.50" según la cultura).
+     las columnas con importes (N2 sale "1.234,50" o "1,234.50" según la cultura), y la dirección
+     a la que Lubricentro.js le pide la provincia y la localidad de un código postal.
      con-menu / sin-menu: con usuario logueado la página lleva la barra lateral. --%>
 <body class="<%: ClaseCuerpo %>"
       data-separador-decimal="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator %>"
-      data-separador-miles="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator %>">
+      data-separador-miles="<%: System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator %>"
+      data-url-codigo-postal="<%: ResolveUrl("~/CodigoPostal.ashx") %>">
     <form runat="server">
         <asp:ScriptManager runat="server">
             <Scripts>

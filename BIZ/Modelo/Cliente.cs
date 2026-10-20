@@ -24,22 +24,9 @@ namespace BIZ.Modelo
         public static readonly string[] TiposDocumento =
             { DocumentoDni, DocumentoCuit, DocumentoCuil, DocumentoLe, DocumentoLc, DocumentoPasaporte };
 
-        // Las 23 provincias y la Ciudad Autónoma de Buenos Aires, en orden alfabético.
-        public static readonly string[] Provincias =
-        {
-            "Buenos Aires", "Catamarca", "Chaco", "Chubut", "Ciudad Autónoma de Buenos Aires", "Córdoba",
-            "Corrientes", "Entre Ríos", "Formosa", "Jujuy", "La Pampa", "La Rioja", "Mendoza", "Misiones",
-            "Neuquén", "Río Negro", "Salta", "San Juan", "San Luis", "Santa Cruz", "Santa Fe",
-            "Santiago del Estero", "Tierra del Fuego", "Tucumán"
-        };
-
         private static readonly Regex FormatoDni = new Regex(@"^\d{7,8}$", RegexOptions.Compiled);
         private static readonly Regex FormatoCuit = new Regex(@"^\d{11}$", RegexOptions.Compiled);
         private static readonly Regex FormatoPasaporte = new Regex(@"^[A-Z0-9]{6,12}$", RegexOptions.Compiled);
-
-        // Código postal: el de 4 dígitos (1638) o el CPA de 8 caracteres (C1406GZA).
-        private static readonly Regex FormatoCodigoPostal =
-            new Regex(@"^(\d{4}|[A-Z]\d{4}[A-Z]{3})$", RegexOptions.Compiled);
 
         private static readonly Regex FormatoEmail =
             new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
@@ -87,21 +74,7 @@ namespace BIZ.Modelo
         // Dirección, localidad, provincia y código postal, lo que esté cargado.
         public string DomicilioCompleto
         {
-            get { return ArmarDomicilio(Direccion, Localidad, Provincia, CodigoPostal); }
-        }
-
-        public static string ArmarDomicilio(string direccion, string localidad, string provincia, string codigoPostal)
-        {
-            var partes = new StringBuilder();
-            foreach (var parte in new[] { direccion, localidad, provincia })
-            {
-                if (string.IsNullOrWhiteSpace(parte)) continue;
-                if (partes.Length > 0) partes.Append(", ");
-                partes.Append(parte.Trim());
-            }
-            if (!string.IsNullOrWhiteSpace(codigoPostal))
-                partes.Append(partes.Length > 0 ? " (CP " : "(CP ").Append(codigoPostal.Trim()).Append(")");
-            return partes.ToString();
+            get { return Domicilio.Armar(Direccion, Localidad, Provincia, CodigoPostal); }
         }
 
         public static bool EsTipoDocumentoNumerico(string tipoDocumento)
@@ -172,13 +145,6 @@ namespace BIZ.Modelo
             return tipoDocumento + " " + mostrado;
         }
 
-        // Vacío es válido: el código postal no es obligatorio.
-        public static bool EsCodigoPostalValido(string codigoPostal)
-        {
-            return string.IsNullOrWhiteSpace(codigoPostal) ||
-                   FormatoCodigoPostal.IsMatch(codigoPostal.Trim().ToUpperInvariant());
-        }
-
         public static bool EsEmailValido(string email)
         {
             return string.IsNullOrWhiteSpace(email) || FormatoEmail.IsMatch(email.Trim());
@@ -240,11 +206,11 @@ namespace BIZ.Modelo
             if (!EsEmailValido(Email))
                 return ResultadoOperacion.Error("El mail no tiene un formato válido.");
 
-            if (!string.IsNullOrWhiteSpace(Provincia) && Array.IndexOf(Provincias, Provincia) < 0)
+            if (!Domicilio.EsProvinciaValida(Provincia))
                 return ResultadoOperacion.Error("La provincia no es válida.");
 
-            if (!EsCodigoPostalValido(CodigoPostal))
-                return ResultadoOperacion.Error("El código postal debe tener 4 números (1638) o el formato CPA (C1406GZA).");
+            if (!Domicilio.EsCodigoPostalValido(CodigoPostal))
+                return ResultadoOperacion.Error(Domicilio.MensajeCodigoPostal);
 
             NumeroDocumento = NormalizarNumeroDocumento(TipoDocumento, NumeroDocumento);
             Telefono = FormatoTelefono.Normalizar(Telefono);
@@ -252,7 +218,7 @@ namespace BIZ.Modelo
             Direccion = string.IsNullOrWhiteSpace(Direccion) ? null : Direccion.Trim();
             Localidad = string.IsNullOrWhiteSpace(Localidad) ? null : Localidad.Trim();
             Provincia = string.IsNullOrWhiteSpace(Provincia) ? null : Provincia;
-            CodigoPostal = string.IsNullOrWhiteSpace(CodigoPostal) ? null : CodigoPostal.Trim().ToUpperInvariant();
+            CodigoPostal = Domicilio.NormalizarCodigoPostal(CodigoPostal);
 
             return ResultadoOperacion.Ok();
         }
