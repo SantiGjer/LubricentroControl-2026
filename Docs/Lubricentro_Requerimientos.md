@@ -539,6 +539,20 @@ ajuste en la cuenta corriente.
 - **Descartado (2026-10-20):** que la nota de crédito reponga el stock sola. Lo usado no se puede
   volver a vender: queda para uso interno del taller.
 
+### 9.18 Procedimientos almacenados (2026-10-21)
+
+Pedido de la cátedra: la base tiene que incluir procedimientos almacenados.
+
+- `Database\06_ProcedimientosAlmacenados.sql` (opcional) crea seis: `sp_AjustarStock` (ajuste
+  manual de stock con su movimiento en el kardex), `sp_RegistrarPagoCliente` (pago que cancela las
+  deudas de la más vieja a la más nueva y deja el resto a cuenta), `sp_StockBajo`,
+  `sp_VentasPorPeriodo`, `sp_SaldosCuentaCorriente` y `sp_HistorialVehiculo`.
+- Hacen lo mismo que la aplicación (mismas reglas: no dejar stock negativo, una transacción por
+  operación, mismo orden de cancelación de deudas), pero la aplicación no los llama: el acceso a
+  datos sigue en las clases de `BIZ/Data`.
+- Se ejecutan con un usuario administrador; el usuario de la aplicación no tiene permiso para
+  ejecutarlos (§9.16).
+
 ---
 
 ## 10. Fuera de alcance (por ahora)

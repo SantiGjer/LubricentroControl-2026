@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 20 de octubre de 2026
+**Última actualización:** 21 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -234,6 +234,32 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-21 — Procedimientos almacenados
+
+La cátedra pidió procedimientos almacenados en la base, y diagramas conceptual y lógico al día.
+
+- **Script nuevo `Database\06_ProcedimientosAlmacenados.sql`, opcional, sin cambios en las
+  tablas.** Seis procedimientos: dos operaciones con transacción (`sp_AjustarStock`,
+  `sp_RegistrarPagoCliente`) y cuatro consultas (`sp_StockBajo`, `sp_VentasPorPeriodo`,
+  `sp_SaldosCuentaCorriente`, `sp_HistorialVehiculo`). Copian las reglas de `MovimientoStockDAL`
+  y `PagoDAL` (stock nunca negativo, pagos que cancelan primero la deuda más vieja, sobrante a
+  cuenta) y de los reportes. La aplicación no los usa.
+- **Errores:** las dos operaciones usan `SET XACT_ABORT ON` y `TRY/CATCH` con `ROLLBACK` y
+  `THROW`. Sin el `CATCH`, un `THROW` dentro de la transacción dejaba la transacción abierta hasta el
+  final del lote (error 3998) cuando quien llamaba capturaba el error.
+- **`CREATE OR ALTER`:** el script se puede correr varias veces, y recrear las tablas con `01` no
+  borra los procedimientos.
+- **Permisos:** `lubricentro_app` no tiene `EXECUTE` (solo `db_datareader`/`db_datawriter`); se
+  ejecutan con un usuario administrador.
+
+Verificado sobre una base nueva creada con `01` a `05` del repositorio: `06` corre sin errores dos
+veces; el ajuste de stock y el pago (deuda más 500: cancela todo y deja 500 a cuenta) dan lo
+esperado dentro de una transacción que después se deshizo; stock insuficiente y cliente inexistente
+se rechazan sin dejar cambios ni transacciones abiertas; las consultas devuelven datos (6 insumos con
+stock bajo, 3 clientes con saldo); `lubricentro_app` no puede ejecutarlos; volver a correr `01` deja
+los seis procedimientos. Los procedimientos también se probaron contra la base de desarrollo de
+Alexis, que ya los tenía desde el 2026-10-15.
 
 ### 2026-10-20 (cont.) — Quién emitió la factura y la nota de crédito
 

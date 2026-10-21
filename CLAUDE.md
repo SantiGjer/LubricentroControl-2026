@@ -131,6 +131,7 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\02_DatosIniciales.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\03_UsuariosDePrueba.sql"   # opcional
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\04_DatosDemo.sql"          # opcional, datos de ejemplo
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\05_ImagenesDemo.sql"       # opcional, imágenes de los productos de 04
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmacenados.sql" # opcional, procedimientos almacenados
 ```
 
 Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18 y nota de
@@ -501,6 +502,17 @@ como `Factura`. Su movimiento de cuenta corriente es `NotaCredito`: apunta a la 
 `CK_CCCli_origen`, que reconoce leyendo su definición. Ojo al revisar el esquema con el usuario de
 la aplicación: `lubricentro_app` no tiene `VIEW DEFINITION`, así que lee
 `sys.check_constraints.definition` como NULL. Esas consultas se hacen con un usuario administrador.
+
+El 2026-10-21 se sumó `06_ProcedimientosAlmacenados.sql`, opcional: seis procedimientos
+almacenados que se piden para la entrega de la materia. Dos son operaciones con transacción
+(`sp_AjustarStock`, `sp_RegistrarPagoCliente`) y cuatro son consultas (`sp_StockBajo`,
+`sp_VentasPorPeriodo`, `sp_SaldosCuentaCorriente`, `sp_HistorialVehiculo`). Replican lo que hace
+la aplicación en `MovimientoStockDAL`, `PagoDAL` y los reportes, pero **la aplicación no los
+usa**: el acceso a datos sigue en `BIZ/Data` con SQL parametrizado. Se crean con
+`CREATE OR ALTER` (el script se puede correr varias veces y `01` no los borra) y se ejecutan con
+un usuario administrador: `lubricentro_app` no tiene `EXECUTE`, y no hace falta dárselo mientras
+la aplicación no los llame. Si cambia la lógica de stock o de pagos en el DAL, revisar que el
+procedimiento equivalente siga igual.
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`), con el usuario
 `lubricentro_app`. Para pasar al SQL Server del lubricentro por VPN Radmin alcanza con cambiar el
