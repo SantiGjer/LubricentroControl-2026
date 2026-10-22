@@ -4,14 +4,22 @@ Resumen de los últimos envíos al repositorio, del más nuevo al más viejo. El
 sesión está en `Docs/EstadoActual.md` y las decisiones de negocio en
 `Docs/Lubricentro_Requerimientos.md` §9.
 
-> **Todos, salvo el 2, cambian el esquema de la base.** Con una base anterior, recrearla con `01` a `04`
-> (el `01` borra los datos); `05` es opcional y carga las imágenes de ejemplo. El 1, el 3 y el 4
+> **Todos, salvo el 3, cambian el esquema de la base.** Con una base anterior, recrearla con `01` a `04`
+> (el `01` borra los datos); `05` es opcional y carga las imágenes de ejemplo. El 1, el 2, el 4 y el 5
 > traen además un script para poner al día, sin perder datos, una base que ya tiene lo anterior.
 > Ver `CLAUDE.md`, «Al levantar el proyecto en otra máquina».
 
 ---
 
-## 1. 2026-10-22 — Pendientes de la entrega final
+## 1. 2026-10-22 — Factura y nota de crédito vinculadas con el comercio (`Emisor`)
+
+**Cambia el esquema:** `Factura` y `NotaCredito` con `idEmisor` (NOT NULL, DEFAULT 1) y su clave
+externa a `Emisor`, que dejaba de estar suelta en los diagramas. Una base existente se pone al día
+con `Database\Actualizar_2026-10-22_Emisor.sql`, sin perder datos. El código no cambia.
+
+---
+
+## 2. 2026-10-22 — Pendientes de la entrega final
 
 Requerimientos §9.19. **Cambia el esquema** (dos CHECK nuevos); una base existente se pone al día
 con `Database\Actualizar_2026-10-22_CuentaCorrienteProveedor.sql`, sin perder datos, y conviene
@@ -37,7 +45,7 @@ Server 2008 R2. Antes del arreglo, dos ventas simultáneas usaban el mismo saldo
 
 ---
 
-## 2. 2026-10-21 — Procedimientos almacenados
+## 3. 2026-10-21 — Procedimientos almacenados
 
 Requerimientos §9.18. **No cambia las tablas:** script nuevo y opcional,
 `Database\06_ProcedimientosAlmacenados.sql`, que se corre después de `01` y `02`.
@@ -56,7 +64,7 @@ operaciones dan lo esperado y los errores no dejan cambios a medias.
 
 ---
 
-## 3. 2026-10-20 — Nota de crédito
+## 4. 2026-10-20 — Nota de crédito
 
 Requerimientos §9.17. Tabla nueva: `NotaCredito`. **Sin ella Ventas, Pagos y Órdenes fallan:** con
 una base que ya tiene lo del 2026-10-18, correr `Database\Actualizar_2026-10-20_NotaCredito.sql`.
@@ -76,7 +84,7 @@ Verificado con MSBuild, `aspnet_compiler`, base creada con `01` a `05`, 19 prueb
 
 ---
 
-## 4. 2026-10-18 — Una venta por orden, restricciones y stock en relativo
+## 5. 2026-10-18 — Una venta por orden, restricciones y stock en relativo
 
 Commit `36263a1`. Script para una base existente: `Database\Actualizar_2026-10-18_Restricciones.sql`.
 
@@ -90,7 +98,7 @@ más; ahora no.
 
 ---
 
-## 5. 2026-10-13 — Código postal, proveedores, usuario de la base y tablas que entran en la pantalla
+## 6. 2026-10-13 — Código postal, proveedores, usuario de la base y tablas que entran en la pantalla
 
 Requerimientos §9.12 y §9.14 a §9.16.
 
@@ -132,7 +140,7 @@ punta en Chrome.
 
 ---
 
-## 6. 2026-10-08 — Imagen de cada producto, datos del comercio editables, teléfonos y login
+## 7. 2026-10-08 — Imagen de cada producto, datos del comercio editables, teléfonos y login
 
 Commit `b95f53c`. Requerimientos §9.13. Tablas nuevas: `Emisor` e `ImagenProducto`.
 
@@ -156,7 +164,7 @@ Commit `b95f53c`. Requerimientos §9.13. Tablas nuevas: `Emisor` e `ImagenProduc
 
 ---
 
-## 7. 2026-10-08 — Barra lateral, listas, productos con IVA, factura, datos fiscales y roles
+## 8. 2026-10-08 — Barra lateral, listas, productos con IVA, factura, datos fiscales y roles
 
 Commit `e1f137f`. Segundo pedido del 2026-10-07, en 13 puntos (Requerimientos §9.7 a §9.12).
 

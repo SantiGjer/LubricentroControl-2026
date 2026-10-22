@@ -235,6 +235,22 @@ nota de crédito parcial y el formato de números argentino.
 
 ## 2. Historial de sesiones
 
+### 2026-10-22 (cont. 2) — Factura y nota de crédito vinculadas con `Emisor`
+
+Antes de presentar, Alexis notó que `Emisor` quedaba suelta en los diagramas (sin vínculos) y
+pidió conectarla. `Factura` y `NotaCredito` tienen ahora `idEmisor` (NOT NULL, DEFAULT 1) con
+`FK_Factura_Emisor` y `FK_NotaCredito_Emisor`; en el modelo conceptual, los vínculos **Expide** y
+**ExpideNota** (Emisor 1 : M, participación total del comprobante). La copia de los datos del
+comercio en cada comprobante se mantiene. El código no cambia: los INSERT no nombran la columna y
+la completa el DEFAULT. `Actualizar_2026-10-22_Emisor.sql` la agrega a una base existente.
+
+Verificado: script de actualización dos veces sobre una copia de la base de Alexis (las 11 facturas
+y 4 notas de crédito quedan con `idEmisor` 1, 52 claves externas confiables) y base nueva con `01`
+a `06`; programa de prueba 53 de 53 (las 50 de la sesión anterior más factura y nota de crédito
+emitidas desde `BIZ` con `idEmisor` 1); modelo conceptual contra la base: 28 tablas, 52 claves
+externas, 27 entidades y 49 vínculos coinciden. Diagramas conceptual y lógico regenerados (0
+cruces).
+
 ### 2026-10-22 (cont.) — Pendientes para la entrega final
 
 Alexis pidió completar lo pendiente antes de la entrega final. Se resolvieron los pendientes de la

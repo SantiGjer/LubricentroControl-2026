@@ -580,6 +580,9 @@ Los que quedaron anotados en `Docs/EstadoActual.md` §4 y no necesitaban una dec
   hash, como con la contraseña.
 - **Los mails de la aplicación quedan como archivos** (`App_Data\MailsEnviados`) mientras no haya
   un servidor de correo configurado.
+- **Cada factura y cada nota de crédito apuntan al comercio que las emite** (`Emisor`, que sigue
+  siendo uno solo): en el modelo, los vínculos Expide y ExpideNota. Los datos del comercio se
+  siguen copiando en el comprobante al emitirse, para que no cambie si después se editan.
 
 ---
 

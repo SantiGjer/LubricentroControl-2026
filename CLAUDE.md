@@ -135,14 +135,15 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmace
 ```
 
 Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18, nota de
-crédito del 2026-10-20 y restricciones de la cuenta corriente de proveedores del 2026-10-22; una
-base recién creada con `01` no los necesita, ya los trae). En este orden; los tres se pueden correr
-más de una vez:
+crédito del 2026-10-20, y restricciones de la cuenta corriente de proveedores y vínculo de los
+comprobantes con `Emisor` del 2026-10-22; una base recién creada con `01` no los necesita, ya los
+trae). En este orden; todos se pueden correr más de una vez:
 
 ```powershell
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-18_Restricciones.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-20_NotaCredito.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_CuentaCorrienteProveedor.sql"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_Emisor.sql"
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -187,7 +188,9 @@ abiertas están en `Docs/EstadoActual.md`, sección 4.
 - **Una base anterior al 2026-10-22 se completa con
   `Actualizar_2026-10-22_CuentaCorrienteProveedor.sql`** (dos CHECK en la cuenta corriente de
   proveedores, los mismos que tiene la de clientes). Sin él la aplicación anda igual; con `06`
-  corrido, conviene volver a correrlo para tener los procedimientos del mismo día.
+  corrido, conviene volver a correrlo para tener los procedimientos del mismo día. Y con
+  `Actualizar_2026-10-22_Emisor.sql` (columna `idEmisor` en `Factura` y `NotaCredito`, con su
+  clave externa; vale 1 por defecto, así que la aplicación no la escribe).
 - **Los datos de ejemplo se fechan al correr `04`.** Turnos, órdenes, compras y pagos salen de
   `GETDATE()`, y dos turnos quedan para ese mismo día (10:30 y 17:00). Con la base recreada otro
   día, "hoy" sale vacío en Turnos y en el Inicio: no es un bug, se vuelven a correr `01` a `04`.
@@ -530,6 +533,13 @@ a su pago, un Ajuste a ninguna de las dos y guarda quién lo hizo). A una base a
 agrega `Actualizar_2026-10-22_CuentaCorrienteProveedor.sql`, sin tocar los datos. Ese día también
 cambió cómo se calcula el saldo de cada movimiento de cuenta corriente: ver «Historial de
 decisiones», sesión 2026-10-22.
+
+También el 2026-10-22, `Factura` y `NotaCredito` recibieron `idEmisor` (NOT NULL, DEFAULT 1) con
+`FK_Factura_Emisor` y `FK_NotaCredito_Emisor`: el comercio que emite cada comprobante, que hasta
+entonces era una tabla sin vínculos. `Emisor` sigue teniendo una sola fila, y los comprobantes
+siguen copiando sus datos al emitirse (la copia es lo que no cambia; la clave dice quién lo emitió).
+Los INSERT de `FacturaDAL` y `NotaCreditoDAL` no nombran la columna: la completa el DEFAULT.
+`Actualizar_2026-10-22_Emisor.sql` la agrega a una base anterior.
 
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`), con el usuario
 `lubricentro_app`. Para pasar al SQL Server del lubricentro por VPN Radmin alcanza con cambiar el

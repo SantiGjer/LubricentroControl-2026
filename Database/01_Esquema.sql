@@ -494,7 +494,8 @@ CREATE TABLE DetalleComprobanteVenta (
 GO
 
 /* Datos del comercio que emite las facturas (§9.10): una sola fila (idEmisor = 1),
-   editable desde Administración > Datos del comercio. Cada factura los copia al
+   editable desde Administración > Datos del comercio. Cada factura y nota de crédito
+   apunta a esta fila (idEmisor, desde el 2026-10-22) y además copia los datos al
    emitirse, así que cambiarlos no toca las ya emitidas. La condición frente al
    IVA define la letra: Responsable Inscripto emite A o B; Monotributista o
    Exento, C. Cada letra numera por separado en cada punto de venta. */
@@ -543,11 +544,16 @@ CREATE TABLE Factura (
     receptorNumeroDocumento  NVARCHAR(20)      NOT NULL,
     receptorCondicionIva     NVARCHAR(30)      NOT NULL,
     receptorDomicilio        NVARCHAR(400)     NULL,
+    /* El comercio que la emite (Emisor tiene una sola fila, así que siempre es 1). Desde el
+       2026-10-22; los datos del comercio se siguen copiando arriba, porque la factura no puede
+       cambiar si después se editan. */
+    idEmisor                 INT               NOT NULL CONSTRAINT DF_Factura_emisor DEFAULT (1),
     CONSTRAINT PK_Factura PRIMARY KEY (idFactura),
     CONSTRAINT UQ_Factura_venta UNIQUE (idVenta),
     CONSTRAINT UQ_Factura_numero UNIQUE (tipo, puntoVenta, numero),
     CONSTRAINT FK_Factura_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
     CONSTRAINT FK_Factura_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
+    CONSTRAINT FK_Factura_Emisor FOREIGN KEY (idEmisor) REFERENCES Emisor(idEmisor),
     CONSTRAINT CK_Factura_tipo CHECK (tipo IN ('A','B','C')),
     CONSTRAINT CK_Factura_puntoVenta CHECK (puntoVenta BETWEEN 1 AND 99999),
     CONSTRAINT CK_Factura_numero CHECK (numero > 0)
@@ -589,12 +595,15 @@ CREATE TABLE NotaCredito (
     receptorNumeroDocumento  NVARCHAR(20)      NOT NULL,
     receptorCondicionIva     NVARCHAR(30)      NOT NULL,
     receptorDomicilio        NVARCHAR(400)     NULL,
+    /* El comercio que la emite: ídem Factura.idEmisor (desde el 2026-10-22). */
+    idEmisor                 INT               NOT NULL CONSTRAINT DF_NotaCredito_emisor DEFAULT (1),
     CONSTRAINT PK_NotaCredito PRIMARY KEY (idNotaCredito),
     CONSTRAINT UQ_NotaCredito_venta UNIQUE (idVenta),
     CONSTRAINT UQ_NotaCredito_numero UNIQUE (tipo, puntoVenta, numero),
     CONSTRAINT FK_NotaCredito_Venta FOREIGN KEY (idVenta) REFERENCES ComprobanteVenta(idVenta),
     CONSTRAINT FK_NotaCredito_Factura FOREIGN KEY (idFactura) REFERENCES Factura(idFactura),
     CONSTRAINT FK_NotaCredito_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
+    CONSTRAINT FK_NotaCredito_Emisor FOREIGN KEY (idEmisor) REFERENCES Emisor(idEmisor),
     CONSTRAINT CK_NotaCredito_tipo CHECK (tipo IN ('A','B','C')),
     CONSTRAINT CK_NotaCredito_puntoVenta CHECK (puntoVenta BETWEEN 1 AND 99999),
     CONSTRAINT CK_NotaCredito_numero CHECK (numero > 0),
