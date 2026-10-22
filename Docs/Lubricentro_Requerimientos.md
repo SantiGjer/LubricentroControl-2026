@@ -552,9 +552,34 @@ Pedido de la cátedra: la base tiene que incluir procedimientos almacenados.
   datos sigue en las clases de `BIZ/Data`.
 - `sp_VentasPorPeriodo` descuenta las ventas anuladas con el criterio del reporte (§9.17): las
   lista marcadas (`anulada`), resta las notas de crédito emitidas en el período (`totalAnulado`,
-  `netoVendido`) y no cuenta las anuladas como cobradas (2026-10-22).
+  `netoVendido`) y no cuenta las anuladas como cobradas (2026-10-22). `sp_HistorialVehiculo` las
+  marca igual (columna `anulada`).
 - Se ejecutan con un usuario administrador; el usuario de la aplicación no tiene permiso para
   ejecutarlos (§9.16).
+
+### 9.19 Pendientes resueltos para la entrega final (2026-10-22)
+
+Los que quedaron anotados en `Docs/EstadoActual.md` §4 y no necesitaban una decisión de negocio:
+
+- **Cerrar una orden es una sola operación:** la venta, su movimiento de cuenta corriente y el
+  estado `Cerrada` se guardan juntos. Si otro usuario cerró o canceló la orden mientras tanto, no
+  se guarda nada y se avisa.
+- **El saldo de la cuenta corriente no se pisa:** dos movimientos simultáneos del mismo cliente o
+  proveedor se registran uno después del otro, y el saldo a favor se aplica a una sola venta o
+  compra aunque se generen a la vez.
+- **La cuenta corriente de proveedores** tiene las mismas restricciones que la de clientes: cada
+  movimiento va al debe o al haber, y cada tipo (Compra, Pago, Ajuste) con su origen.
+- **Los números de venta y de compra** siguen con 6 dígitos y, desde la 1.000.000, usan el número
+  completo (`V-1000000`) en vez de repetirse.
+- **Un error inesperado muestra una página propia** («Ocurrió un error inesperado…»), sin el
+  detalle técnico; el detalle queda registrado en el servidor.
+- **Las líneas de una compra validan cantidad y precio**: un número escrito con el formato de la
+  otra cultura (`1500,50` en una máquina en inglés) se rechaza con un mensaje, en vez de guardarse
+  como `150050`.
+- **El enlace para restablecer la contraseña no se puede armar leyendo la base**: se guarda su
+  hash, como con la contraseña.
+- **Los mails de la aplicación quedan como archivos** (`App_Data\MailsEnviados`) mientras no haya
+  un servidor de correo configurado.
 
 ---
 

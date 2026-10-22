@@ -107,6 +107,7 @@
     <Content Include="CuentaCorrienteClientes.aspx" />
     <Content Include="CuentaCorrienteProveedores.aspx" />
     <Content Include="DatosComercio.aspx" />
+    <Content Include="Error.aspx" />
     <Content Include="Login.aspx" />
     <Content Include="OrdenesDeTrabajo.aspx" />
     <Content Include="Pagos.aspx" />
@@ -282,6 +283,13 @@
     </Compile>
     <Compile Include="DatosComercio.aspx.designer.cs">
       <DependentUpon>DatosComercio.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Error.aspx.cs">
+      <DependentUpon>Error.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Error.aspx.designer.cs">
+      <DependentUpon>Error.aspx</DependentUpon>
     </Compile>
     <Compile Include="Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>

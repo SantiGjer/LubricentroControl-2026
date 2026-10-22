@@ -134,13 +134,15 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\05_ImagenesDemo.sql"   
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmacenados.sql" # opcional, procedimientos almacenados
 ```
 
-Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18 y nota de
-crédito del 2026-10-20; una base recién creada con `01` no los necesita, ya los trae). En este
-orden; los dos se pueden correr más de una vez:
+Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18, nota de
+crédito del 2026-10-20 y restricciones de la cuenta corriente de proveedores del 2026-10-22; una
+base recién creada con `01` no los necesita, ya los trae). En este orden; los tres se pueden correr
+más de una vez:
 
 ```powershell
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-18_Restricciones.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-20_NotaCredito.sql"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_CuentaCorrienteProveedor.sql"
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -182,17 +184,25 @@ abiertas están en `Docs/EstadoActual.md`, sección 4.
   (tabla `NotaCredito`). Este sí es obligatorio: la lista de ventas lee si cada venta tiene nota de
   crédito, así que sin la tabla fallan Ventas, Pagos, Órdenes de trabajo (al cerrar) y Ventas por
   período.
+- **Una base anterior al 2026-10-22 se completa con
+  `Actualizar_2026-10-22_CuentaCorrienteProveedor.sql`** (dos CHECK en la cuenta corriente de
+  proveedores, los mismos que tiene la de clientes). Sin él la aplicación anda igual; con `06`
+  corrido, conviene volver a correrlo para tener los procedimientos del mismo día.
 - **Los datos de ejemplo se fechan al correr `04`.** Turnos, órdenes, compras y pagos salen de
   `GETDATE()`, y dos turnos quedan para ese mismo día (10:30 y 17:00). Con la base recreada otro
   día, "hoy" sale vacío en Turnos y en el Inicio: no es un bug, se vuelven a correr `01` a `04`.
-- **Mails: el `Web.config` commiteado trae `MailModoDesarrollo=false`** (envío real por Gmail),
-  pero las credenciales van en `Web.MailSettings.config`, que está gitignoreado y no viene con el
-  repo. Sin ese archivo el envío falla sin romper la pantalla: `ServicioMail.Enviar` devuelve el
-  error, pero quien lo llama no lo muestra. El alta y el blanqueo de usuarios igual muestran la
-  clave temporal en pantalla; el mail de recuperación de clave, en cambio, no sale y nadie se
-  entera. Para que ande, copiar `Web.MailSettings.config.example` como `Web.MailSettings.config`,
-  completarlo y poner la misma cuenta en `MailRemitente`; para probar sin correo,
-  `MailModoDesarrollo=true` (los mails quedan en `App_Data\MailsEnviados`) sin commitearlo.
+- **Mails: desde el 2026-10-22 el `Web.config` commiteado trae `MailModoDesarrollo=true`**: los
+  mails no salen, quedan como `.txt` en `App_Data\MailsEnviados`, y la recuperación de clave se
+  puede probar en cualquier PC (el enlace está en el archivo). Hasta ese día venía en `false`, y en
+  una PC sin `Web.MailSettings.config` (gitignoreado, no viene con el repo) el mail de
+  recuperación no salía y nadie se enteraba: `ServicioMail.Enviar` devuelve el error, pero la
+  recuperación responde siempre lo mismo, a propósito. Para envío real por Gmail: copiar
+  `Web.MailSettings.config.example` como `Web.MailSettings.config`, completarlo, poner la misma
+  cuenta en `MailRemitente` y `MailModoDesarrollo=false`, sin commitear esos cambios.
+- **Un error no controlado muestra `~/Error`** (desde el 2026-10-22, `customErrors mode="On"` en
+  `Web.config`), sin el detalle; el detalle queda en `App_Data\Errores.log` (gitignoreado), que
+  escribe `Global.Application_Error`. Para ver el error completo en el navegador mientras se
+  programa, poner `mode="Off"` sin commitearlo.
 - **Los datos del comercio para la factura son de ejemplo**: razón social, CUIT, domicilio,
   ingresos brutos e inicio de actividades inventados, sembrados por `02_DatosIniciales.sql` en la
   tabla `Emisor`. Reemplazarlos por los reales antes de imprimir una factura, desde Administración
@@ -514,6 +524,13 @@ un usuario administrador: `lubricentro_app` no tiene `EXECUTE`, y no hace falta 
 la aplicación no los llame. Si cambia la lógica de stock o de pagos en el DAL, revisar que el
 procedimiento equivalente siga igual.
 
+El 2026-10-22 la cuenta corriente de proveedores recibió los CHECK que la de clientes tiene desde
+el 2026-10-18: `CK_CCProv_debeHaber` y `CK_CCProv_origen` (una Compra apunta a su compra, un Pago
+a su pago, un Ajuste a ninguna de las dos y guarda quién lo hizo). A una base anterior se los
+agrega `Actualizar_2026-10-22_CuentaCorrienteProveedor.sql`, sin tocar los datos. Ese día también
+cambió cómo se calcula el saldo de cada movimiento de cuenta corriente: ver «Historial de
+decisiones», sesión 2026-10-22.
+
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`), con el usuario
 `lubricentro_app`. Para pasar al SQL Server del lubricentro por VPN Radmin alcanza con cambiar el
 `Data Source` de la cadena `LubricentroDB` en `Web.config` (y la clave, ver «Al levantar el
@@ -534,8 +551,12 @@ en la suya.
 - Con `MailModoDesarrollo=true` en `Web.config` los mails **no salen por SMTP**: se escriben como
   `.txt` planos en `App_Data\MailsEnviados` (destinatario, asunto y cuerpo, sin codificar). Así se
   prueba el circuito de recuperación de clave sin servidor de correo ni cliente de mail — alcanza
-  con abrir el archivo con cualquier editor de texto. Ojo: el `Web.config` commiteado hoy lo trae
-  en `false` (ver «Al levantar el proyecto en otra máquina»).
+  con abrir el archivo con cualquier editor de texto. Es el valor del `Web.config` commiteado desde
+  el 2026-10-22 (ver «Al levantar el proyecto en otra máquina»).
+- **El token de recuperación se guarda como hash** (desde el 2026-10-22): `RecuperacionClave.token`
+  tiene el SHA-256 en hexadecimal (`RecuperacionClave.HashToken`), y `RecuperacionClaveDAL` busca
+  por el hash del token que trae el enlace. Quien lea la tabla no puede armar un enlace válido. Sin
+  salt ni iteraciones, a diferencia de la contraseña: el token ya es aleatorio de 256 bits.
 - La recuperación responde **el mismo mensaje genérico exista o no el mail**, y el login usa un
   único mensaje de error para usuario inexistente y contraseña incorrecta. Es a propósito: evita
   que el formulario sirva para averiguar qué cuentas existen. No "mejorar" esos mensajes.
@@ -1119,3 +1140,27 @@ chocar con `System.Web.UI.WebControls.Menu` en los code-behind. La tabla sigue l
   **Probar la pantalla sin Visual Studio:** IIS Express sobre una copia del sitio cuyo `Web.config`
   apunta a una base de prueba, y un script de PowerShell que inicia sesión y hace los postbacks
   (campos ocultos de Web Forms incluidos). Llega a la pantalla real sin tocar la base de nadie.
+
+- **Pendientes de la entrega final (sesión 2026-10-22, Alexis con Claude).** Detalle en
+  `Docs/EstadoActual.md` y Requerimientos §9.19. Resuelve los tres que quedaron sin hacer el
+  2026-10-18. Lo que deja precedente:
+
+  **El saldo anterior de una cuenta corriente se lee en una sentencia aparte, con
+  `UPDLOCK, HOLDLOCK`, antes de insertar nada y dentro de la transacción.** Leerlo con esas pistas
+  dentro del mismo `INSERT ... VALUES ((SELECT TOP 1 saldo ...))` no alcanzó: con 8 hilos haciendo
+  ajustes a la vez, dos movimientos partían del mismo saldo o quedaban numerados en otro orden que
+  sus saldos, y la cadena se cortaba. Con la lectura aparte, el siguiente movimiento del mismo
+  titular espera a que termine la transacción. Lo mismo para el saldo a favor que se aplica a una
+  venta o a una compra: se calcula en SQL, dentro de la transacción, y no en C# con una lectura
+  previa (dos ventas a la vez usaban el mismo saldo a favor 7 de cada 10 veces). El pago toma el
+  bloqueo al principio del batch, antes de tocar las ventas, y `sp_RegistrarPagoCliente` igual:
+  siempre primero la cuenta corriente.
+
+  **Un batch que tiene que avisar algo usa `RAISERROR` + `RETURN`, no `THROW`**: el código no usa
+  nada posterior a SQL Server 2008, por si la aplicación termina contra el servidor de la cátedra.
+  `GenerarDesdeOrden` pasa la orden a Cerrada con `WHERE estado IN (Abierta, En proceso)` al
+  principio del batch; si no tocó ninguna fila, deshace y avisa (`RAISERROR`, que llega como
+  `SqlException` 50000 y se muestra tal cual).
+
+  **La página de error no usa `Site.Master`**: el maestro arma el menú leyendo la base, y si el
+  error vino de la base, la página de error también fallaría.

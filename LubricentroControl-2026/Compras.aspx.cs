@@ -128,6 +128,11 @@ namespace LubricentroControl_2026
         {
             if (EsSoloLectura) return;
 
+            // Los CompareValidator del grupo LineaCompra rechazan el número escrito con el formato
+            // de la otra cultura (1500,50 en una máquina en inglés): decimal.TryParse lo tomaría
+            // como 150050 sin avisar.
+            if (!Page.IsValid) return;
+
             decimal cantidad, precio;
             if (!decimal.TryParse(txtCantidadLinea.Text, out cantidad) || cantidad <= 0)
             {

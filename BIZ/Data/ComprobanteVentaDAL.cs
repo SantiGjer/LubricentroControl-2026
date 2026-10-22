@@ -142,6 +142,10 @@ namespace BIZ.Data
         // solo batch atómico — mismo mecanismo que ComprobanteCompraDAL.Crear. Cada línea guarda el
         // IVA del producto de ese momento y el IVA que contiene su precio final (§9.10): la venta
         // suma el neto en subtotal y el IVA en impuestos, y el total no cambia.
+        // Desde el 2026-10-22 el mismo batch pasa la orden a Cerrada (antes era otra sentencia,
+        // después de la venta: si fallaba, la orden quedaba abierta con su venta hecha). El UPDATE
+        // va primero y solo toca una orden Abierta o En proceso: si otro usuario la cerró o la
+        // canceló mientras tanto, se deshace todo y se avisa.
         public static ResultadoOperacion GenerarDesdeOrden(int idOrden)
         {
             // Este chequeo da el mensaje en el caso normal; lo que garantiza una sola venta por
@@ -192,10 +196,10 @@ namespace BIZ.Data
             // Si el cliente tiene saldo a favor (cuenta corriente negativa, por un pago de más),
             // se aplica a esta venta: nace con saldoPendiente = total - crédito aplicado. No hace
             // falta ningún movimiento extra: el débito de la venta ya netea el saldo a favor.
-            var saldoPrevio = CuentaCorrienteClienteDAL.ObtenerSaldoActual(orden.IdCliente);
-            var creditoAplicado = saldoPrevio < 0 ? System.Math.Min(-saldoPrevio, total) : 0;
-            var saldoPendiente = total - creditoAplicado;
-
+            // El saldo se lee dentro de la transacción con UPDLOCK/HOLDLOCK (desde el 2026-10-22):
+            // otro movimiento del mismo cliente espera a que esta termine, así dos ventas
+            // simultáneas no usan el mismo saldo a favor ni calculan el saldo corrido sobre el
+            // mismo número. El batch devuelve el crédito aplicado, para el mensaje.
             var sql = new StringBuilder();
             var parametros = new List<SqlParameter>();
 
@@ -203,10 +207,28 @@ namespace BIZ.Data
                 SET XACT_ABORT ON;
                 BEGIN TRANSACTION;
 
+                UPDATE OrdenDeTrabajo SET estado = @estadoCerrada
+                WHERE idOrden = @idOrden AND estado IN (@estadoAbierta, @estadoEnProceso);
+
+                IF @@ROWCOUNT = 0
+                BEGIN
+                    ROLLBACK TRANSACTION;
+                    RAISERROR(N'La orden ya no está abierta: otro usuario la cerró o la canceló.', 16, 1);
+                    RETURN;
+                END
+
+                DECLARE @saldoPrevio DECIMAL(12,2) = ISNULL((
+                    SELECT TOP 1 saldo FROM CuentaCorrienteCliente WITH (UPDLOCK, HOLDLOCK)
+                    WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0);
+                DECLARE @creditoAplicado DECIMAL(12,2) = CASE
+                    WHEN @saldoPrevio >= 0 THEN 0
+                    WHEN -@saldoPrevio < @total THEN -@saldoPrevio
+                    ELSE @total END;
+
                 INSERT INTO ComprobanteVenta
                     (idOrden, idCliente, numeroComprobante, subtotal, impuestos, total, saldoPendiente)
                 VALUES
-                    (@idOrden, @idCliente, '(pendiente)', @subtotal, @impuestos, @total, @saldoPendiente);
+                    (@idOrden, @idCliente, '(pendiente)', @subtotal, @impuestos, @total, @total - @creditoAplicado);
 
                 DECLARE @idVenta INT = CAST(SCOPE_IDENTITY() AS INT);
             ");
@@ -216,7 +238,9 @@ namespace BIZ.Data
             parametros.Add(AccesoDatos.Param("@subtotal", subtotal));
             parametros.Add(AccesoDatos.Param("@impuestos", impuestos));
             parametros.Add(AccesoDatos.Param("@total", total));
-            parametros.Add(AccesoDatos.Param("@saldoPendiente", saldoPendiente));
+            parametros.Add(AccesoDatos.Param("@estadoCerrada", OrdenDeTrabajo.EstadoCerrada));
+            parametros.Add(AccesoDatos.Param("@estadoAbierta", OrdenDeTrabajo.EstadoAbierta));
+            parametros.Add(AccesoDatos.Param("@estadoEnProceso", OrdenDeTrabajo.EstadoEnProceso));
 
             for (var i = 0; i < lineas.Count; i++)
             {
@@ -249,23 +273,24 @@ namespace BIZ.Data
                     (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
                 VALUES (
                     @idCliente, @tipoMovimientoCC, @idVenta, NULL, @total, 0,
-                    ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteCliente
-                            WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0) + @total,
+                    @saldoPrevio + @total,
                     'Venta #' + CAST(@idVenta AS VARCHAR(10)), NULL);
 
                 UPDATE ComprobanteVenta
-                SET numeroComprobante = 'V-' + RIGHT('000000' + CAST(@idVenta AS VARCHAR(10)), 6)
+                SET numeroComprobante = 'V-' + CASE WHEN @idVenta > 999999 THEN CAST(@idVenta AS VARCHAR(10))
+                                                    ELSE RIGHT('000000' + CAST(@idVenta AS VARCHAR(10)), 6) END
                 WHERE idVenta = @idVenta;
 
                 COMMIT TRANSACTION;
 
-                SELECT @idVenta;
+                SELECT @creditoAplicado;
             ");
             parametros.Add(AccesoDatos.Param("@tipoMovimientoCC", CuentaCorrienteCliente.TipoVenta));
 
+            decimal creditoAplicado;
             try
             {
-                AccesoDatos.Escalar(sql.ToString(), parametros.ToArray());
+                creditoAplicado = System.Convert.ToDecimal(AccesoDatos.Escalar(sql.ToString(), parametros.ToArray()));
             }
             catch (SqlException ex) when (ex.Number == 2627 && ex.Message.Contains("UQ_ComprobanteVenta_orden"))
             {
@@ -273,6 +298,12 @@ namespace BIZ.Data
                 // la base rechazó la segunda venta (2627 = clave única repetida) y XACT_ABORT ya
                 // revirtió todo el batch, también el movimiento de cuenta corriente.
                 return ResultadoOperacion.Error("Esta orden ya tiene una venta generada.");
+            }
+            catch (SqlException ex) when (ex.Number == 50000)
+            {
+                // El RAISERROR del batch: la orden ya no estaba Abierta ni En proceso. El ROLLBACK
+                // ya se hizo antes de avisar.
+                return ResultadoOperacion.Error(ex.Message);
             }
 
             return ResultadoOperacion.Ok("Se generó la venta correspondiente." +

@@ -108,17 +108,9 @@ namespace BIZ.Data
 
             // Misma regla que en las ventas: si ya le pagamos de más al proveedor (cuenta
             // corriente negativa), ese saldo a favor se aplica a esta compra a cuenta corriente.
-            var creditoAplicado = 0m;
-            if (compra.CondicionPago == ComprobanteCompra.CondicionCuentaCorriente)
-            {
-                var saldoPrevio = CuentaCorrienteProveedorDAL.ObtenerSaldoActual(compra.IdProveedor);
-                if (saldoPrevio < 0)
-                {
-                    creditoAplicado = System.Math.Min(-saldoPrevio, compra.Total);
-                    compra.SaldoPendiente = compra.Total - creditoAplicado;
-                }
-            }
-
+            // Como en las ventas, el saldo se lee dentro de la transacción con UPDLOCK/HOLDLOCK
+            // (desde el 2026-10-22), y el batch devuelve el crédito aplicado junto con el id.
+            var esCuentaCorriente = compra.CondicionPago == ComprobanteCompra.CondicionCuentaCorriente;
             var sql = new StringBuilder();
             var parametros = new List<SqlParameter>();
 
@@ -126,10 +118,27 @@ namespace BIZ.Data
                 SET XACT_ABORT ON;
                 BEGIN TRANSACTION;
 
+                DECLARE @saldoPrevio DECIMAL(12,2) = 0;
+                DECLARE @creditoAplicado DECIMAL(12,2) = 0;
+            ");
+
+            if (esCuentaCorriente)
+                sql.Append(@"
+                SET @saldoPrevio = ISNULL((
+                    SELECT TOP 1 saldo FROM CuentaCorrienteProveedor WITH (UPDLOCK, HOLDLOCK)
+                    WHERE idProveedor = @idProveedor ORDER BY idMovimiento DESC), 0);
+                SET @creditoAplicado = CASE
+                    WHEN @saldoPrevio >= 0 THEN 0
+                    WHEN -@saldoPrevio < @total THEN -@saldoPrevio
+                    ELSE @total END;
+            ");
+
+            sql.Append(@"
                 INSERT INTO ComprobanteCompra
                     (idProveedor, numeroComprobante, condicionPago, medioPago, subtotal, impuestos, total, saldoPendiente)
                 VALUES
-                    (@idProveedor, '(pendiente)', @condicionPago, @medioPago, @subtotal, @impuestos, @total, @saldoPendiente);
+                    (@idProveedor, '(pendiente)', @condicionPago, @medioPago, @subtotal, @impuestos, @total,
+                     @saldoPendiente - @creditoAplicado);
 
                 DECLARE @idCompra INT = CAST(SCOPE_IDENTITY() AS INT);
             ");
@@ -169,15 +178,14 @@ namespace BIZ.Data
             parametros.Add(AccesoDatos.Param("@tipoMovimientoStock", MovimientoStock.TipoCompra));
             parametros.Add(AccesoDatos.Param("@idUsuario", idUsuario));
 
-            if (compra.CondicionPago == ComprobanteCompra.CondicionCuentaCorriente)
+            if (esCuentaCorriente)
             {
                 sql.Append(@"
                     INSERT INTO CuentaCorrienteProveedor
                         (idProveedor, tipoMovimiento, idCompra, idPago, debe, haber, saldo, descripcion, idUsuario)
                     VALUES (
                         @idProveedor, @tipoMovimientoCC, @idCompra, NULL, @total, 0,
-                        ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteProveedor
-                                WHERE idProveedor = @idProveedor ORDER BY idMovimiento DESC), 0) + @total,
+                        @saldoPrevio + @total,
                         'Compra #' + CAST(@idCompra AS VARCHAR(10)), NULL);
                 ");
                 parametros.Add(AccesoDatos.Param("@tipoMovimientoCC", CuentaCorrienteProveedor.TipoCompra));
@@ -185,16 +193,19 @@ namespace BIZ.Data
 
             sql.Append(@"
                 UPDATE ComprobanteCompra
-                SET numeroComprobante = 'C-' + RIGHT('000000' + CAST(@idCompra AS VARCHAR(10)), 6)
+                SET numeroComprobante = 'C-' + CASE WHEN @idCompra > 999999 THEN CAST(@idCompra AS VARCHAR(10))
+                                                    ELSE RIGHT('000000' + CAST(@idCompra AS VARCHAR(10)), 6) END
                 WHERE idCompra = @idCompra;
 
                 COMMIT TRANSACTION;
 
-                SELECT @idCompra;
+                SELECT @idCompra AS idCompra, @creditoAplicado AS creditoAplicado;
             ");
 
-            var id = AccesoDatos.Escalar(sql.ToString(), parametros.ToArray());
-            compra.IdCompra = System.Convert.ToInt32(id);
+            var resultado = AccesoDatos.Consultar(sql.ToString(), parametros.ToArray()).Rows[0];
+            compra.IdCompra = AccesoDatos.LeerInt(resultado, "idCompra");
+            var creditoAplicado = AccesoDatos.LeerDecimal(resultado, "creditoAplicado");
+            compra.SaldoPendiente -= creditoAplicado;
 
             return ResultadoOperacion.Ok("Compra registrada." +
                 (creditoAplicado > 0

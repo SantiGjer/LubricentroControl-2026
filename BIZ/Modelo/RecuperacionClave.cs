@@ -11,6 +11,7 @@ namespace BIZ.Modelo
 
         public int IdRecuperacion { get; set; }
         public int IdUsuario { get; set; }
+        // Al insertar, el token que viaja en el enlace; leído de la base, su hash (HashToken).
         public string Token { get; set; }
         public DateTime FechaSolicitud { get; set; }
         public DateTime FechaVencimiento { get; set; }
@@ -46,6 +47,18 @@ namespace BIZ.Modelo
                           .Replace('+', '-')
                           .Replace('/', '_')
                           .TrimEnd('=');
+        }
+
+        // La base guarda el SHA-256 del token (64 caracteres hexadecimales), no el token: quien lea
+        // la tabla RecuperacionClave no puede armar un enlace válido. Desde el 2026-10-22; como la
+        // contraseña, pero sin salt ni iteraciones, porque el token ya es aleatorio de 256 bits.
+        public static string HashToken(string token)
+        {
+            using (var sha = SHA256.Create())
+            {
+                var hash = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(token ?? ""));
+                return BitConverter.ToString(hash).Replace("-", "");
+            }
         }
     }
 }

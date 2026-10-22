@@ -142,6 +142,10 @@ namespace BIZ.Data
                     SELECT MAX(numero) FROM NotaCredito WITH (UPDLOCK, HOLDLOCK)
                     WHERE tipo = @tipo AND puntoVenta = @puntoVenta), 0) + 1;
 
+                DECLARE @saldoAnterior DECIMAL(12,2) = ISNULL((
+                    SELECT TOP 1 saldo FROM CuentaCorrienteCliente WITH (UPDLOCK, HOLDLOCK)
+                    WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0);
+
                 INSERT INTO NotaCredito
                     (idVenta, idFactura, tipo, puntoVenta, numero, idUsuario, motivo, condicionVenta,
                      subtotal, impuestos, total,
@@ -161,8 +165,7 @@ namespace BIZ.Data
                     (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
                 VALUES (
                     @idCliente, @tipoMovimientoCC, @idVenta, NULL, 0, @total,
-                    ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteCliente
-                            WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0) - @total,
+                    @saldoAnterior - @total,
                     'Nota de crédito ' + @tipo + ' ' + RIGHT('00000' + CAST(@puntoVenta AS VARCHAR(5)), 5) + '-' +
                         RIGHT('00000000' + CAST(@numero AS VARCHAR(8)), 8) + ' (anula ' + @numeroVenta + ')',
                     @idUsuario);

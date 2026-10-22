@@ -215,7 +215,9 @@ namespace BIZ.Data
 
         // Cierra la orden y genera automáticamente el comprobante de venta (Requerimientos §6.6)
         // — por eso Cerrada salió de EstadosEditables y pasa a tener su propio botón, igual que
-        // Cancelar. Solo se puede cerrar una orden Abierta o En proceso.
+        // Cancelar. Solo se puede cerrar una orden Abierta o En proceso. El estado Cerrada lo
+        // guarda GenerarDesdeOrden en la misma transacción que la venta (desde el 2026-10-22):
+        // no puede quedar una orden abierta con su venta hecha.
         public static ResultadoOperacion Cerrar(int idOrden)
         {
             var orden = ObtenerPorId(idOrden);
@@ -227,11 +229,6 @@ namespace BIZ.Data
 
             var venta = ComprobanteVentaDAL.GenerarDesdeOrden(idOrden);
             if (!venta.Exito) return venta;
-
-            AccesoDatos.Ejecutar(
-                "UPDATE OrdenDeTrabajo SET estado = @estado WHERE idOrden = @idOrden",
-                AccesoDatos.Param("@estado", OrdenDeTrabajo.EstadoCerrada),
-                AccesoDatos.Param("@idOrden", idOrden));
 
             return ResultadoOperacion.Ok("Orden cerrada. " + venta.Mensaje);
         }

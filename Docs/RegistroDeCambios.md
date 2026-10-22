@@ -4,14 +4,40 @@ Resumen de los últimos envíos al repositorio, del más nuevo al más viejo. El
 sesión está en `Docs/EstadoActual.md` y las decisiones de negocio en
 `Docs/Lubricentro_Requerimientos.md` §9.
 
-> **Todos, salvo el 1, cambian el esquema de la base.** Con una base anterior, recrearla con `01` a `04`
-> (el `01` borra los datos); `05` es opcional y carga las imágenes de ejemplo. El 2 y el 3
+> **Todos, salvo el 2, cambian el esquema de la base.** Con una base anterior, recrearla con `01` a `04`
+> (el `01` borra los datos); `05` es opcional y carga las imágenes de ejemplo. El 1, el 3 y el 4
 > traen además un script para poner al día, sin perder datos, una base que ya tiene lo anterior.
 > Ver `CLAUDE.md`, «Al levantar el proyecto en otra máquina».
 
 ---
 
-## 1. 2026-10-21 — Procedimientos almacenados
+## 1. 2026-10-22 — Pendientes de la entrega final
+
+Requerimientos §9.19. **Cambia el esquema** (dos CHECK nuevos); una base existente se pone al día
+con `Database\Actualizar_2026-10-22_CuentaCorrienteProveedor.sql`, sin perder datos, y conviene
+volver a correr `06`.
+
+- Cerrar una orden guarda la venta, su movimiento y el estado `Cerrada` en una sola transacción.
+- El saldo de cada movimiento de cuenta corriente (clientes y proveedores) y el saldo a favor que
+  se aplica a una venta o a una compra se leen con bloqueo, dentro de la transacción: dos
+  movimientos simultáneos ya no parten del mismo saldo.
+- `CuentaCorrienteProveedor` con `CK_CCProv_debeHaber` y `CK_CCProv_origen`.
+- Números `V-` y `C-` sin tope de 6 dígitos.
+- Página de error propia (`~/Error`, `customErrors`) y registro en `App_Data\Errores.log`.
+- Validadores de cantidad y precio en las líneas de Compras.
+- El token de recuperación de clave se guarda como hash (SHA-256).
+- `Web.config` con `MailModoDesarrollo=true`: los mails quedan en `App_Data\MailsEnviados`.
+- `06`: `sp_HistorialVehiculo` marca las ventas anuladas y `sp_RegistrarPagoCliente` bloquea el
+  saldo del cliente al empezar.
+
+Verificado con un programa de prueba sobre una base nueva y sobre una copia de la base de Alexis
+(50 de 50 en las dos, con concurrencia), con la pantalla real en IIS Express (13 de 13), y en SQL
+Server 2008 R2. Antes del arreglo, dos ventas simultáneas usaban el mismo saldo a favor 7 de cada
+10 veces y la cadena de saldos se cortaba; después, 0 de 10.
+
+---
+
+## 2. 2026-10-21 — Procedimientos almacenados
 
 Requerimientos §9.18. **No cambia las tablas:** script nuevo y opcional,
 `Database\06_ProcedimientosAlmacenados.sql`, que se corre después de `01` y `02`.
@@ -30,7 +56,7 @@ operaciones dan lo esperado y los errores no dejan cambios a medias.
 
 ---
 
-## 2. 2026-10-20 — Nota de crédito
+## 3. 2026-10-20 — Nota de crédito
 
 Requerimientos §9.17. Tabla nueva: `NotaCredito`. **Sin ella Ventas, Pagos y Órdenes fallan:** con
 una base que ya tiene lo del 2026-10-18, correr `Database\Actualizar_2026-10-20_NotaCredito.sql`.
@@ -50,7 +76,7 @@ Verificado con MSBuild, `aspnet_compiler`, base creada con `01` a `05`, 19 prueb
 
 ---
 
-## 3. 2026-10-18 — Una venta por orden, restricciones y stock en relativo
+## 4. 2026-10-18 — Una venta por orden, restricciones y stock en relativo
 
 Commit `36263a1`. Script para una base existente: `Database\Actualizar_2026-10-18_Restricciones.sql`.
 
@@ -64,7 +90,7 @@ más; ahora no.
 
 ---
 
-## 4. 2026-10-13 — Código postal, proveedores, usuario de la base y tablas que entran en la pantalla
+## 5. 2026-10-13 — Código postal, proveedores, usuario de la base y tablas que entran en la pantalla
 
 Requerimientos §9.12 y §9.14 a §9.16.
 
@@ -106,7 +132,7 @@ punta en Chrome.
 
 ---
 
-## 5. 2026-10-08 — Imagen de cada producto, datos del comercio editables, teléfonos y login
+## 6. 2026-10-08 — Imagen de cada producto, datos del comercio editables, teléfonos y login
 
 Commit `b95f53c`. Requerimientos §9.13. Tablas nuevas: `Emisor` e `ImagenProducto`.
 
@@ -130,7 +156,7 @@ Commit `b95f53c`. Requerimientos §9.13. Tablas nuevas: `Emisor` e `ImagenProduc
 
 ---
 
-## 6. 2026-10-08 — Barra lateral, listas, productos con IVA, factura, datos fiscales y roles
+## 7. 2026-10-08 — Barra lateral, listas, productos con IVA, factura, datos fiscales y roles
 
 Commit `e1f137f`. Segundo pedido del 2026-10-07, en 13 puntos (Requerimientos §9.7 a §9.12).
 

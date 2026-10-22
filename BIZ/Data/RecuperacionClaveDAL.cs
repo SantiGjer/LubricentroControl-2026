@@ -14,10 +14,11 @@ namespace BIZ.Data
 
             AccesoDatos.Ejecutar(sql,
                 AccesoDatos.Param("@idUsuario", recuperacion.IdUsuario),
-                AccesoDatos.Param("@token", recuperacion.Token),
+                AccesoDatos.Param("@token", RecuperacionClave.HashToken(recuperacion.Token)),
                 AccesoDatos.Param("@fechaVencimiento", recuperacion.FechaVencimiento));
         }
 
+        // Busca por el hash del token que trae el enlace (ver RecuperacionClave.HashToken).
         public static RecuperacionClave ObtenerPorToken(string token)
         {
             const string sql = @"
@@ -25,7 +26,7 @@ namespace BIZ.Data
                 FROM RecuperacionClave
                 WHERE token = @token";
 
-            var tabla = AccesoDatos.Consultar(sql, AccesoDatos.Param("@token", token));
+            var tabla = AccesoDatos.Consultar(sql, AccesoDatos.Param("@token", RecuperacionClave.HashToken(token)));
             if (tabla.Rows.Count == 0) return null;
 
             var fila = tabla.Rows[0];

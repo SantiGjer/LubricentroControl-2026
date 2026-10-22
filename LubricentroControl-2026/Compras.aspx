@@ -135,14 +135,22 @@
                                 <div class="col-md-2 campo">
                                     <asp:Label runat="server" AssociatedControlID="txtCantidadLinea">Cantidad</asp:Label>
                                     <asp:TextBox ID="txtCantidadLinea" runat="server" MaxLength="12" />
+                                    <asp:CompareValidator runat="server" ControlToValidate="txtCantidadLinea"
+                                        Operator="DataTypeCheck" Type="Double"
+                                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="LineaCompra"
+                                        ErrorMessage="La cantidad debe ser un número, sin separador de miles." />
                                 </div>
                                 <div class="col-md-2 campo">
                                     <asp:Label runat="server" AssociatedControlID="txtPrecioLinea">Precio unitario</asp:Label>
                                     <asp:TextBox ID="txtPrecioLinea" runat="server" MaxLength="12" />
+                                    <asp:CompareValidator runat="server" ControlToValidate="txtPrecioLinea"
+                                        Operator="DataTypeCheck" Type="Currency"
+                                        CssClass="text-danger small" Display="Dynamic" ValidationGroup="LineaCompra"
+                                        ErrorMessage="El precio debe ser un número." />
                                 </div>
                                 <div class="col-md-2 campo">
                                     <asp:Button ID="btnAgregarLinea" runat="server" CssClass="boton-gris w-100 m-0" Text="Agregar"
-                                        OnClick="btnAgregarLinea_Click" CausesValidation="false" />
+                                        OnClick="btnAgregarLinea_Click" ValidationGroup="LineaCompra" />
                                 </div>
                             </asp:Panel>
 

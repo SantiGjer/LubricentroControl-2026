@@ -17,5 +17,27 @@ namespace LubricentroControl_2026
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
         }
+
+        // Un error no controlado: customErrors (Web.config) le muestra al usuario ~/Error, sin el
+        // detalle, y acá el detalle se agrega a App_Data\Errores.log (fecha, dirección y
+        // excepción completa) para quien tenga que revisarlo. Si no se puede escribir el archivo,
+        // no se hace nada: un error al registrar el error no puede tapar la página de error.
+        void Application_Error(object sender, EventArgs e)
+        {
+            var error = Server.GetLastError();
+            if (error == null) return;
+
+            try
+            {
+                var carpeta = Server.MapPath("~/App_Data");
+                System.IO.Directory.CreateDirectory(carpeta);
+                System.IO.File.AppendAllText(System.IO.Path.Combine(carpeta, "Errores.log"),
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + Request.HttpMethod + " " + Request.RawUrl +
+                    Environment.NewLine + error + Environment.NewLine + Environment.NewLine);
+            }
+            catch (Exception)
+            {
+            }
+        }
     }
 }

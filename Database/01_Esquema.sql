@@ -687,7 +687,16 @@ CREATE TABLE CuentaCorrienteProveedor (
     CONSTRAINT FK_CCProv_Proveedor FOREIGN KEY (idProveedor) REFERENCES Proveedor(idProveedor),
     CONSTRAINT FK_CCProv_Compra FOREIGN KEY (idCompra) REFERENCES ComprobanteCompra(idCompra),
     CONSTRAINT FK_CCProv_Pago FOREIGN KEY (idPago) REFERENCES Pago(idPago),
-    CONSTRAINT FK_CCProv_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
+    CONSTRAINT FK_CCProv_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario),
+    /* Agregados 2026-10-22, los mismos que CuentaCorrienteCliente: un movimiento va al debe o
+       al haber, nunca a los dos; una Compra apunta a su compra, un Pago a su pago, y un Ajuste a
+       ninguna de las dos pero guarda quién lo hizo. Un tipo fuera de esos tres ya queda
+       rechazado. */
+    CONSTRAINT CK_CCProv_debeHaber CHECK (debe >= 0 AND haber >= 0 AND (debe = 0 OR haber = 0)),
+    CONSTRAINT CK_CCProv_origen CHECK (
+        (tipoMovimiento = 'Compra' AND idCompra IS NOT NULL AND idPago IS NULL) OR
+        (tipoMovimiento = 'Pago'   AND idPago IS NOT NULL AND idCompra IS NULL) OR
+        (tipoMovimiento = 'Ajuste' AND idCompra IS NULL AND idPago IS NULL AND idUsuario IS NOT NULL))
 );
 GO
 

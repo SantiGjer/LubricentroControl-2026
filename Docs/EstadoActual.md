@@ -29,12 +29,12 @@ completo el sistema, qué se hizo, y qué queda planificado para adelante.
 
 ## 1. Hasta dónde estamos
 
-**Fase 1 a 5 completas. Falta Fase 6** (integración, pruebas y pulido — sin empezar). Las 5
-pantallas de Fase 4 (Compras, Cuenta corriente de Proveedores, Ventas, Cuenta corriente de
-Clientes, Pagos) están hechas y verificadas contra IIS Express. Los 3 reportes de Fase 5 (Stock
-bajo, Ventas por período, Cuentas corrientes) están hechos y verificados con `MSBuild`/
-`aspnet_compiler`, pero **ninguno se probó todavía contra IIS Express** (WSL no llega a esos
-puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
+**Fase 1 a 5 completas; Fase 6 en curso, con los pendientes técnicos resueltos para la entrega
+final (2026-10-22).** Las 15 pantallas de negocio están hechas y probadas contra IIS Express. El
+circuito completo (turno → orden → venta → pago → cuenta corriente) y la concurrencia (stock,
+cierre de órdenes, saldos de cuenta corriente) se verificaron con un programa de prueba sobre la
+capa de datos (2026-09-27, 2026-10-18 y 2026-10-22). Lo que sigue abierto en la sección 4 son
+decisiones (o datos reales del comercio), no errores conocidos.
 
 | Fase | Contenido | Estado |
 |---|---|:---:|
@@ -225,15 +225,59 @@ puertos — queda para Alexis con F5 en Visual Studio, ver Fase 6).
 
 ### Qué NO funciona todavía
 
-Las 15 pantallas de negocio existen y funcionan. Queda **Fase 6** completa (Roadmap): pruebas de
-flujo de punta a punta (turno → orden → venta → pago → cuenta corriente), validaciones cruzadas
-entre módulos, revisión de permisos por rol pantalla por pantalla, mejora de mensajes de error y
-UX, y documentación final. Ver también los pendientes puntuales sin fase asignada en la
-sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, etc.).
+Las 15 pantallas de negocio existen y funcionan. Las pruebas de punta a punta, la revisión de
+permisos por rol (2026-09-28) y la página de error propia (2026-10-22) ya están. Quedan las
+decisiones de la sección 4: contraseña del admin y usuarios de prueba para la entrega, la base
+compartida por VPN Radmin, la condición de venta de la factura, el cobro obligatorio al cerrar, la
+nota de crédito parcial y el formato de números argentino.
 
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-22 (cont.) — Pendientes para la entrega final
+
+Alexis pidió completar lo pendiente antes de la entrega final. Se resolvieron los pendientes de la
+sección 4 que no necesitaban una decisión de negocio (Requerimientos §9.19); los que sí, quedaron
+anotados ahí.
+
+- **Cerrar una orden es atómico.** `ComprobanteVentaDAL.GenerarDesdeOrden` pasa la orden a
+  `Cerrada` en el mismo batch que la venta, al principio y solo si sigue `Abierta` o `En proceso`;
+  si otro usuario la cerró o la canceló después de que se leyeron sus líneas, deshace y avisa
+  (`RAISERROR` + `RETURN`: el código sigue sin usar nada posterior a SQL Server 2008).
+  `OrdenDeTrabajoDAL.Cerrar` ya no guarda el estado aparte.
+- **Saldos de cuenta corriente.** Cada camino que escribe un movimiento (venta, compra, pago, nota
+  de crédito y los ajustes de clientes y de proveedores) lee el saldo anterior con
+  `UPDLOCK, HOLDLOCK` en una sentencia aparte, antes de insertar, dentro de la transacción. Bug no
+  obvio: con las mismas pistas pero dentro del `INSERT ... VALUES ((SELECT TOP 1 saldo ...))` la
+  prueba de 8 hilos seguía cortando la cadena de saldos. El saldo a favor que se aplica a una venta
+  o a una compra se calcula en SQL dentro de la transacción; antes se leía en C# y dos ventas
+  simultáneas lo usaban las dos (7 de cada 10 veces en la prueba).
+- **`CuentaCorrienteProveedor`** con `CK_CCProv_debeHaber` y `CK_CCProv_origen`, los mismos que
+  la de clientes; `Actualizar_2026-10-22_CuentaCorrienteProveedor.sql` para una base existente
+  (aplicado a la de Alexis, con backup previo).
+- **Números `V-` y `C-`**: 6 dígitos hasta 999999 y el número completo desde ahí.
+- **Página de error propia** (`Error.aspx`, sin `Site.Master` porque el maestro lee la base),
+  `customErrors mode="On"` y el detalle en `App_Data\Errores.log` (`Global.Application_Error`).
+- **Compras**: `CompareValidator` en cantidad (`Double`) y precio (`Currency`) de cada línea, en
+  el grupo `LineaCompra`. Se comprobó con `BaseCompareValidator.CanConvert` que los dos rechazan el
+  formato de la otra cultura; `decimal.TryParse` no.
+- **Token de recuperación**: la base guarda su SHA-256 (`RecuperacionClave.HashToken`).
+- **`MailModoDesarrollo=true`** en el `Web.config` commiteado (decisión del pendiente de la
+  sección 4): en una PC sin `Web.MailSettings.config` el mail de recuperación se perdía en silencio.
+- **`06`**: `sp_HistorialVehiculo` marca las anuladas; `sp_RegistrarPagoCliente` bloquea el saldo
+  del cliente al empezar, en el mismo orden que `PagoDAL`.
+
+Verificado: `MSBuild` (0 advertencias) y `aspnet_compiler`; programa de prueba sobre `BIZ.dll`
+(las 28 verificaciones del 2026-10-18 más 22 nuevas: cierre atómico, saldo a favor con dos ventas
+y dos compras simultáneas, 80 ajustes simultáneos en clientes y en proveedores, CHECK nuevos,
+token, historial con anuladas, números después de 999999) con 50 de 50 sobre una base nueva
+(`01` a `06`) y sobre una copia de la base de Alexis con el script de actualización; las pruebas de
+concurrencia con el `BIZ.dll` anterior fallan y con el nuevo pasan. Pantalla real en IIS Express
+sobre una base de prueba: página de error (también con un error real), registro en
+`Errores.log`, validadores de Compras y recuperación de clave de punta a punta, 13 de 13. Los
+scripts del servidor de la cátedra (`LubricentroII`) se probaron en SQL Server 2008 R2 desde cero
+y como actualización de la base ya cargada.
 
 ### 2026-10-22 — `sp_VentasPorPeriodo` descuenta las ventas anuladas
 
@@ -2166,15 +2210,15 @@ corriente de Clientes, Pagos) hechas y verificadas contra IIS Express.
 hechos sobre datos reales de Fase 4, cada uno verificado con `MSBuild` + `aspnet_compiler` sin
 errores. Ninguno necesitó cambio de esquema.
 
-**Sigue Fase 6 — Integración, pruebas y pulido**, según el Roadmap: pruebas de flujo completo
-(turno → orden → venta → pago → cuenta corriente), validaciones cruzadas entre módulos (ej. no
-permitir cerrar una orden sin stock suficiente), revisión de permisos por rol pantalla por
-pantalla, mejora de mensajes de error y UX (Bootstrap), y documentación final para la entrega.
-Sin acordar todavía por dónde arrancar dentro de Fase 6 — a diferencia de las fases anteriores,
-acá no hay una pantalla nueva por vez: son 5 frentes transversales que tocan código ya
-entregado. Ver también los reportes de Stock bajo/Ventas por período pendientes de probar contra
-IIS Express (ningún reporte de Fase 5 se probó en caliente todavía — WSL no llega a esos
-puertos).
+**Fase 6, entrega final (al 2026-10-22).** Hechos: pruebas de flujo completo y de concurrencia,
+revisión de permisos por rol, página de error y pendientes técnicos (ver la sesión del
+2026-10-22). Para la entrega:
+
+- Cada compañero pone al día su base con `Actualizar_2026-10-22_CuentaCorrienteProveedor.sql` y
+  vuelve a correr `06` (ver `CLAUDE.md`, «Comandos»).
+- La base del servidor de la cátedra (`LubricentroII`) se actualiza con los scripts de la carpeta
+  de la presentación (`5_Actualizar`, `3_Procedimientos` y `4_Verificar`).
+- Las decisiones de la sección 4 que hagan falta antes de entregar.
 
 ### Repaso de redacción, pendiente
 
@@ -2191,15 +2235,12 @@ falta es decidir si se unifica el criterio.
 Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
 
 - **Pendientes de la revisión de Ventas, Productos y Cuenta corriente de clientes (2026-10-18).**
-  (a) `OrdenDeTrabajoDAL.Cerrar` no es atómico: genera la venta en una transacción y guarda el
-  estado `Cerrada` en otra sentencia; si la segunda fallara, la orden queda abierta con su venta
-  hecha. (b) El saldo de cada movimiento de cuenta corriente (clientes y proveedores) se calcula con
-  `SELECT TOP 1 saldo …` sin `UPDLOCK`: dos movimientos simultáneos del mismo titular pueden leer
-  el mismo saldo anterior. (c) `CuentaCorrienteProveedor` no tiene los CHECK que se agregaron a la
-  de clientes. (d) La factura toma la condición de venta ("Contado" o "Cuenta corriente") del
-  interruptor del cliente, no de si esa venta se pagó. (e) Cerrar la orden de un cliente sin cuenta
-  corriente lleva a Pagos, pero nada obliga a completar el cobro. (f) El número `V-` tiene 6
-  dígitos fijos (`RIGHT('000000' + id, 6)`): se repetiría desde la venta 1.000.000.
+  ~~(a) cierre de orden no atómico, (b) saldo de cuenta corriente sin `UPDLOCK`, (c) sin CHECK en
+  `CuentaCorrienteProveedor`, (f) número `V-` de 6 dígitos fijos~~ **resueltos el 2026-10-22**
+  (ver esa sesión). Quedan dos, que son decisiones de negocio: (d) la factura toma la condición de
+  venta ("Contado" o "Cuenta corriente") del interruptor del cliente, no de si esa venta se pagó;
+  (e) cerrar la orden de un cliente sin cuenta corriente lleva a Pagos, pero nada obliga a
+  completar el cobro (la venta queda con saldo pendiente y su movimiento en la cuenta).
 - **Nota de crédito parcial (2026-10-20).** Hoy la nota de crédito anula la venta completa, servicio
   incluido. Falta la nota de crédito por algunas líneas o por un monto (con su IVA proporcional),
   para acreditar, por ejemplo, solo un producto devuelto y no el servicio; mientras tanto, un ajuste
@@ -2241,24 +2282,16 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   Vicente López) ni la ciudad de otros (9100 Trelew, 2800 Zárate: solo barrios o parajes). Con
   esos se completa solo la provincia. Se puede mejorar con otra fuente o agregando a mano esas
   filas en `BIZ\Modelo\CodigosPostales.txt`.
-- **Salida real de mails — mecanismo listo, falta decidir el estado final.** `<system.net>/
-  <mailSettings>` ya está configurado (Gmail + contraseña de aplicación, ver sesión
-  2026-09-15 cont.), con las credenciales en `Web.MailSettings.config` (gitignoreado). Hoy
-  `Web.config` quedó con `MailModoDesarrollo=false` (envío real activo, cuenta de prueba del
-  usuario) en vez del `true` documentado como default seguro en `CLAUDE.md` — falta decidir si
-  se revierte a `true` antes de commitear/entregar, o si se deja en `false` a propósito. En una
-  máquina sin `Web.MailSettings.config` (cualquiera que clone el repo) los mails no salen y nadie
-  avisa; ver la entrada del 2026-10-08.
-- **Token de recuperación de clave guardado en texto plano.** `RecuperacionClave.token` guarda el
-  valor tal cual, no un hash — a diferencia de la contraseña, que sí está hasheada. El usuario
-  pidió evaluar guardar el hash del token en vez del token; decisión pendiente de confirmar antes
-  de implementarla (no requiere columna nueva, `token` ya es `NVARCHAR(100)`).
-- **`customErrors`:** con `debug="true"` y sin `customErrors`, un error muestra el stack trace
-  completo en pantalla. Antes de entregar conviene una página de error propia.
-- **El esquema de negocio nunca se ejerció por completo.** Con Fase 2 cerrada ya se ejercitaron
-  Cliente, Vehiculo, Proveedor, Insumo y Servicio (más el `MovimientoStock` agregado en Fase 2);
-  las tablas de Turnos, Órdenes, Compras, Ventas, Pagos y Cuentas Corrientes siguen sin usar —
-  esperable que aparezcan ajustes de tipos o restricciones al escribir esas pantallas.
+- ~~**Salida real de mails — falta decidir el estado final.**~~ **Resuelto el 2026-10-22:** el
+  `Web.config` commiteado vuelve a `MailModoDesarrollo=true` (los mails quedan en
+  `App_Data\MailsEnviados`). Para el envío real por Gmail, en la PC que lo tenga:
+  `Web.MailSettings.config` + `MailModoDesarrollo=false`, sin commitearlo.
+- ~~**Token de recuperación de clave guardado en texto plano.**~~ **Resuelto el 2026-10-22:** se
+  guarda su SHA-256, en la misma columna.
+- ~~**`customErrors`.**~~ **Resuelto el 2026-10-22:** página `~/Error` propia y el detalle en
+  `App_Data\Errores.log`. `debug="true"` sigue, para depurar desde Visual Studio.
+- ~~**El esquema de negocio nunca se ejerció por completo.**~~ Ya no aplica: todas las tablas se
+  usan desde Fase 4 y se ejercitaron con los programas de prueba.
 - **Estilos Bootstrap más elaborados (tablas, paginado) — parcialmente resuelto.** Se aplicaron
   clases de tabla (`table table-striped table-bordered table-hover`) y paginado real con pager
   custom en `Insumos.aspx` (ver sesión 2026-09-07 cont. 2). Queda pendiente: (a) decidir si se
@@ -2286,7 +2319,6 @@ Cosas que hay que resolver antes de la entrega, anotadas para no perderlas:
   tipean se leen con la misma cultura (`decimal.TryParse` sin cultura), así que dentro de una
   máquina es coherente, y el formato de la otra cultura lo rechaza el `CompareValidator
   Type="Currency"` de cada campo.
-- **Las líneas de Compras no validan el formato de los números.** Cantidad y precio unitario no
-  tienen `CompareValidator` (`btnAgregarLinea_Click` usa `decimal.TryParse` directo): en una
-  máquina en inglés `1500,50` se guarda como `150050`, y en una en es-AR pasa lo mismo con
-  `1500.50`, sin aviso. Hace falta el validador aunque se fije la cultura.
+- ~~**Las líneas de Compras no validan el formato de los números.**~~ **Resuelto el
+  2026-10-22:** `CompareValidator` en cantidad y precio (grupo `LineaCompra`); el número con el
+  formato de la otra cultura se rechaza con un mensaje.

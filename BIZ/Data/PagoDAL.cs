@@ -140,12 +140,24 @@ namespace BIZ.Data
             var sql = new StringBuilder();
             var parametros = new List<SqlParameter>();
 
+            // El saldo del titular se bloquea (UPDLOCK/HOLDLOCK) al principio de la transacción,
+            // antes de insertar nada (desde el 2026-10-22): otro movimiento del mismo titular espera
+            // a que el pago termine, y cada imputación lee el saldo que dejó la anterior.
             sql.Append(@"
                 SET XACT_ABORT ON;
                 BEGIN TRANSACTION;
 
                 DECLARE @idPago INT;
                 DECLARE @primerIdPago INT = NULL;
+            ");
+            sql.Append(esCliente
+                ? @"
+                DECLARE @bloqueo DECIMAL(12,2) = (SELECT TOP 1 saldo FROM CuentaCorrienteCliente WITH (UPDLOCK, HOLDLOCK)
+                                                  WHERE idCliente = @idCliente ORDER BY idMovimiento DESC);
+            "
+                : @"
+                DECLARE @bloqueo DECIMAL(12,2) = (SELECT TOP 1 saldo FROM CuentaCorrienteProveedor WITH (UPDLOCK, HOLDLOCK)
+                                                  WHERE idProveedor = @idProveedor ORDER BY idMovimiento DESC);
             ");
 
             parametros.Add(AccesoDatos.Param("@tipo", pago.Tipo));
@@ -192,7 +204,7 @@ namespace BIZ.Data
                             (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
                         VALUES (
                             @idCliente, @tipoMovimientoCC, NULL, @idPago, 0, @monto" + suf + @",
-                            ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteCliente
+                            ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteCliente WITH (UPDLOCK, HOLDLOCK)
                                     WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0) - @monto" + suf + @",
                             @descripcionCC" + suf + @", NULL);
                     ");
@@ -204,7 +216,7 @@ namespace BIZ.Data
                             (idProveedor, tipoMovimiento, idCompra, idPago, debe, haber, saldo, descripcion, idUsuario)
                         VALUES (
                             @idProveedor, @tipoMovimientoCC, NULL, @idPago, 0, @monto" + suf + @",
-                            ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteProveedor
+                            ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteProveedor WITH (UPDLOCK, HOLDLOCK)
                                     WHERE idProveedor = @idProveedor ORDER BY idMovimiento DESC), 0) - @monto" + suf + @",
                             @descripcionCC" + suf + @", NULL);
                     ");

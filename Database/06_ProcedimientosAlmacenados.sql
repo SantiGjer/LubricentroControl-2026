@@ -20,7 +20,8 @@
      sp_VentasPorPeriodo      — ventas entre dos fechas (detalle y totales, sin las anuladas
                                 con nota de crédito)
      sp_SaldosCuentaCorriente — clientes con saldo distinto de cero
-     sp_HistorialVehiculo     — órdenes de trabajo y ventas de un vehículo por patente
+     sp_HistorialVehiculo     — órdenes de trabajo y ventas de un vehículo por patente (con
+                                las anuladas marcadas)
 
    Replican la lógica que hoy hace la aplicación en BIZ/Data (MovimientoStockDAL,
    PagoDAL, ProductoDAL, ComprobanteVentaDAL, NotaCreditoDAL, CuentaCorrienteClienteDAL).
@@ -117,6 +118,11 @@ BEGIN
 
     BEGIN TRY
     BEGIN TRANSACTION;
+
+    -- Bloquea el saldo del cliente antes de tocar nada (como PagoDAL): otro movimiento del
+    -- mismo cliente espera a que este pago termine.
+    DECLARE @bloqueo DECIMAL(12,2) = (SELECT TOP 1 saldo FROM CuentaCorrienteCliente WITH (UPDLOCK, HOLDLOCK)
+                                      WHERE idCliente = @idCliente ORDER BY idMovimiento DESC);
 
     DECLARE @restante DECIMAL(12,2) = @monto;
     DECLARE @idVenta INT, @numero NVARCHAR(50), @saldoVenta DECIMAL(12,2), @aplicado DECIMAL(12,2);
@@ -264,6 +270,8 @@ GO
 
 /* ---------------------------------------------------------------------------
    sp_HistorialVehiculo — órdenes de trabajo de un vehículo y la venta de cada una
+   La venta anulada con nota de crédito sale marcada (columna anulada): su saldo quedó
+   en 0 por la nota de crédito, no por un pago.
    --------------------------------------------------------------------------- */
 CREATE OR ALTER PROCEDURE sp_HistorialVehiculo
     @patente NVARCHAR(15)
@@ -275,11 +283,13 @@ BEGIN
 
     SELECT ve.patente, ve.marca, ve.modelo, c.denominacion AS titular,
            o.idOrden, o.fecha, o.kilometraje, o.estado AS estadoOrden,
-           v.numeroComprobante, v.total, v.saldoPendiente
+           v.numeroComprobante, v.total, v.saldoPendiente,
+           CAST(CASE WHEN nc.idNotaCredito IS NULL THEN 0 ELSE 1 END AS BIT) AS anulada
     FROM Vehiculo ve
     JOIN Cliente c ON c.idCliente = ve.idCliente
     LEFT JOIN OrdenDeTrabajo o ON o.idVehiculo = ve.idVehiculo
     LEFT JOIN ComprobanteVenta v ON v.idOrden = o.idOrden
+    LEFT JOIN NotaCredito nc ON nc.idVenta = v.idVenta
     WHERE ve.patente = @patente
     ORDER BY o.fecha DESC;
 END;

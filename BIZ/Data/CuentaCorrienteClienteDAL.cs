@@ -83,22 +83,36 @@ namespace BIZ.Data
             return lista;
         }
 
-        // Núcleo de escritura: una sola fila, con el saldo acumulado calculado por subquery en
-        // el propio INSERT. Los casos que necesitan ir atómicamente junto con otra escritura (una
-        // Venta generada al cerrar una orden, un Pago) arman su propio batch con este mismo texto
-        // en vez de llamar a este método — mismo criterio que
-        // CuentaCorrienteProveedorDAL.Registrar (ver CLAUDE.md, Historial de decisiones).
+        // Núcleo de escritura: una sola fila, con el saldo acumulado a partir del saldo anterior,
+        // leído con bloqueo en la misma transacción (ver el comentario del SQL). Los casos que
+        // necesitan ir atómicamente junto con otra escritura (una Venta generada al cerrar una
+        // orden, un Pago, una nota de crédito) arman su propio batch con la misma lectura en vez
+        // de llamar a este método — mismo criterio que CuentaCorrienteProveedorDAL.Registrar (ver
+        // CLAUDE.md, Historial de decisiones).
         private static void Registrar(int idCliente, string tipoMovimiento, decimal debe, decimal haber,
             int? idVenta, int? idPago, int? idUsuario, string descripcion)
         {
+            // El saldo anterior se lee con UPDLOCK/HOLDLOCK en una sentencia aparte, antes del
+            // INSERT y dentro de una transacción (desde el 2026-10-22): el siguiente movimiento del
+            // mismo titular espera a que este termine. Leído dentro del mismo INSERT no alcanzaba:
+            // con varios movimientos a la vez, dos partían del mismo saldo o quedaban numerados
+            // en otro orden que sus saldos.
             const string sql = @"
+                SET XACT_ABORT ON;
+                BEGIN TRANSACTION;
+
+                DECLARE @saldoAnterior DECIMAL(12,2) = ISNULL((
+                    SELECT TOP 1 saldo FROM CuentaCorrienteCliente WITH (UPDLOCK, HOLDLOCK)
+                    WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0);
+
                 INSERT INTO CuentaCorrienteCliente
                     (idCliente, tipoMovimiento, idVenta, idPago, debe, haber, saldo, descripcion, idUsuario)
                 VALUES (
                     @idCliente, @tipoMovimiento, @idVenta, @idPago, @debe, @haber,
-                    ISNULL((SELECT TOP 1 saldo FROM CuentaCorrienteCliente
-                            WHERE idCliente = @idCliente ORDER BY idMovimiento DESC), 0) + @debe - @haber,
-                    @descripcion, @idUsuario);";
+                    @saldoAnterior + @debe - @haber,
+                    @descripcion, @idUsuario);
+
+                COMMIT TRANSACTION;";
 
             AccesoDatos.Ejecutar(sql,
                 AccesoDatos.Param("@idCliente", idCliente),
