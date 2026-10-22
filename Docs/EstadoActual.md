@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 21 de octubre de 2026
+**Última actualización:** 22 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -234,6 +234,25 @@ sección 4 más abajo (contraseña del admin, usuarios de prueba, VPN Radmin, et
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-22 — `sp_VentasPorPeriodo` descuenta las ventas anuladas
+
+Al cargar la base en el servidor de la cátedra se vio que `sp_VentasPorPeriodo` contaba las
+ventas anuladas con nota de crédito como vendidas y cobradas (la nota de crédito les deja el saldo
+en 0), a diferencia del reporte de la aplicación. Solo cambia `06_ProcedimientosAlmacenados.sql`:
+
+- **Mismo criterio que `Reportes/VentasPorPeriodo` (Requerimientos §9.17):** la nota de crédito
+  resta de lo vendido en el período en que se emite, aunque anule una venta de otro período.
+- **Detalle:** las anuladas se siguen listando, con la columna nueva `anulada`.
+- **Totales:** se agregan `notasCredito`, `totalAnulado` y `netoVendido`; `totalCobrado` ya no
+  cuenta las anuladas (lo que se había pagado de ellas le queda al cliente a favor en la cuenta
+  corriente).
+
+Verificado en SQL Server 2008 R2 y en LocalDB con los datos de la base de Alexis (11 ventas, 4
+anuladas): para 2026 da 376.300 vendido, 81.700 anulado, 294.600 neto, 198.300 cobrado y 96.300
+pendiente; también un período anterior a las notas de crédito, el día en que se emitieron
+(anulan ventas de días anteriores), un período vacío y fechas invertidas. Los totales coinciden con
+una consulta aparte que repite el cálculo del reporte. El script se corrió dos veces sin errores.
 
 ### 2026-10-21 — Procedimientos almacenados
 

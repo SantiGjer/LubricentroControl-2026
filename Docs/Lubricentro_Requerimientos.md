@@ -550,6 +550,9 @@ Pedido de la cátedra: la base tiene que incluir procedimientos almacenados.
 - Hacen lo mismo que la aplicación (mismas reglas: no dejar stock negativo, una transacción por
   operación, mismo orden de cancelación de deudas), pero la aplicación no los llama: el acceso a
   datos sigue en las clases de `BIZ/Data`.
+- `sp_VentasPorPeriodo` descuenta las ventas anuladas con el criterio del reporte (§9.17): las
+  lista marcadas (`anulada`), resta las notas de crédito emitidas en el período (`totalAnulado`,
+  `netoVendido`) y no cuenta las anuladas como cobradas (2026-10-22).
 - Se ejecutan con un usuario administrador; el usuario de la aplicación no tiene permiso para
   ejecutarlos (§9.16).
 

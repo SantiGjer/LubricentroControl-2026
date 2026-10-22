@@ -17,12 +17,13 @@
                                 nueva y deja el sobrante a cuenta, con su movimiento de cuenta corriente
    Consultas:
      sp_StockBajo             — insumos activos por debajo del stock mínimo
-     sp_VentasPorPeriodo      — ventas entre dos fechas (detalle y totales)
+     sp_VentasPorPeriodo      — ventas entre dos fechas (detalle y totales, sin las anuladas
+                                con nota de crédito)
      sp_SaldosCuentaCorriente — clientes con saldo distinto de cero
      sp_HistorialVehiculo     — órdenes de trabajo y ventas de un vehículo por patente
 
    Replican la lógica que hoy hace la aplicación en BIZ/Data (MovimientoStockDAL,
-   PagoDAL, ProductoDAL, ComprobanteVentaDAL, CuentaCorrienteClienteDAL).
+   PagoDAL, ProductoDAL, ComprobanteVentaDAL, NotaCreditoDAL, CuentaCorrienteClienteDAL).
    ============================================================================ */
 
 SET QUOTED_IDENTIFIER ON;
@@ -197,6 +198,12 @@ GO
 /* ---------------------------------------------------------------------------
    sp_VentasPorPeriodo — ventas entre dos fechas (inclusive del día completo de @hasta)
    Devuelve dos resultados: el detalle de las ventas y los totales del período.
+   Las ventas anuladas con nota de crédito se listan igual (columna anulada) y se
+   descuentan con el criterio de Reportes/VentasPorPeriodo (Requerimientos §9.17):
+   la nota de crédito resta de lo vendido en el período en que se emite, aunque anule
+   una venta de otro período. Lo cobrado no cuenta las ventas anuladas: su saldo quedó
+   en 0 por la nota de crédito, no por un pago (lo que se había pagado le queda al
+   cliente a favor en la cuenta corriente).
    --------------------------------------------------------------------------- */
 CREATE OR ALTER PROCEDURE sp_VentasPorPeriodo
     @desde DATE,
@@ -210,17 +217,28 @@ BEGIN
     DECLARE @hastaExclusiva DATETIME = DATEADD(DAY, 1, CAST(@hasta AS DATETIME));
 
     SELECT v.idVenta, v.numeroComprobante, v.fecha, c.denominacion AS cliente,
-           v.subtotal, v.impuestos, v.total, v.saldoPendiente
+           v.subtotal, v.impuestos, v.total, v.saldoPendiente,
+           CAST(CASE WHEN nc.idNotaCredito IS NULL THEN 0 ELSE 1 END AS BIT) AS anulada
     FROM ComprobanteVenta v
     JOIN Cliente c ON c.idCliente = v.idCliente
+    LEFT JOIN NotaCredito nc ON nc.idVenta = v.idVenta
     WHERE v.fecha >= @desde AND v.fecha < @hastaExclusiva
     ORDER BY v.fecha;
 
+    DECLARE @notasCredito INT, @totalAnulado DECIMAL(18,2);
+    SELECT @notasCredito = COUNT(*), @totalAnulado = ISNULL(SUM(total), 0)
+    FROM NotaCredito
+    WHERE fecha >= @desde AND fecha < @hastaExclusiva;
+
     SELECT COUNT(*) AS cantidadVentas,
            ISNULL(SUM(v.total), 0) AS totalVendido,
-           ISNULL(SUM(v.total - v.saldoPendiente), 0) AS totalCobrado,
+           @notasCredito AS notasCredito,
+           @totalAnulado AS totalAnulado,
+           ISNULL(SUM(v.total), 0) - @totalAnulado AS netoVendido,
+           ISNULL(SUM(CASE WHEN nc.idNotaCredito IS NULL THEN v.total - v.saldoPendiente ELSE 0 END), 0) AS totalCobrado,
            ISNULL(SUM(v.saldoPendiente), 0) AS totalPendiente
     FROM ComprobanteVenta v
+    LEFT JOIN NotaCredito nc ON nc.idVenta = v.idVenta
     WHERE v.fecha >= @desde AND v.fecha < @hastaExclusiva;
 END;
 GO

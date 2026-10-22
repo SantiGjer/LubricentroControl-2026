@@ -20,6 +20,10 @@ Requerimientos §9.18. **No cambia las tablas:** script nuevo y opcional,
   `sp_StockBajo`, `sp_VentasPorPeriodo`, `sp_SaldosCuentaCorriente` y `sp_HistorialVehiculo`.
 - Repiten las reglas de la aplicación, pero la aplicación no los usa.
 - Se ejecutan con un usuario administrador (`lubricentro_app` no tiene permiso).
+- 2026-10-22: `sp_VentasPorPeriodo` descuenta las ventas anuladas con nota de crédito, como el
+  reporte de la aplicación (columna `anulada` y totales `notasCredito`, `totalAnulado` y
+  `netoVendido`; lo cobrado no cuenta las anuladas). Con una base que ya tiene los procedimientos,
+  alcanza con volver a correr `06`.
 
 Verificado sobre una base nueva creada con `01` a `05`: el script corre dos veces sin errores, las
 operaciones dan lo esperado y los errores no dejan cambios a medias.
