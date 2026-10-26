@@ -136,14 +136,16 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmace
 
 Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18, nota de
 crédito del 2026-10-20, y restricciones de la cuenta corriente de proveedores y vínculo de los
-comprobantes con `Emisor` del 2026-10-22; una base recién creada con `01` no los necesita, ya los
-trae). En este orden; todos se pueden correr más de una vez:
+comprobantes con `Emisor` del 2026-10-22, y pantalla del asistente del 2026-10-26; una base recién
+creada con `01` y `02` no los necesita, ya los trae). En este orden; todos se pueden correr más de
+una vez:
 
 ```powershell
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-18_Restricciones.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-20_NotaCredito.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_CuentaCorrienteProveedor.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_Emisor.sql"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-26_Asistente.sql"
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -552,6 +554,27 @@ Nota (2026-09-27): `04_DatosDemo.sql` corrido contra la LocalDB de Alexis (los 4
 `04`) — el circuito de 10 clientes/vehículos/proveedores/etc de ejemplo está cargado ahí. Es
 LocalDB, por-usuario: no afecta la base de ningún otro compañero, cada uno decide si lo corre
 en la suya.
+
+## Asistente de consultas con IA local (desde 2026-10-26, Requerimientos §9.20)
+
+Pantalla `~/Reportes/Asistente` (Admin y Encargado): el usuario pregunta en lenguaje natural y el
+sistema responde con datos reales. **Decisión: catálogo cerrado, no text-to-SQL.** La IA no escribe
+SQL ni arma la respuesta: solo elige una consulta del catálogo (`BIZ/Modelo/ConsultaAsistente`) y el
+período, y devuelve `{"consulta","desde","hasta"}`. `AsistenteDAL` valida el id contra la lista
+blanca, ejecuta la consulta parametrizada y arma el texto en C# (ningún número pasa por el modelo).
+Pantalla de solo lectura. Si Ollama no responde, `ServicioIA` devuelve un error claro y los botones
+de ejemplo siguen andando (`AsistenteDAL.EjecutarDirecto`, mes actual, sin IA).
+
+- Modelo local con **Ollama** (https://ollama.com, queda en `http://localhost:11434`). Por PC, no se
+  instala en el repo: `ollama pull qwen2.5:3b` (≈2 GB; `qwen2.5:1.5b` si la PC es justa,
+  `qwen2.5:7b` si tiene 16 GB), probar con `ollama run qwen2.5:3b "hola"`, ver `ollama list`.
+- Configuración en `appSettings` de `Web.config`: `IA.Url` (endpoint compatible con OpenAI, sirve
+  también LM Studio), `IA.Modelo` y `IA.TimeoutSegundos`. Cambiar de modelo = `ollama pull` +
+  cambiar `IA.Modelo`, sin recompilar.
+- Newtonsoft.Json 13.0.3 se referencia también desde `BIZ` (`BIZ/packages.config`).
+- **Agregar una consulta nueva, en 3 pasos:** (1) método SQL parametrizado en `AsistenteDAL`;
+  (2) entrada en el catálogo `ConsultaAsistente` (id, descripción, 2 o 3 ejemplos; el prompt de la IA
+  sale del catálogo); (3) un `case` en `AsistenteDAL.Ejecutar` con su plantilla de respuesta.
 
 ## Contraseñas y mails
 

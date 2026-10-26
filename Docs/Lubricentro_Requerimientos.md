@@ -584,6 +584,27 @@ Los que quedaron anotados en `Docs/EstadoActual.md` §4 y no necesitaban una dec
   siendo uno solo): en el modelo, los vínculos Expide y ExpideNota. Los datos del comercio se
   siguen copiando en el comprobante al emitirse, para que no cambie si después se editan.
 
+### 9.20 Asistente de consultas con IA local (2026-10-26)
+
+Pedido: que un usuario escriba preguntas simples («¿cuál es el ticket promedio de este mes?», «¿qué
+marca y modelo atendemos más?») y el sistema las responda con datos reales, con un modelo que corra
+en la PC (sin servicios en la nube) y que se pueda cambiar fácil.
+
+- **Alcance:** pantalla `~/Reportes/Asistente` (Reportes > Asistente IA), de solo lectura, para los
+  roles que ven los reportes (Admin y Encargado de base; se ajusta desde Roles).
+- **Catálogo cerrado:** la IA solo interpreta la pregunta y elige una consulta de una lista que
+  escribe el equipo (más el período). Hoy: ticket promedio (promedio de las ventas del período, sin
+  las anuladas con nota de crédito) y marca y modelo más atendidos (top 5 de órdenes no canceladas).
+  Sin período en la pregunta, mes actual. Lo que no está en el catálogo se contesta con la lista de lo
+  que sí sabe responder.
+- **La respuesta la arma el sistema**, no el modelo: un modelo chico puede inventar o redondear mal un
+  número.
+- **Modelo configurable:** `IA.Modelo`, `IA.Url` e `IA.TimeoutSegundos` en `Web.config`, sobre el
+  endpoint compatible con OpenAI de Ollama (también sirve LM Studio). Cada PC necesita Ollama y el
+  modelo descargado; si no está, la pantalla avisa y los botones de ejemplo siguen respondiendo.
+- **Fuera de alcance:** que la IA genere o ejecute SQL libre (text-to-SQL), escriba datos o responda
+  consultas que no estén en el catálogo.
+
 ---
 
 ## 10. Fuera de alcance (por ahora)

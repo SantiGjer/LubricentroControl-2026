@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 22 de octubre de 2026
+**Última actualización:** 26 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -234,6 +234,25 @@ nota de crédito parcial y el formato de números argentino.
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-26 — Asistente de consultas con IA local
+
+Pantalla nueva `~/Reportes/Asistente` (Reportes > Asistente IA, Admin y Encargado): el usuario
+escribe una pregunta y el sistema responde con datos reales. **La IA no escribe SQL:** un modelo
+local (Ollama, `qwen2.5:3b` por defecto) solo elige una consulta de un catálogo cerrado
+(`ConsultaAsistente`) y el período; `AsistenteDAL` la ejecuta con SQL parametrizado y arma el texto
+en C#, así que ningún número lo toca el modelo. Dos consultas de ejemplo: ticket promedio (sin las
+ventas anuladas con nota de crédito, mismo criterio que `sp_VentasPorPeriodo`) y top 5 de marca y
+modelo más atendidos (marca y modelo normalizados, sin las órdenes canceladas). Sin período, mes
+actual. Los botones de ejemplo corren sin IA, así la pantalla sirve aunque Ollama esté cerrado.
+Modelo, URL y timeout en `appSettings` (`IA.*`); Newtonsoft.Json suma referencia en `BIZ`. Sin
+tablas nuevas; `Actualizar_2026-10-26_Asistente.sql` agrega la pantalla al menú de una base
+existente. Ver CLAUDE.md (sección del asistente) y Requerimientos §9.20.
+
+Verificado: compila (MSBuild) y `aspnet_compiler` valida el markup; las consultas y el script de
+actualización se analizaron con `PARSEONLY`. Sin probar contra la base ni contra Ollama (no están
+instalados en la máquina donde se escribió): falta correr el script, bajar el modelo y repasar las
+preguntas de prueba del plan.
 
 ### 2026-10-22 (cont. 2) — Factura y nota de crédito vinculadas con `Emisor`
 

@@ -114,6 +114,7 @@
     <Content Include="Proveedores.aspx" />
     <Content Include="RecuperarClave.aspx" />
     <Content Include="Registro.aspx" />
+    <Content Include="Reportes\Asistente.aspx" />
     <Content Include="Reportes\CuentasCorrientes.aspx" />
     <Content Include="Reportes\StockBajo.aspx" />
     <Content Include="Reportes\VentasPorPeriodo.aspx" />
@@ -346,6 +347,13 @@
     </Compile>
     <Compile Include="Registro.aspx.designer.cs">
       <DependentUpon>Registro.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Reportes\Asistente.aspx.cs">
+      <DependentUpon>Reportes\Asistente.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Reportes\Asistente.aspx.designer.cs">
+      <DependentUpon>Reportes\Asistente.aspx</DependentUpon>
     </Compile>
     <Compile Include="Reportes\CuentasCorrientes.aspx.cs">
       <DependentUpon>Reportes\CuentasCorrientes.aspx</DependentUpon>

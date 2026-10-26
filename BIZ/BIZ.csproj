@@ -40,10 +40,14 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Data\AccesoDatos.cs" />
+    <Compile Include="Data\AsistenteDAL.cs" />
     <Compile Include="Data\ClienteDAL.cs" />
     <Compile Include="Data\ComprobanteCompraDAL.cs" />
     <Compile Include="Data\ComprobanteVentaDAL.cs" />
@@ -64,6 +68,7 @@
     <Compile Include="Data\ProductoDAL.cs" />
     <Compile Include="Data\ProveedorDAL.cs" />
     <Compile Include="Data\RecuperacionClaveDAL.cs" />
+    <Compile Include="Data\ServicioIA.cs" />
     <Compile Include="Data\ServicioMail.cs" />
     <Compile Include="Data\TurnoDAL.cs" />
     <Compile Include="Data\UsuarioDAL.cs" />
@@ -72,6 +77,7 @@
     <Compile Include="Modelo\CodigosPostales.cs" />
     <Compile Include="Modelo\ComprobanteCompra.cs" />
     <Compile Include="Modelo\ComprobanteVenta.cs" />
+    <Compile Include="Modelo\ConsultaAsistente.cs" />
     <Compile Include="Modelo\CuentaCorrienteCliente.cs" />
     <Compile Include="Modelo\CuentaCorrienteProveedor.cs" />
     <Compile Include="Modelo\DatosEmisor.cs" />
@@ -94,6 +100,7 @@
     <Compile Include="Modelo\Producto.cs" />
     <Compile Include="Modelo\Proveedor.cs" />
     <Compile Include="Modelo\RecuperacionClave.cs" />
+    <Compile Include="Modelo\RespuestaAsistente.cs" />
     <Compile Include="Modelo\ResultadoOperacion.cs" />
     <Compile Include="Modelo\Turno.cs" />
     <Compile Include="Modelo\Url.cs" />
@@ -101,6 +108,9 @@
     <Compile Include="Modelo\Vehiculo.cs" />
     <Compile Include="Negocio\PasswordHasher.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Modelo\CodigosPostales.txt" />
