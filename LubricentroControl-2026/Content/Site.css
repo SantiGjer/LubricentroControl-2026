@@ -1021,6 +1021,38 @@ body.sin-menu .pie-pagina {
     width: 100%;
 }
 
+/* Asistente de consultas: el modelo de IA debajo del título y la línea que separa la
+   pregunta libre (con IA) de las consultas rápidas (sin IA). */
+.pantalla-abm h1.con-subtitulo {
+    margin-bottom: 0.2rem;
+}
+
+.pantalla-abm .subtitulo-asistente {
+    color: var(--rojo);
+    font-weight: 700;
+    margin-bottom: 1.1rem;
+}
+
+.pantalla-abm .separador-asistente {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0 0.8rem;
+    color: #6c757d;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+
+.pantalla-abm .separador-asistente::before,
+.pantalla-abm .separador-asistente::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #c4c8cc;
+}
+
 /* Título de un grupo de campos dentro de un formulario (Datos fiscales, Domicilio…). */
 .pantalla-abm .subtitulo-formulario {
     font-size: 0.78rem;

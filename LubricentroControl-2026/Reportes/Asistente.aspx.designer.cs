@@ -23,6 +23,9 @@ namespace LubricentroControl_2026.Reportes
         /// <summary>Control btnPreguntar.</summary>
         protected global::System.Web.UI.WebControls.Button btnPreguntar;
 
+        /// <summary>Control btnLimpiar.</summary>
+        protected global::System.Web.UI.WebControls.Button btnLimpiar;
+
         /// <summary>Control rptEjemplos.</summary>
         protected global::System.Web.UI.WebControls.Repeater rptEjemplos;
 

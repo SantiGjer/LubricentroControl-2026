@@ -39,10 +39,20 @@ namespace LubricentroControl_2026.Reportes
             Mostrar(AsistenteDAL.EjecutarDirecto(Convert.ToString(e.CommandArgument)));
         }
 
+        // Saca la respuesta (o el error) de la pantalla y vacía la pregunta.
+        protected void btnLimpiar_Click(object sender, EventArgs e)
+        {
+            gvTop.Visible = false;
+            pnlRespuesta.Visible = false;
+            btnLimpiar.Visible = false;
+            txtPregunta.Text = "";
+        }
+
         private void Mostrar(RespuestaAsistente respuesta)
         {
             gvTop.Visible = false;
             pnlRespuesta.Visible = false;
+            btnLimpiar.Visible = true;
 
             if (!respuesta.Exito)
             {
