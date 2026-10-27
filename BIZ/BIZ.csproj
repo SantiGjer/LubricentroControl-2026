@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="Data\AccesoDatos.cs" />
     <Compile Include="Data\AsistenteDAL.cs" />
+    <Compile Include="Data\AsistenteVentasDAL.cs" />
     <Compile Include="Data\ClienteDAL.cs" />
     <Compile Include="Data\ComprobanteCompraDAL.cs" />
     <Compile Include="Data\ComprobanteVentaDAL.cs" />
@@ -69,6 +70,7 @@
     <Compile Include="Data\ProveedorDAL.cs" />
     <Compile Include="Data\RecuperacionClaveDAL.cs" />
     <Compile Include="Data\ServicioIA.cs" />
+    <Compile Include="Data\ServicioIAVentas.cs" />
     <Compile Include="Data\ServicioMail.cs" />
     <Compile Include="Data\TurnoDAL.cs" />
     <Compile Include="Data\UsuarioDAL.cs" />
@@ -78,6 +80,7 @@
     <Compile Include="Modelo\ComprobanteCompra.cs" />
     <Compile Include="Modelo\ComprobanteVenta.cs" />
     <Compile Include="Modelo\ConsultaAsistente.cs" />
+    <Compile Include="Modelo\ConsultaVentasIA.cs" />
     <Compile Include="Modelo\CuentaCorrienteCliente.cs" />
     <Compile Include="Modelo\CuentaCorrienteProveedor.cs" />
     <Compile Include="Modelo\DatosEmisor.cs" />
@@ -101,6 +104,7 @@
     <Compile Include="Modelo\Proveedor.cs" />
     <Compile Include="Modelo\RecuperacionClave.cs" />
     <Compile Include="Modelo\RespuestaAsistente.cs" />
+    <Compile Include="Modelo\RespuestaVentasIA.cs" />
     <Compile Include="Modelo\ResultadoOperacion.cs" />
     <Compile Include="Modelo\Turno.cs" />
     <Compile Include="Modelo\Url.cs" />

@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 26 de octubre de 2026
+**Última actualización:** 27 de octubre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -234,6 +234,46 @@ nota de crédito parcial y el formato de números argentino.
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-10-27 — Asistente de ventas y stock con IA local
+
+Pedido de la cátedra para los módulos de Alexis (Ventas, Productos y Cuenta corriente de clientes):
+integrar Qwen 2.5 con Ollama. Pantalla nueva `~/Reportes/AsistenteVentas` (Reportes > Asistente de
+ventas, Admin y Encargado), **aparte** del asistente de consultas del 26/10 para no tocar sus
+clases: catálogo propio (`ConsultaVentasIA`, 7 consultas), cliente de Ollama propio
+(`ServicioIAVentas`, con las mismas claves `IA.*` y el mismo estilo que `ServicioIA`) y consultas en
+`AsistenteVentasDAL`. La pantalla repite el diseño de la del asistente de consultas (modelo como
+subtítulo, separador, botón Limpiar). Sin tablas nuevas;
+`Actualizar_2026-10-27_AsistenteVentas.sql` la agrega al menú de una base existente (orden 5,
+detrás de «Asistente IA»). Ver CLAUDE.md (sección del asistente de ventas) y Requerimientos §9.21.
+
+Decisiones que no se ven en el código a simple vista:
+- La IA devuelve también un **filtro** (el cliente, insumo o cajero que nombra la pregunta), que
+  solo se usa como parámetro de `LIKE`. Si elige «stock bajo» pero nombra un insumo («¿quedan
+  bujías?»), se responde el stock de ese insumo.
+- Las consultas de deuda y stock se piden **sin período** (fechas vacías): sin placa de video el
+  modelo escribe unas 3 palabras por segundo, así que cada campo que no escribe ahorra tiempo.
+- El ranking de más vendidos no cuenta las ventas anuladas aunque la nota de crédito sea de otro mes
+  (lo que se vendió de verdad); el resumen sigue el criterio de `sp_VentasPorPeriodo` (la nota de
+  crédito resta en el mes en que se emite). Por eso septiembre muestra 1 venta en el resumen y
+  ninguna en el ranking: la V-000001 se anuló en octubre. El texto vacío del ranking lo aclara
+  («sin contar las anuladas»).
+- Si Ollama tarda más que `IA.TimeoutSegundos` (60), el aviso dice eso y no «no disponible»: la
+  primera pregunta, la que carga el modelo, puede pasar el minuto en una PC sin placa de video.
+
+Verificado sin correr el modelo: compila (MSBuild y `aspnet_compiler`); `01` y `02` desde cero, y
+el script de actualización dos veces sobre una copia de la base de Alexis (mismo menú y permisos);
+41 controles de datos contra cálculos independientes en SQL (incluye el resumen igual a
+`sp_VentasPorPeriodo` en septiembre y octubre, búsquedas sin tildes y en plural, y comillas y `%` en
+el filtro); 40 del cliente de IA contra un Ollama simulado (lo que se le manda, JSON dentro de un
+bloque de código, lista blanca, fechas inválidas, error HTTP, demora y Ollama cerrado); 33 de
+pantalla con IIS Express (las 7 consultas rápidas, pregunta escrita, Limpiar, avisos, la pantalla
+del asistente de consultas sigue igual, y Empleado y Lectura no entran).
+
+Pendiente: la batería de preguntas reales con el modelo. Una primera tanda de 45 preguntas con
+`qwen2.5:3b` (26/10, sobre una versión anterior del catálogo) eligió bien la consulta en 41; con eso
+se ajustaron descripciones y ejemplos. Falta repetirla con esta versión en una PC donde el modelo
+corra de forma estable.
 
 ### 2026-10-26 — Asistente de consultas con IA local
 

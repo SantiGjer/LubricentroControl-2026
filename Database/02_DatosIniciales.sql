@@ -61,6 +61,7 @@ INSERT INTO Url (descripcion, path) VALUES
     (N'Reporte de ventas por período','~/Reportes/VentasPorPeriodo'),
     (N'Reporte de cuentas corrientes','~/Reportes/CuentasCorrientes'),
     (N'Asistente de consultas con IA','~/Reportes/Asistente'),
+    (N'Asistente de ventas y stock con IA','~/Reportes/AsistenteVentas'),
     (N'Usuarios',                    '~/Usuarios'),
     (N'Roles y permisos',            '~/Roles'),
     (N'Datos del comercio',          '~/DatosComercio');
@@ -108,6 +109,7 @@ FROM (VALUES
     (N'Ventas por período',           '~/Reportes/VentasPorPeriodo',    @gReportes,  2),
     (N'Cuentas corrientes',           '~/Reportes/CuentasCorrientes',   @gReportes,  3),
     (N'Asistente IA',                 '~/Reportes/Asistente',           @gReportes,  4),
+    (N'Asistente de ventas',          '~/Reportes/AsistenteVentas',     @gReportes,  5),
     (N'Usuarios',                     '~/Usuarios',                     @gAdmin,     1),
     (N'Roles y permisos',             '~/Roles',                        @gAdmin,     2),
     (N'Datos del comercio',           '~/DatosComercio',                @gAdmin,     3)

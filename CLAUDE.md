@@ -136,9 +136,9 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmace
 
 Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18, nota de
 crédito del 2026-10-20, y restricciones de la cuenta corriente de proveedores y vínculo de los
-comprobantes con `Emisor` del 2026-10-22, y pantalla del asistente del 2026-10-26; una base recién
-creada con `01` y `02` no los necesita, ya los trae). En este orden; todos se pueden correr más de
-una vez:
+comprobantes con `Emisor` del 2026-10-22, y pantalla del asistente del 2026-10-26 y del asistente
+de ventas del 2026-10-27; una base recién creada con `01` y `02` no los necesita, ya los trae). En
+este orden; todos se pueden correr más de una vez:
 
 ```powershell
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-18_Restricciones.sql"
@@ -146,6 +146,7 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-20_N
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_CuentaCorrienteProveedor.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_Emisor.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-26_Asistente.sql"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-27_AsistenteVentas.sql"
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -575,6 +576,34 @@ de ejemplo siguen andando (`AsistenteDAL.EjecutarDirecto`, mes actual, sin IA).
 - **Agregar una consulta nueva, en 3 pasos:** (1) método SQL parametrizado en `AsistenteDAL`;
   (2) entrada en el catálogo `ConsultaAsistente` (id, descripción, 2 o 3 ejemplos; el prompt de la IA
   sale del catálogo); (3) un `case` en `AsistenteDAL.Ejecutar` con su plantilla de respuesta.
+
+## Asistente de ventas y stock con IA local (desde 2026-10-27, Requerimientos §9.21)
+
+Pantalla `~/Reportes/AsistenteVentas` (Reportes > Asistente de ventas; Admin y Encargado), para
+Ventas, Productos y Cuenta corriente de clientes. **Es un asistente aparte del de consultas** (no
+usa ni toca sus clases) con el mismo diseño: catálogo cerrado, la IA solo elige, C# valida contra la
+lista blanca, ejecuta SQL parametrizado y arma el texto. Clases propias: `ConsultaVentasIA`
+(catálogo), `ServicioIAVentas` (cliente de Ollama), `AsistenteVentasDAL` (consultas) y
+`RespuestaVentasIA`.
+
+- **La IA devuelve además un `filtro`**: `{"consulta","desde","hasta","filtro"}`. Es lo que nombra
+  la pregunta (un cliente, un insumo, un cajero, o «servicio»/«insumo» en el ranking) y se usa **solo
+  como parámetro de `LIKE`**, palabra por palabra, sin distinguir mayúsculas ni tildes
+  (`COLLATE Latin1_General_CI_AI`), con los plurales recortados («baterías» encuentra «Batería») y
+  los comodines escapados (`%` y `_` se buscan literales).
+- Siete consultas: más vendidos, deudores (o lo que debe un cliente), stock bajo, stock de un insumo
+  (o de todos), reposición (consumo de los últimos 30 días), ventas por cajero y resumen de ventas
+  (los mismos totales que `sp_VentasPorPeriodo`). Las de deuda y stock no dependen del período
+  (`SinPeriodo`): la IA deja las fechas vacías y escribe menos.
+- Comparte con el asistente de consultas las claves `IA.Url`, `IA.Modelo` e `IA.TimeoutSegundos`
+  (mismo Ollama y mismo modelo; instalarlo como dice la sección anterior). Si la IA tarda más que
+  `IA.TimeoutSegundos`, la pantalla lo dice: en una PC sin placa de video la primera pregunta (la que
+  carga el modelo) puede pasar el minuto. Si pasa siempre, subir ese valor (vale para los dos).
+- Las consultas rápidas (botones) corren sin IA: `AsistenteVentasDAL.EjecutarDirecto`, mes actual.
+- **Agregar una consulta, en 3 pasos:** (1) entrada en `ConsultaVentasIA` (id, descripción, qué va
+  en `filtro` o `null`, si depende del período, y ejemplos: el primero es el texto del botón);
+  (2) método SQL parametrizado en `AsistenteVentasDAL`; (3) un `case` en
+  `AsistenteVentasDAL.Ejecutar`.
 
 ## Contraseñas y mails
 

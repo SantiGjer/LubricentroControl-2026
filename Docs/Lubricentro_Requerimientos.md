@@ -605,6 +605,41 @@ en la PC (sin servicios en la nube) y que se pueda cambiar fácil.
 - **Fuera de alcance:** que la IA genere o ejecute SQL libre (text-to-SQL), escriba datos o responda
   consultas que no estén en el catálogo.
 
+### 9.21 Asistente de ventas y stock con IA local (2026-10-27)
+
+Pedido de la cátedra: integrar el modelo Qwen 2.5 (Ollama) en los módulos de Ventas, Productos y
+Cuenta corriente de clientes, para saber lo más vendido, qué cliente debe más y cómo está el stock,
+y sumar algunas consultas más.
+
+- **Alcance:** pantalla `~/Reportes/AsistenteVentas` (Reportes > Asistente de ventas), de solo
+  lectura, para los roles que ven los reportes (Admin y Encargado de base; se ajusta desde Roles).
+  Es aparte del asistente de consultas (§9.20): mismo criterio y misma configuración, catálogo propio.
+- **Catálogo cerrado, 7 consultas:**
+  - *Más vendidos:* ranking por cantidad vendida en el período, sin las ventas anuladas con nota de
+    crédito. Top 5 de servicios y top 5 de insumos; top 10 si la pregunta dice «servicios» o
+    «insumos»; si nombra un producto («aceite»), el ranking de lo que se llama así.
+  - *Deudores:* los clientes con saldo deudor en la cuenta corriente, el que más debe y el total; si
+    la pregunta nombra un cliente, lo que debe ese cliente.
+  - *Stock bajo:* los insumos activos por debajo del mínimo, el más urgente primero.
+  - *Stock de un insumo:* cantidad, mínimo y último movimiento del insumo que nombra la pregunta; sin
+    nombre, todos los insumos activos.
+  - *Reposición:* consumo de los últimos 30 días (salidas por órdenes de trabajo menos lo que volvió
+    al cancelarlas), para cuántos días alcanza el stock y cuánto comprar (consumo de 30 días + mínimo
+    − stock, si da positivo).
+  - *Ventas por cajero:* facturas emitidas por cada usuario en el período, lo facturado, lo anulado
+    con nota de crédito y el neto (el mismo dato que el filtro «Facturó» de Ventas).
+  - *Resumen de ventas:* vendido, anulado con notas de crédito, neto, cobrado y pendiente, con los
+    mismos totales que `sp_VentasPorPeriodo` (§9.18).
+- **Período y filtro:** la IA devuelve el período (si la pregunta no lo dice, el mes actual; la deuda
+  y el stock son los de hoy) y el nombre que menciona la pregunta. El nombre se busca como texto, sin
+  tildes ni mayúsculas y aceptando plurales; nunca se arma SQL con él.
+- **La respuesta la arma el sistema**, no el modelo. Lo que no está en el catálogo se contesta con la
+  lista de lo que sí sabe responder.
+- **Sin IA** (Ollama cerrado o demasiado lento), la pantalla lo avisa y las consultas rápidas (mes
+  actual) siguen respondiendo.
+- **Fuera de alcance:** text-to-SQL, escribir datos, responder fuera del catálogo y comparar dos
+  períodos en una misma pregunta.
+
 ---
 
 ## 10. Fuera de alcance (por ahora)
