@@ -11,6 +11,21 @@ sesión está en `Docs/EstadoActual.md` y las decisiones de negocio en
 
 ---
 
+## 2026-11-02 — Asistente: uso del sistema (tiempo en sesión, páginas y usuarios)
+
+**Cambia el esquema:** tablas `RegistroSesion` y `VisitaPagina`. Una base existente se pone al día
+con `Database\Actualizar_2026-11-02_RegistroDeUso.sql`, sin perder datos; las tablas arrancan
+vacías y el uso se registra desde ese momento.
+
+- La aplicación registra cada inicio de sesión, su última actividad y su cierre, y cada pantalla
+  abierta (`RegistroUsoDAL`, desde `SesionUsuario` y `PaginaConSesion`). Si falla, no corta nada.
+- La caja de arriba del asistente (`~/Reportes/Asistente`) responde tres preguntas nuevas, con
+  botón de consulta rápida: tiempo en sesión, páginas más visitadas y usuarios que más ingresan,
+  de todos o de un usuario que nombre la pregunta.
+- La grilla de esa caja genera sus columnas, como la de abajo.
+
+---
+
 ## 1. 2026-10-22 — Factura y nota de crédito vinculadas con el comercio (`Emisor`)
 
 **Cambia el esquema:** `Factura` y `NotaCredito` con `idEmisor` (NOT NULL, DEFAULT 1) y su clave

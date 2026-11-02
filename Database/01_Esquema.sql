@@ -4,7 +4,9 @@
    agregadas después: MovimientoStock (kardex de stock, Fase 2 — ver
    Docs/Lubricentro_Requerimientos.md §8 y §9.3), Producto (supertipo de
    Servicio e Insumo, §9.9), Factura y Emisor (datos del comercio que factura,
-   §9.10) e ImagenProducto (la imagen de cada producto, §9.13).
+   §9.10) e ImagenProducto (la imagen de cada producto, §9.13). Y, desde el
+   2026-11-02, el registro de uso que lee el asistente de consultas:
+   RegistroSesion (cada inicio de sesión) y VisitaPagina (cada pantalla abierta).
 
    Idempotente: se puede correr varias veces. Borra y recrea todas las tablas,
    por lo que PIERDE LOS DATOS. Correr 02_DatosIniciales.sql a continuación.
@@ -29,6 +31,8 @@ USE LubricentroControl;
 GO
 
 /* --- Borrado en orden inverso a las dependencias ------------------------- */
+DROP TABLE IF EXISTS VisitaPagina;
+DROP TABLE IF EXISTS RegistroSesion;
 DROP TABLE IF EXISTS MovimientoStock;
 DROP TABLE IF EXISTS CuentaCorrienteProveedor;
 DROP TABLE IF EXISTS CuentaCorrienteCliente;
@@ -143,6 +147,37 @@ CREATE TABLE RecuperacionClave (
     CONSTRAINT PK_RecuperacionClave PRIMARY KEY (idRecuperacion),
     CONSTRAINT UQ_RecuperacionClave_token UNIQUE (token),
     CONSTRAINT FK_RecuperacionClave_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
+);
+GO
+
+/* Registro de uso (2026-11-02): una fila por cada inicio de sesión. Lo llena la
+   aplicación (SesionUsuario y PaginaConSesion) y lo lee el asistente de
+   consultas: tiempo en sesión y usuarios que más ingresan. ultimaActividad se
+   actualiza en cada pedido; fin queda NULL si la sesión vence sin "Cerrar
+   sesión", y entonces el tiempo se cuenta hasta ultimaActividad. */
+CREATE TABLE RegistroSesion (
+    idRegistroSesion INT IDENTITY(1,1) NOT NULL,
+    idUsuario        INT               NOT NULL,
+    inicio           DATETIME          NOT NULL CONSTRAINT DF_RegistroSesion_inicio DEFAULT (GETDATE()),
+    ultimaActividad  DATETIME          NOT NULL CONSTRAINT DF_RegistroSesion_ultimaActividad DEFAULT (GETDATE()),
+    fin              DATETIME          NULL,
+    CONSTRAINT PK_RegistroSesion PRIMARY KEY (idRegistroSesion),
+    CONSTRAINT FK_RegistroSesion_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
+);
+GO
+
+/* Una fila por cada pantalla abierta (no los postbacks) dentro de una sesión.
+   path es la ruta lógica, igual que Url.path (~/Clientes): así el asistente
+   muestra el nombre de la pantalla. Páginas más visitadas. */
+CREATE TABLE VisitaPagina (
+    idVisitaPagina   INT IDENTITY(1,1) NOT NULL,
+    idRegistroSesion INT               NOT NULL,
+    idUsuario        INT               NOT NULL,
+    path             NVARCHAR(200)     NOT NULL,
+    fecha            DATETIME          NOT NULL CONSTRAINT DF_VisitaPagina_fecha DEFAULT (GETDATE()),
+    CONSTRAINT PK_VisitaPagina PRIMARY KEY (idVisitaPagina),
+    CONSTRAINT FK_VisitaPagina_RegistroSesion FOREIGN KEY (idRegistroSesion) REFERENCES RegistroSesion(idRegistroSesion),
+    CONSTRAINT FK_VisitaPagina_Usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario)
 );
 GO
 
@@ -758,6 +793,8 @@ CREATE INDEX IX_CCProv_idProveedor        ON CuentaCorrienteProveedor(idProveedo
 CREATE INDEX IX_Menu_idMenuPadre          ON Menu(idMenuPadre);
 CREATE INDEX IX_MovStock_idInsumo         ON MovimientoStock(idInsumo);
 CREATE INDEX IX_MovStock_fecha            ON MovimientoStock(fecha);
+CREATE INDEX IX_RegistroSesion_inicio     ON RegistroSesion(inicio);
+CREATE INDEX IX_VisitaPagina_fecha        ON VisitaPagina(fecha);
 GO
 
 /* ==========================================================================

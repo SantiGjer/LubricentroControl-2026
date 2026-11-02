@@ -21,6 +21,9 @@ namespace BIZ.Modelo
         // Grupo Negocio
         public const string TicketPromedio = "ticket_promedio";
         public const string MarcaModeloMasAtendido = "marca_modelo_mas_atendido";
+        public const string TiempoEnSesion = "tiempo_en_sesion";
+        public const string PaginasMasVisitadas = "paginas_mas_visitadas";
+        public const string UsuariosQueMasIngresan = "usuarios_que_mas_ingresan";
 
         // Grupo VentasStock (Requerimientos §9.21)
         public const string MasVendidos = "mas_vendidos";
@@ -68,6 +71,26 @@ namespace BIZ.Modelo
                 "¿Qué marca y modelo atendemos más?",
                 "¿Qué auto viene más al lubricentro?",
                 "Vehículos más atendidos del año"),
+
+            // Uso del sistema (registro de uso, desde el 2026-11-02: RegistroSesion y VisitaPagina).
+            new ConsultaAsistente(TiempoEnSesion, GrupoAsistente.Negocio,
+                "Tiempo que cada usuario pasa con sesión iniciada en el sistema: total, cantidad de sesiones y promedio por sesión",
+                "el nombre del usuario si la pregunta nombra uno; si no, vacío", false,
+                "¿Cuánto tiempo pasa cada usuario en el sistema?",
+                "¿Cuánto tiempo estuvo conectado Juan este mes?",
+                "¿Cuánto dura en promedio una sesión?"),
+            new ConsultaAsistente(PaginasMasVisitadas, GrupoAsistente.Negocio,
+                "Páginas o pantallas del sistema más visitadas (cuántas veces se abrió cada una y por cuántos usuarios)",
+                "el nombre del usuario si la pregunta pregunta por las páginas de alguien; si no, vacío", false,
+                "¿Cuáles son las páginas más visitadas?",
+                "¿Qué pantalla usa más Juan Empleado?",
+                "¿Qué sección del sistema se usa más?"),
+            new ConsultaAsistente(UsuariosQueMasIngresan, GrupoAsistente.Negocio,
+                "Usuarios que más veces ingresan (inician sesión) al sistema, con su último ingreso",
+                "el nombre del usuario si la pregunta nombra uno; si no, vacío", false,
+                "¿Qué usuarios ingresan más al sistema?",
+                "¿Quién entró más veces este mes?",
+                "¿Cuántas veces ingresó Juan en octubre?"),
 
             new ConsultaAsistente(MasVendidos, GrupoAsistente.VentasStock,
                 "Ranking de los productos y servicios más vendidos en el período (por cantidad vendida)",

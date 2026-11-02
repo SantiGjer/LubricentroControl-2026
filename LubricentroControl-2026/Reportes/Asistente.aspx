@@ -47,16 +47,10 @@
         <asp:Literal ID="litRespuesta" runat="server" Mode="Encode" />
     </asp:Panel>
 
-    <%-- Top 5 de las consultas que devuelven un ranking; el orden y el filtro de Lubricentro.js no hacen falta. --%>
+    <%-- Cada consulta trae sus columnas, ya formateadas (AutoGenerateColumns), igual que la caja de
+         abajo; el orden y el filtro de Lubricentro.js no hacen falta. --%>
     <asp:GridView ID="gvTop" runat="server" CssClass="tabla-abm" data-sin-filtro="true"
-        AutoGenerateColumns="false" GridLines="None" Visible="false">
-        <Columns>
-            <asp:BoundField DataField="Marca" HeaderText="Marca" />
-            <asp:BoundField DataField="Modelo" HeaderText="Modelo" />
-            <asp:BoundField DataField="Ordenes" HeaderText="Órdenes"
-                ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
-        </Columns>
-    </asp:GridView>
+        AutoGenerateColumns="true" GridLines="None" Visible="false" />
 
     <div class="separador-secciones"></div>
 

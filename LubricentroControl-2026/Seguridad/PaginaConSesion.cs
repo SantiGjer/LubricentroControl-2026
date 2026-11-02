@@ -37,6 +37,10 @@ namespace LubricentroControl_2026.Seguridad
             }
 
             VerificarPermisos();
+
+            // Llega acá solo con permiso: un acceso denegado redirige cortando el request y no
+            // cuenta como visita. Los postbacks solo mueven la última actividad de la sesión.
+            SesionUsuario.RegistrarActividad(RutaLogica, !IsPostBack);
         }
 
         // Redirige cortando el request. Se usa endResponse=true a propósito:

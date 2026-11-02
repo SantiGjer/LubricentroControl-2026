@@ -650,6 +650,26 @@ y sumar algunas consultas más.
 - **Fuera de alcance:** text-to-SQL, escribir datos, responder fuera del catálogo y comparar dos
   períodos en una misma pregunta.
 
+### 9.22 Uso del sistema en el asistente (2026-11-02)
+
+Pedido: que el asistente responda consultas sobre el uso del sistema: tiempo en sesión, página más
+visitada y usuarios que más ingresan.
+
+- **El sistema registra su uso:** cada inicio de sesión (con su última actividad y su cierre) y cada
+  pantalla abierta (los postbacks no cuentan), en dos tablas nuevas, `RegistroSesion` y
+  `VisitaPagina`. Hasta este cambio no se guardaba nada de esto, así que los datos arrancan el día
+  que se crea o se pone al día la base. Si el registro falla, la pantalla sigue andando sin registrar.
+- **Tres consultas nuevas en la caja de arriba del asistente** (grupo Negocio, §9.20), con el período
+  como las demás y, opcional, el nombre de un usuario como filtro:
+  - *Tiempo en sesión:* total, cantidad de sesiones, promedio y la más larga, por usuario. Una sesión
+    dura desde que se inicia hasta "Cerrar sesión" o, si vence sola, hasta su última actividad.
+  - *Páginas más visitadas:* las 10 más abiertas, con cuántos usuarios distintos las abrieron.
+  - *Usuarios que más ingresan:* los 10 que más veces iniciaron sesión, con su rol y su último ingreso.
+- **Quién lo ve:** los mismos roles que el asistente (Admin y Encargado de base): el Encargado ve
+  también el uso de los administradores. Se ajusta desde Roles.
+- **Fuera de alcance:** ver el detalle de cada sesión o de cada visita en una pantalla propia y borrar
+  el registro viejo; por ahora las tablas solo crecen.
+
 ---
 
 ## 10. Fuera de alcance (por ahora)

@@ -68,6 +68,7 @@
     <Compile Include="Data\ProductoDAL.cs" />
     <Compile Include="Data\ProveedorDAL.cs" />
     <Compile Include="Data\RecuperacionClaveDAL.cs" />
+    <Compile Include="Data\RegistroUsoDAL.cs" />
     <Compile Include="Data\ServicioIA.cs" />
     <Compile Include="Data\ServicioMail.cs" />
     <Compile Include="Data\TurnoDAL.cs" />
@@ -116,4 +117,4 @@
     <EmbeddedResource Include="Modelo\CodigosPostales.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-</Project>
+</Project>

@@ -129,10 +129,19 @@ namespace BIZ.Data
                             return RespuestaAsistente.Ok("No hay órdenes de trabajo " + periodo + ".");
                         var primero = tabla.Rows[0];
                         var ordenes = AccesoDatos.LeerInt(primero, "Ordenes");
+                        // La grilla de la caja genera las columnas sola: el encabezado sale del nombre.
+                        tabla.Columns["Ordenes"].ColumnName = "Órdenes";
                         return RespuestaAsistente.Ok("El vehículo más atendido " + periodo + " es " +
                             AccesoDatos.LeerString(primero, "Marca") + " " + AccesoDatos.LeerString(primero, "Modelo") +
                             " (" + ordenes + (ordenes == 1 ? " orden" : " órdenes") + "). Top 5:", tabla);
                     }
+
+                    case ConsultaAsistente.TiempoEnSesion:
+                        return TiempoEnSesion(desde, hasta, periodo, filtro);
+                    case ConsultaAsistente.PaginasMasVisitadas:
+                        return PaginasMasVisitadas(desde, hasta, periodo, filtro);
+                    case ConsultaAsistente.UsuariosQueMasIngresan:
+                        return UsuariosQueMasIngresan(desde, hasta, periodo, filtro);
 
                     case ConsultaAsistente.MasVendidos:
                         return MasVendidos(desde, hasta, periodo, filtro);
@@ -194,6 +203,197 @@ namespace BIZ.Data
             var hoy = DateTime.Today;
             desde = new DateTime(hoy.Year, hoy.Month, 1);
             hasta = desde.AddMonths(1).AddDays(-1);
+        }
+
+        /* --- Uso del sistema ------------------------------------------------------
+           Leen el registro de uso (RegistroSesion y VisitaPagina, que llena la capa web desde el
+           2026-11-02). El período es el del inicio de la sesión o el de la visita. El tiempo de una
+           sesión va del inicio al cierre ("Cerrar sesión") o, si venció sola, a la última actividad. */
+
+        private const string AvisoRegistroUso =
+            " El uso del sistema se registra desde la actualización del 2026-11-02.";
+
+        private const string DuracionSesionSql =
+            "DATEDIFF(SECOND, s.inicio, COALESCE(s.fin, s.ultimaActividad))";
+
+        private static RespuestaAsistente TiempoEnSesion(DateTime desde, DateTime hasta, string periodo, string filtro)
+        {
+            var parametros = ParametrosPeriodo(desde, hasta);
+            var condicion = filtro == null ? "" : " AND " + CondicionPalabras("u.nombre + ' ' + u.apellido", filtro, parametros);
+
+            var filas = AccesoDatos.Consultar(
+                @"SELECT u.nombre + ' ' + u.apellido AS usuario, COUNT(*) AS sesiones,
+                         SUM(CAST(" + DuracionSesionSql + @" AS BIGINT)) AS segundos,
+                         MAX(" + DuracionSesionSql + @") AS maximo
+                  FROM RegistroSesion s
+                  JOIN Usuario u ON u.idUsuario = s.idUsuario
+                  WHERE s.inicio >= @desde AND s.inicio < @hastaExclusiva" + condicion + @"
+                  GROUP BY u.idUsuario, u.nombre, u.apellido
+                  ORDER BY SUM(CAST(" + DuracionSesionSql + @" AS BIGINT)) DESC",
+                parametros.ToArray()).Rows;
+
+            if (filas.Count == 0)
+                return SinRegistrosDeUsuario(filtro, "No hay sesiones registradas " + periodo + ".",
+                    "no inició sesión " + periodo + ".");
+
+            if (filas.Count == 1 && filtro != null)
+            {
+                var f = filas[0];
+                var sesiones = AccesoDatos.LeerInt(f, "sesiones");
+                var segundos = Convert.ToInt64(f["segundos"]);
+                return RespuestaAsistente.Ok(AccesoDatos.LeerString(f, "usuario") + " estuvo " + Duracion(segundos) +
+                    " con sesión iniciada " + periodo + ", en " + sesiones + (sesiones == 1 ? " sesión" : " sesiones") +
+                    " (promedio " + Duracion(segundos / sesiones) + " por sesión; la más larga, " +
+                    Duracion(AccesoDatos.LeerInt(f, "maximo")) + ").");
+            }
+
+            long totalSegundos = 0;
+            var totalSesiones = 0;
+            var tabla = NuevaTabla("Usuario", "Sesiones", "Tiempo total", "Promedio por sesión", "Sesión más larga");
+            foreach (DataRow f in filas)
+            {
+                var sesiones = AccesoDatos.LeerInt(f, "sesiones");
+                var segundos = Convert.ToInt64(f["segundos"]);
+                totalSegundos += segundos;
+                totalSesiones += sesiones;
+                tabla.Rows.Add(AccesoDatos.LeerString(f, "usuario"), sesiones.ToString(), Duracion(segundos),
+                    Duracion(segundos / sesiones), Duracion(AccesoDatos.LeerInt(f, "maximo")));
+            }
+
+            var primero = filas[0];
+            return RespuestaAsistente.Ok("Tiempo con sesión iniciada " + periodo + ": " + Duracion(totalSegundos) +
+                " en " + totalSesiones + (totalSesiones == 1 ? " sesión" : " sesiones") + " (promedio " +
+                Duracion(totalSegundos / totalSesiones) + " por sesión). Quien más tiempo estuvo es " +
+                AccesoDatos.LeerString(primero, "usuario") + " (" + Duracion(Convert.ToInt64(primero["segundos"])) +
+                "). Por usuario:", tabla);
+        }
+
+        // Pantallas más abiertas (los postbacks no cuentan), con el nombre de la tabla Url cuando la
+        // pantalla está en el menú; si no (Inicio, Cambiar clave), la ruta.
+        private static RespuestaAsistente PaginasMasVisitadas(DateTime desde, DateTime hasta, string periodo, string filtro)
+        {
+            var parametros = ParametrosPeriodo(desde, hasta);
+            var condicion = filtro == null ? "" : " AND " + CondicionPalabras("u.nombre + ' ' + u.apellido", filtro, parametros);
+
+            var filas = AccesoDatos.Consultar(
+                @"SELECT TOP 10 COALESCE(url.descripcion, v.path) AS pagina, COUNT(*) AS visitas,
+                         COUNT(DISTINCT v.idUsuario) AS usuarios
+                  FROM VisitaPagina v
+                  JOIN Usuario u ON u.idUsuario = v.idUsuario
+                  LEFT JOIN Url url ON url.path = v.path
+                  WHERE v.fecha >= @desde AND v.fecha < @hastaExclusiva" + condicion + @"
+                  GROUP BY COALESCE(url.descripcion, v.path)
+                  ORDER BY COUNT(*) DESC, COALESCE(url.descripcion, v.path)",
+                parametros.ToArray()).Rows;
+
+            if (filas.Count == 0)
+                return SinRegistrosDeUsuario(filtro, "No hay visitas a páginas registradas " + periodo + ".",
+                    "no abrió ninguna página " + periodo + ".");
+
+            var tabla = filtro == null
+                ? NuevaTabla("Página", "Visitas", "Usuarios")
+                : NuevaTabla("Página", "Visitas");
+            foreach (DataRow f in filas)
+            {
+                if (filtro == null)
+                    tabla.Rows.Add(NombrePagina(AccesoDatos.LeerString(f, "pagina")),
+                        AccesoDatos.LeerInt(f, "visitas").ToString(), AccesoDatos.LeerInt(f, "usuarios").ToString());
+                else
+                    tabla.Rows.Add(NombrePagina(AccesoDatos.LeerString(f, "pagina")),
+                        AccesoDatos.LeerInt(f, "visitas").ToString());
+            }
+
+            var primero = filas[0];
+            var visitas = AccesoDatos.LeerInt(primero, "visitas");
+            return RespuestaAsistente.Ok("La página más visitada " + (filtro == null ? "" : "por «" + filtro + "» ") +
+                periodo + " es «" + NombrePagina(AccesoDatos.LeerString(primero, "pagina")) + "» (" + visitas +
+                (visitas == 1 ? " visita" : " visitas") + "). Las " + filas.Count + " primeras:", tabla);
+        }
+
+        private static RespuestaAsistente UsuariosQueMasIngresan(DateTime desde, DateTime hasta, string periodo, string filtro)
+        {
+            var parametros = ParametrosPeriodo(desde, hasta);
+            var condicion = filtro == null ? "" : " AND " + CondicionPalabras("u.nombre + ' ' + u.apellido", filtro, parametros);
+
+            var filas = AccesoDatos.Consultar(
+                @"SELECT TOP 10 u.nombre + ' ' + u.apellido AS usuario, n.nombre AS rol, COUNT(*) AS ingresos,
+                         MAX(s.inicio) AS ultimo
+                  FROM RegistroSesion s
+                  JOIN Usuario u ON u.idUsuario = s.idUsuario
+                  JOIN Nivel n ON n.idNivel = u.idNivel
+                  WHERE s.inicio >= @desde AND s.inicio < @hastaExclusiva" + condicion + @"
+                  GROUP BY u.idUsuario, u.nombre, u.apellido, n.nombre
+                  ORDER BY COUNT(*) DESC, MAX(s.inicio) DESC",
+                parametros.ToArray()).Rows;
+
+            if (filas.Count == 0)
+                return SinRegistrosDeUsuario(filtro, "Nadie inició sesión " + periodo + ".",
+                    "no inició sesión " + periodo + ".");
+
+            if (filas.Count == 1 && filtro != null)
+            {
+                var f = filas[0];
+                var ingresos = AccesoDatos.LeerInt(f, "ingresos");
+                return RespuestaAsistente.Ok(AccesoDatos.LeerString(f, "usuario") + " ingresó " + ingresos +
+                    (ingresos == 1 ? " vez " : " veces ") + periodo + "; la última, el " +
+                    AccesoDatos.LeerFecha(f, "ultimo").ToString("dd/MM/yyyy HH:mm") + ".");
+            }
+
+            var tabla = NuevaTabla("Usuario", "Rol", "Ingresos", "Último ingreso");
+            foreach (DataRow f in filas)
+                tabla.Rows.Add(AccesoDatos.LeerString(f, "usuario"), AccesoDatos.LeerString(f, "rol"),
+                    AccesoDatos.LeerInt(f, "ingresos").ToString(),
+                    AccesoDatos.LeerFecha(f, "ultimo").ToString("dd/MM/yyyy HH:mm"));
+
+            var primero = filas[0];
+            var veces = AccesoDatos.LeerInt(primero, "ingresos");
+            return RespuestaAsistente.Ok("Quien más ingresó " + periodo + " es " + AccesoDatos.LeerString(primero, "usuario") +
+                " (" + veces + (veces == 1 ? " vez" : " veces") + "). Por usuario:", tabla);
+        }
+
+        // Sin filas: sin filtro, el mensaje general; con filtro, distingue si no existe nadie con ese
+        // nombre o si existe pero no tiene registros en el período.
+        private static RespuestaAsistente SinRegistrosDeUsuario(string filtro, string mensajeGeneral, string accionDelUsuario)
+        {
+            if (filtro == null)
+                return RespuestaAsistente.Ok(mensajeGeneral + AvisoRegistroUso);
+
+            var usuarios = new List<SqlParameter>();
+            var existe = AccesoDatos.Consultar(
+                "SELECT TOP 1 nombre + ' ' + apellido AS usuario FROM Usuario u WHERE " +
+                CondicionPalabras("u.nombre + ' ' + u.apellido", filtro, usuarios), usuarios.ToArray()).Rows;
+            return RespuestaAsistente.Ok(existe.Count == 0
+                ? "No hay ningún usuario que se llame «" + filtro + "»."
+                : AccesoDatos.LeerString(existe[0], "usuario") + " " + accionDelUsuario + AvisoRegistroUso);
+        }
+
+        private static List<SqlParameter> ParametrosPeriodo(DateTime desde, DateTime hasta)
+        {
+            return new List<SqlParameter>
+            {
+                AccesoDatos.Param("@desde", desde.Date),
+                AccesoDatos.Param("@hastaExclusiva", hasta.Date.AddDays(1))
+            };
+        }
+
+        // "~/Reportes/StockBajo" → "Reportes/StockBajo"; "~/" → "Inicio".
+        private static string NombrePagina(string pagina)
+        {
+            if (string.IsNullOrEmpty(pagina)) return "Inicio";
+            if (!pagina.StartsWith("~/", StringComparison.Ordinal)) return pagina;
+            var ruta = pagina.Substring(2);
+            return ruta.Length == 0 || ruta.Equals("Default", StringComparison.OrdinalIgnoreCase) ? "Inicio" : ruta;
+        }
+
+        // 45 → "menos de 1 min"; 750 → "12 min"; 8100 → "2 h 15 min".
+        private static string Duracion(long segundos)
+        {
+            if (segundos < 60) return "menos de 1 min";
+            var minutos = segundos / 60;
+            if (minutos < 60) return minutos + " min";
+            var horas = minutos / 60;
+            var resto = minutos % 60;
+            return horas + " h" + (resto == 0 ? "" : " " + resto + " min");
         }
 
         /* --- Ventas -------------------------------------------------------------- */

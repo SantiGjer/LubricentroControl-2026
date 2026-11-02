@@ -137,7 +137,8 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmace
 Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18, nota de
 crédito del 2026-10-20, y restricciones de la cuenta corriente de proveedores y vínculo de los
 comprobantes con `Emisor` del 2026-10-22, pantalla del asistente del 2026-10-26 y, el 2026-11-02,
-quitar del menú la pantalla del asistente de ventas, que pasó a la del asistente; una base recién
+quitar del menú la pantalla del asistente de ventas, que pasó a la del asistente, y las tablas del
+registro de uso que lee el asistente; una base recién
 creada con `01` y `02` no los necesita, ya los trae). En este orden; todos se pueden correr más de
 una vez:
 
@@ -148,6 +149,7 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_C
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_Emisor.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-26_Asistente.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-11-02_QuitarAsistenteVentas.sql"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-11-02_RegistroDeUso.sql"
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -358,6 +360,11 @@ Reglas transversales de la capa web:
   tiene que ser `PostBackTrigger`. En una grilla, una miniatura con `data-imagen` (la imagen
   entera) hace que "Ver" la muestre grande.
 - La sesión se toca solo a través de `Seguridad/SesionUsuario.cs`, nunca `Session["..."]` directo.
+  Desde el 2026-11-02 también lleva el **registro de uso** (`BIZ/Data/RegistroUsoDAL`): `Iniciar`
+  abre una fila de `RegistroSesion`, `Cerrar` le pone el fin, y `PaginaConSesion.OnPreInit`, ya con
+  el permiso verificado, llama a `SesionUsuario.RegistrarActividad` (mueve la última actividad y, si
+  no es un postback, suma una `VisitaPagina`). Es de apoyo: `RegistroUsoDAL` atrapa cualquier error y
+  sin las tablas la aplicación anda igual, sin registrar.
 - El menú es una **barra lateral** (desde 2026-10-07) que arma `Site.Master.cs` desde
   `MenuDAL.ObtenerArbol(idNivel)` (que a su vez arma el árbol con `ItemMenu.ArmarArbol`, en
   `Modelo/`, a partir de la lista plana de `MenuDAL.ListarPorNivel`). Las opciones de primer nivel
@@ -545,6 +552,12 @@ siguen copiando sus datos al emitirse (la copia es lo que no cambia; la clave di
 Los INSERT de `FacturaDAL` y `NotaCreditoDAL` no nombran la columna: la completa el DEFAULT.
 `Actualizar_2026-10-22_Emisor.sql` la agrega a una base anterior.
 
+El 2026-11-02 se sumaron `RegistroSesion` (una fila por inicio de sesión: `inicio`,
+`ultimaActividad` y `fin`, NULL si la sesión venció sin "Cerrar sesión") y `VisitaPagina` (una fila
+por pantalla abierta, con su `path` igual que `Url.path`), que lee el asistente de consultas. Las
+llena la aplicación, no se cargan datos de ejemplo. `Actualizar_2026-11-02_RegistroDeUso.sql` las
+crea en una base anterior; arrancan vacías.
+
 Hoy apunta a **LocalDB** (`(localdb)\MSSQLLocalDB`, base `LubricentroControl`), con el usuario
 `lubricentro_app`. Para pasar al SQL Server del lubricentro por VPN Radmin alcanza con cambiar el
 `Data Source` de la cadena `LubricentroDB` en `Web.config` (y la clave, ver «Al levantar el
@@ -569,7 +582,7 @@ lectura. Si Ollama no responde, `ServicioIA` devuelve un error claro y los boton
 andando (`AsistenteDAL.EjecutarDirecto`, mes actual, sin IA).
 
 **Una sola implementación, dos cajas de preguntas en la misma pantalla** (desde 2026-11-02; antes
-eran dos pantallas con clases duplicadas). El catálogo tiene 9 consultas partidas en dos grupos
+eran dos pantallas con clases duplicadas). El catálogo tiene 12 consultas partidas en dos grupos
 (`GrupoAsistente`): la caja de arriba usa `Negocio` y la de abajo, separada por una línea, usa
 `VentasStock` (Requerimientos §9.20 y §9.21). Cada caja tiene su pregunta, su Preguntar/Limpiar, sus
 consultas rápidas y su respuesta, y solo muestra y limpia lo suyo. `ServicioIA.Interpretar` recibe el
@@ -577,7 +590,12 @@ grupo y arma el prompt solo con las consultas de ese grupo: `AsistenteDAL.Respon
 con `ConsultaAsistente.Buscar(id, grupo)`, así que lo que la IA elija fuera del grupo de la caja no se
 ejecuta. Una sola clase de respuesta (`RespuestaAsistente`, texto + tabla opcional).
 
-- **Grupo `Negocio`** (2): ticket promedio y marca y modelo más atendidos. No usan filtro.
+- **Grupo `Negocio`** (5): ticket promedio y marca y modelo más atendidos (sin filtro), y desde el
+  2026-11-02 el uso del sistema, sobre el registro de uso: tiempo en sesión (total, sesiones,
+  promedio y la más larga), páginas más visitadas (top 10, con el nombre de `Url.descripcion`) y
+  usuarios que más ingresan (top 10, con rol y último ingreso). Las tres aceptan el nombre de un
+  usuario como filtro. El tiempo de una sesión va de `inicio` a `fin` o, si venció sola, a
+  `ultimaActividad`. Las dos grillas de la pantalla generan sus columnas (`AutoGenerateColumns`).
 - **Grupo `VentasStock`** (7): más vendidos, deudores (o lo que debe un cliente), stock bajo, stock
   de un insumo (o de todos), reposición (consumo de los últimos 30 días), ventas por cajero y resumen
   de ventas (los mismos totales que `sp_VentasPorPeriodo`). Las de deuda y stock no dependen del

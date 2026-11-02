@@ -78,6 +78,7 @@ namespace LubricentroControl_2026.Reportes
             {
                 gvTop.DataSource = respuesta.Tabla;
                 gvTop.DataBind();
+                AlinearNumeros(gvTop);
                 gvTop.Visible = true;
             }
         }
@@ -127,22 +128,22 @@ namespace LubricentroControl_2026.Reportes
             {
                 gvResultadoVentas.DataSource = respuesta.Tabla;
                 gvResultadoVentas.DataBind();
-                AlinearNumeros();
+                AlinearNumeros(gvResultadoVentas);
                 gvResultadoVentas.Visible = true;
             }
         }
 
         // Las columnas salen de cada respuesta: las que son números (cantidades, importes, días) van a la
         // derecha, como en el resto de las tablas.
-        private void AlinearNumeros()
+        private static void AlinearNumeros(GridView grilla)
         {
-            for (var c = 0; c < gvResultadoVentas.HeaderRow.Cells.Count; c++)
+            for (var c = 0; c < grilla.HeaderRow.Cells.Count; c++)
             {
                 var columna = c;
-                if (!gvResultadoVentas.Rows.Cast<GridViewRow>().All(f => EsNumero(f.Cells[columna].Text))) continue;
+                if (!grilla.Rows.Cast<GridViewRow>().All(f => EsNumero(f.Cells[columna].Text))) continue;
 
-                gvResultadoVentas.HeaderRow.Cells[c].HorizontalAlign = HorizontalAlign.Right;
-                foreach (GridViewRow fila in gvResultadoVentas.Rows)
+                grilla.HeaderRow.Cells[c].HorizontalAlign = HorizontalAlign.Right;
+                foreach (GridViewRow fila in grilla.Rows)
                     fila.Cells[c].HorizontalAlign = HorizontalAlign.Right;
             }
         }

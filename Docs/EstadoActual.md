@@ -1,7 +1,7 @@
 # Estado actual del sistema
 
 **Proyecto:** LubricentroControl 2026 · Programación Avanzada — USAL
-**Última actualización:** 27 de octubre de 2026
+**Última actualización:** 2 de noviembre de 2026
 
 Documento vivo: se actualiza al cerrar cada sesión de trabajo. Registra hasta dónde está
 completo el sistema, qué se hizo, y qué queda planificado para adelante.
@@ -234,6 +234,34 @@ nota de crédito parcial y el formato de números argentino.
 ---
 
 ## 2. Historial de sesiones
+
+### 2026-11-02 (cont.) — Uso del sistema en el asistente: tiempo en sesión, páginas y usuarios
+
+Pedido: que el asistente responda tiempo en sesión, página más visitada y usuarios que más ingresan
+(Requerimientos §9.22). La base no guardaba nada de eso, así que primero se agregó un **registro de
+uso**: `RegistroSesion` (una fila por inicio de sesión, con `inicio`, `ultimaActividad` y `fin`) y
+`VisitaPagina` (una fila por pantalla abierta, con el `path` igual que `Url.path`, para mostrar el
+nombre de la pantalla). Lo escribe `RegistroUsoDAL`, llamado desde `SesionUsuario` (`Iniciar` abre,
+`Cerrar` pone el fin) y desde `PaginaConSesion.OnPreInit`, después de verificar el permiso: un acceso
+denegado no cuenta como visita y un postback solo mueve la última actividad.
+
+Decisiones:
+
+- **El registro es de apoyo, no puede cortar una pantalla.** `RegistroUsoDAL` atrapa cualquier error
+  y no devuelve `ResultadoOperacion`: si la base falla, o todavía no tiene las tablas, la aplicación
+  anda igual y no registra. Es la única clase de `Data` que se traga los errores, a propósito.
+- **Una sesión que vence sola no tiene fin.** Nadie avisa cuando ASP.NET la descarta, así que su
+  tiempo se cuenta hasta `ultimaActividad`, que se mueve en cada pedido (un `UPDATE` por pedido, en
+  el mismo viaje que la visita).
+- **Las tres consultas van en la caja de arriba (grupo `Negocio`)**, que pasa de 2 a 5 y ahora usa
+  filtro (el nombre de un usuario). Su grilla, `gvTop`, tenía las columnas fijas de marca y modelo:
+  pasó a `AutoGenerateColumns`, como la de abajo, y `AlinearNumeros` sirve a las dos. Para que el
+  encabezado siga diciendo «Órdenes», `AsistenteDAL` renombra la columna en la tabla de marca y modelo.
+- Sin datos de ejemplo: las tablas arrancan vacías y las respuestas sin filas avisan desde cuándo se
+  registra el uso.
+
+Una base nueva las trae en `01_Esquema.sql`; una anterior se pone al día con
+`Actualizar_2026-11-02_RegistroDeUso.sql`, sin perder datos.
 
 ### 2026-11-02 — Un solo asistente con dos cajas de preguntas
 
