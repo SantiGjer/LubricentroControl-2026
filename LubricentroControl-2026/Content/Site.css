@@ -2167,8 +2167,15 @@ body.sin-menu .pie-pagina {
     }
 }
 
-/* Botones de ejemplo del asistente de ventas (Reportes/AsistenteVentas): el botón es un input, y
+/* Botones de ejemplo del asistente de ventas y stock (Reportes/Asistente): el botón es un input, y
    la regla general de input lo cortaba en 280px y dejaba la pregunta a medias. */
 .pantalla-abm .boton-ejemplo {
     max-width: 100%;
+}
+
+/* Línea que separa las dos cajas de preguntas del asistente (Reportes/Asistente). */
+.pantalla-abm .separador-secciones {
+    height: 1px;
+    margin: 2.2rem 0 1.6rem;
+    background: #c4c8cc;
 }

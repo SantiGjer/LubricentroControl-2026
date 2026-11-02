@@ -136,9 +136,10 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmace
 
 Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18, nota de
 crédito del 2026-10-20, y restricciones de la cuenta corriente de proveedores y vínculo de los
-comprobantes con `Emisor` del 2026-10-22, y pantalla del asistente del 2026-10-26 y del asistente
-de ventas del 2026-10-27; una base recién creada con `01` y `02` no los necesita, ya los trae). En
-este orden; todos se pueden correr más de una vez:
+comprobantes con `Emisor` del 2026-10-22, pantalla del asistente del 2026-10-26 y, el 2026-11-02,
+quitar del menú la pantalla del asistente de ventas, que pasó a la del asistente; una base recién
+creada con `01` y `02` no los necesita, ya los trae). En este orden; todos se pueden correr más de
+una vez:
 
 ```powershell
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-18_Restricciones.sql"
@@ -146,7 +147,7 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-20_N
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_CuentaCorrienteProveedor.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-22_Emisor.sql"
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-26_Asistente.sql"
-sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-10-27_AsistenteVentas.sql"
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\Actualizar_2026-11-02_QuitarAsistenteVentas.sql"
 ```
 
 Restore de paquetes: lo hace Visual Studio al abrir la solución. `dotnet restore` **no aplica**
@@ -556,54 +557,52 @@ Nota (2026-09-27): `04_DatosDemo.sql` corrido contra la LocalDB de Alexis (los 4
 LocalDB, por-usuario: no afecta la base de ningún otro compañero, cada uno decide si lo corre
 en la suya.
 
-## Asistente de consultas con IA local (desde 2026-10-26, Requerimientos §9.20)
+## Asistente de consultas y de ventas y stock con IA local (Requerimientos §9.20 y §9.21)
 
 Pantalla `~/Reportes/Asistente` (Admin y Encargado): el usuario pregunta en lenguaje natural y el
 sistema responde con datos reales. **Decisión: catálogo cerrado, no text-to-SQL.** La IA no escribe
-SQL ni arma la respuesta: solo elige una consulta del catálogo (`BIZ/Modelo/ConsultaAsistente`) y el
-período, y devuelve `{"consulta","desde","hasta"}`. `AsistenteDAL` valida el id contra la lista
-blanca, ejecuta la consulta parametrizada y arma el texto en C# (ningún número pasa por el modelo).
-Pantalla de solo lectura. Si Ollama no responde, `ServicioIA` devuelve un error claro y los botones
-de ejemplo siguen andando (`AsistenteDAL.EjecutarDirecto`, mes actual, sin IA).
+SQL ni arma la respuesta: solo elige una consulta del catálogo (`BIZ/Modelo/ConsultaAsistente`), el
+período y, si la consulta lo usa, un filtro, y devuelve `{"consulta","desde","hasta"}` (más
+`"filtro"` en el grupo que lo usa). `AsistenteDAL` valida el id contra la lista blanca, ejecuta la
+consulta parametrizada y arma el texto en C# (ningún número pasa por el modelo). Pantalla de solo
+lectura. Si Ollama no responde, `ServicioIA` devuelve un error claro y los botones de ejemplo siguen
+andando (`AsistenteDAL.EjecutarDirecto`, mes actual, sin IA).
 
+**Una sola implementación, dos cajas de preguntas en la misma pantalla** (desde 2026-11-02; antes
+eran dos pantallas con clases duplicadas). El catálogo tiene 9 consultas partidas en dos grupos
+(`GrupoAsistente`): la caja de arriba usa `Negocio` y la de abajo, separada por una línea, usa
+`VentasStock` (Requerimientos §9.20 y §9.21). Cada caja tiene su pregunta, su Preguntar/Limpiar, sus
+consultas rápidas y su respuesta, y solo muestra y limpia lo suyo. `ServicioIA.Interpretar` recibe el
+grupo y arma el prompt solo con las consultas de ese grupo: `AsistenteDAL.Responder` busca la consulta
+con `ConsultaAsistente.Buscar(id, grupo)`, así que lo que la IA elija fuera del grupo de la caja no se
+ejecuta. Una sola clase de respuesta (`RespuestaAsistente`, texto + tabla opcional).
+
+- **Grupo `Negocio`** (2): ticket promedio y marca y modelo más atendidos. No usan filtro.
+- **Grupo `VentasStock`** (7): más vendidos, deudores (o lo que debe un cliente), stock bajo, stock
+  de un insumo (o de todos), reposición (consumo de los últimos 30 días), ventas por cajero y resumen
+  de ventas (los mismos totales que `sp_VentasPorPeriodo`). Las de deuda y stock no dependen del
+  período (`SinPeriodo`): la IA deja las fechas vacías y escribe menos.
+- **El `filtro`** es lo que nombra la pregunta (un cliente, un insumo, un cajero, o «servicio»/
+  «insumo» en el ranking). Cada consulta declara en el catálogo qué va ahí (`ConsultaAsistente.Filtro`,
+  `null` si no usa) y el prompt solo lo pide si alguna consulta del grupo lo usa. Se usa **solo como
+  parámetro de `LIKE`**, palabra por palabra, sin distinguir mayúsculas ni tildes
+  (`COLLATE Latin1_General_CI_AI`), con los plurales recortados («baterías» encuentra «Batería») y
+  los comodines escapados (`%` y `_` se buscan literales).
 - Modelo local con **Ollama** (https://ollama.com, queda en `http://localhost:11434`). Por PC, no se
   instala en el repo: `ollama pull qwen2.5:3b` (≈2 GB; `qwen2.5:1.5b` si la PC es justa,
   `qwen2.5:7b` si tiene 16 GB), probar con `ollama run qwen2.5:3b "hola"`, ver `ollama list`.
 - Configuración en `appSettings` de `Web.config`: `IA.Url` (endpoint compatible con OpenAI, sirve
   también LM Studio), `IA.Modelo` y `IA.TimeoutSegundos`. Cambiar de modelo = `ollama pull` +
-  cambiar `IA.Modelo`, sin recompilar.
+  cambiar `IA.Modelo`, sin recompilar. Si la IA tarda más que `IA.TimeoutSegundos`, la pantalla lo
+  dice: en una PC sin placa de video la primera pregunta (la que carga el modelo) puede pasar el
+  minuto. Si pasa siempre, subir ese valor.
 - Newtonsoft.Json 13.0.3 se referencia también desde `BIZ` (`BIZ/packages.config`).
+- Las consultas rápidas (botones) corren sin IA: `AsistenteDAL.EjecutarDirecto`, mes actual, sin
+  filtro. El texto del botón es el primer ejemplo de cada consulta.
 - **Agregar una consulta nueva, en 3 pasos:** (1) método SQL parametrizado en `AsistenteDAL`;
-  (2) entrada en el catálogo `ConsultaAsistente` (id, descripción, 2 o 3 ejemplos; el prompt de la IA
-  sale del catálogo); (3) un `case` en `AsistenteDAL.Ejecutar` con su plantilla de respuesta.
-
-## Asistente de ventas y stock con IA local (desde 2026-10-27, Requerimientos §9.21)
-
-Pantalla `~/Reportes/AsistenteVentas` (Reportes > Asistente de ventas; Admin y Encargado), para
-Ventas, Productos y Cuenta corriente de clientes. **Es un asistente aparte del de consultas** (no
-usa ni toca sus clases) con el mismo diseño: catálogo cerrado, la IA solo elige, C# valida contra la
-lista blanca, ejecuta SQL parametrizado y arma el texto. Clases propias: `ConsultaVentasIA`
-(catálogo), `ServicioIAVentas` (cliente de Ollama), `AsistenteVentasDAL` (consultas) y
-`RespuestaVentasIA`.
-
-- **La IA devuelve además un `filtro`**: `{"consulta","desde","hasta","filtro"}`. Es lo que nombra
-  la pregunta (un cliente, un insumo, un cajero, o «servicio»/«insumo» en el ranking) y se usa **solo
-  como parámetro de `LIKE`**, palabra por palabra, sin distinguir mayúsculas ni tildes
-  (`COLLATE Latin1_General_CI_AI`), con los plurales recortados («baterías» encuentra «Batería») y
-  los comodines escapados (`%` y `_` se buscan literales).
-- Siete consultas: más vendidos, deudores (o lo que debe un cliente), stock bajo, stock de un insumo
-  (o de todos), reposición (consumo de los últimos 30 días), ventas por cajero y resumen de ventas
-  (los mismos totales que `sp_VentasPorPeriodo`). Las de deuda y stock no dependen del período
-  (`SinPeriodo`): la IA deja las fechas vacías y escribe menos.
-- Comparte con el asistente de consultas las claves `IA.Url`, `IA.Modelo` e `IA.TimeoutSegundos`
-  (mismo Ollama y mismo modelo; instalarlo como dice la sección anterior). Si la IA tarda más que
-  `IA.TimeoutSegundos`, la pantalla lo dice: en una PC sin placa de video la primera pregunta (la que
-  carga el modelo) puede pasar el minuto. Si pasa siempre, subir ese valor (vale para los dos).
-- Las consultas rápidas (botones) corren sin IA: `AsistenteVentasDAL.EjecutarDirecto`, mes actual.
-- **Agregar una consulta, en 3 pasos:** (1) entrada en `ConsultaVentasIA` (id, descripción, qué va
-  en `filtro` o `null`, si depende del período, y ejemplos: el primero es el texto del botón);
-  (2) método SQL parametrizado en `AsistenteVentasDAL`; (3) un `case` en
-  `AsistenteVentasDAL.Ejecutar`.
+  (2) entrada en el catálogo `ConsultaAsistente` (id, grupo, descripción, qué va en `filtro` o
+  `null`, si depende del período y 2 o 3 ejemplos; el prompt de la IA sale del catálogo); (3) un
+  `case` en `AsistenteDAL.Ejecutar` con su plantilla de respuesta.
 
 ## Contraseñas y mails
 

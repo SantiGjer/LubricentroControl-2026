@@ -235,7 +235,31 @@ nota de crédito parcial y el formato de números argentino.
 
 ## 2. Historial de sesiones
 
-### 2026-10-27 — Asistente de ventas y stock con IA local
+### 2026-11-02 — Un solo asistente con dos cajas de preguntas
+
+El asistente de ventas y stock (27/10) había nacido como pantalla y clases aparte del asistente de
+consultas (26/10), con mucho código repetido. Se unificó sobre las clases del asistente de consultas:
+`ConsultaAsistente` pasa a ser **un solo catálogo de 9 consultas partido en dos grupos**
+(`GrupoAsistente.Negocio`, las 2 de antes, y `GrupoAsistente.VentasStock`, las 7 de ventas y stock),
+con `CatalogoDe(grupo)` y `Buscar(id, grupo)` como lista blanca por caja. `ServicioIA` es el único
+cliente de Ollama: `Interpretar` recibe el grupo, arma el prompt solo con ese grupo, pide `filtro`
+únicamente si alguna consulta del grupo lo usa y distingue «se agotó el tiempo» de «no disponible».
+`AsistenteDAL` tiene las 9 consultas, la normalización del filtro y todas las plantillas de
+respuesta; `RespuestaAsistente` sirve a las dos cajas. Se borraron `ConsultaVentasIA`,
+`RespuestaVentasIA`, `ServicioIAVentas`, `AsistenteVentasDAL` y la pantalla `AsistenteVentas`.
+
+En `~/Reportes/Asistente`, la caja del asistente de consultas queda como estaba y debajo, separada
+por una línea, está la del asistente de ventas y stock (su pregunta, Preguntar/Limpiar, consultas
+rápidas, respuesta y tabla). Cada una muestra y limpia solo lo suyo. La opción de menú «Asistente de
+ventas» desapareció de `02_DatosIniciales.sql`; `Actualizar_2026-11-02_QuitarAsistenteVentas.sql`
+(reemplaza al del 27/10, que se borró) la saca de una base que ya la tenía. Ver CLAUDE.md (sección
+del asistente) y Requerimientos §9.20 y §9.21.
+
+Las decisiones y verificaciones de la entrada del 27/10 siguen valiendo para las 7 consultas, que se
+trasladaron sin cambiar su SQL ni sus textos. La consulta rápida de un id fuera del catálogo y la
+respuesta «no sé» ahora listan solo las consultas del grupo de la caja.
+
+### 2026-10-27 — Asistente de ventas y stock con IA local (unificado el 2026-11-02; ver arriba)
 
 Pedido de la cátedra para los módulos de Alexis (Ventas, Productos y Cuenta corriente de clientes):
 integrar Qwen 2.5 con Ollama. Pantalla nueva `~/Reportes/AsistenteVentas` (Reportes > Asistente de

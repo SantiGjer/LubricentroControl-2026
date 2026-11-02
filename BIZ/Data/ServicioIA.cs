@@ -1,26 +1,30 @@
 using System;
 using System.Configuration;
 using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 using BIZ.Modelo;
 using Newtonsoft.Json.Linq;
 
 namespace BIZ.Data
 {
-    // Lo que la IA entendió de la pregunta: qué consulta del catálogo y qué período.
-    // Las fechas vienen como texto y las valida quien las usa (AsistenteDAL).
+    // Lo que la IA entendió de la pregunta: qué consulta del catálogo, qué período y, si la consulta
+    // lo usa, el filtro. Las fechas y el filtro vienen como texto y los valida AsistenteDAL.
     public class InterpretacionConsulta
     {
         public string Consulta { get; set; }
         public string Desde { get; set; }
         public string Hasta { get; set; }
+        public string Filtro { get; set; }
     }
 
     // Cliente de un modelo de lenguaje LOCAL (Ollama, LM Studio...) por el endpoint compatible
     // con OpenAI (/v1/chat/completions). La configuración vive en appSettings de Web.config:
     // IA.Url, IA.Modelo e IA.TimeoutSegundos. La IA solo interpreta la pregunta: elige una consulta
-    // del catálogo cerrado y el período. No escribe SQL ni arma la respuesta.
+    // del catálogo cerrado (el de la caja de preguntas que se usó), el período y el filtro. No escribe
+    // SQL ni arma la respuesta.
     public static class ServicioIA
     {
         private const string MensajeNoDisponible =
@@ -57,18 +61,26 @@ namespace BIZ.Data
 
         // Pide a la IA que interprete la pregunta. Devuelve el error en vez de propagar la excepción:
         // que Ollama esté cerrado no debe tumbar la pantalla.
-        public static ResultadoOperacion Interpretar(string pregunta, out InterpretacionConsulta interpretacion)
+        public static ResultadoOperacion Interpretar(string pregunta, GrupoAsistente grupo, out InterpretacionConsulta interpretacion)
         {
             interpretacion = null;
 
             string contenido;
             try
             {
-                contenido = Llamar(pregunta);
+                contenido = Llamar(pregunta, grupo);
+            }
+            catch (TaskCanceledException)
+            {
+                // Así avisa HttpClient que se agotó el tiempo: Ollama está abierto pero no llegó a contestar.
+                // En una PC sin placa de video la primera pregunta (la que carga el modelo) es la más lenta.
+                return ResultadoOperacion.Error("El asistente tardó más de " + TimeoutSegundos +
+                    " segundos en responder. La primera pregunta es la más lenta porque la IA carga el modelo: " +
+                    "probá de nuevo en un momento.");
             }
             catch (Exception)
             {
-                // Conexión rechazada, timeout, HTTP de error: para el usuario es lo mismo.
+                // Conexión rechazada, error HTTP, respuesta sin el formato de OpenAI: para el usuario es lo mismo.
                 return ResultadoOperacion.Error(MensajeNoDisponible);
             }
 
@@ -79,7 +91,8 @@ namespace BIZ.Data
                 {
                     Consulta = (string)json["consulta"],
                     Desde = (string)json["desde"],
-                    Hasta = (string)json["hasta"]
+                    Hasta = (string)json["hasta"],
+                    Filtro = (string)json["filtro"]
                 };
                 return ResultadoOperacion.Ok();
             }
@@ -91,7 +104,7 @@ namespace BIZ.Data
         }
 
         // POST síncrono (Web Forms, sin async de página) con timeout. Devuelve el texto del mensaje del modelo.
-        private static string Llamar(string pregunta)
+        private static string Llamar(string pregunta, GrupoAsistente grupo)
         {
             var cuerpo = new JObject
             {
@@ -101,7 +114,7 @@ namespace BIZ.Data
                 ["response_format"] = new JObject { ["type"] = "json_object" },
                 ["messages"] = new JArray
                 {
-                    new JObject { ["role"] = "system", ["content"] = ArmarPromptSistema(DateTime.Today) },
+                    new JObject { ["role"] = "system", ["content"] = ArmarPromptSistema(grupo, DateTime.Today) },
                     new JObject { ["role"] = "user", ["content"] = pregunta }
                 }
             };
@@ -119,24 +132,39 @@ namespace BIZ.Data
             }
         }
 
-        // Prompt de sistema: sale del catálogo, así que una consulta nueva queda disponible sin tocar esto.
-        internal static string ArmarPromptSistema(DateTime hoy)
+        // Prompt de sistema: sale del catálogo del grupo, así que una consulta nueva queda disponible
+        // sin tocar esto. El filtro y las consultas sin período solo se mencionan si el grupo las tiene.
+        internal static string ArmarPromptSistema(GrupoAsistente grupo, DateTime hoy)
         {
+            var catalogo = ConsultaAsistente.CatalogoDe(grupo);
+            var usaFiltro = catalogo.Any(c => c.Filtro != null);
+
             var sb = new StringBuilder();
-            sb.AppendLine("Sos el intérprete de preguntas de un sistema de gestión de un lubricentro.");
+            sb.AppendLine(grupo == GrupoAsistente.VentasStock
+                ? "Sos el intérprete de preguntas del asistente de ventas y stock de un lubricentro."
+                : "Sos el intérprete de preguntas de un sistema de gestión de un lubricentro.");
             sb.AppendLine("Tu única tarea es elegir cuál de estas consultas corresponde a la pregunta del usuario:");
-            foreach (var c in ConsultaAsistente.Catalogo)
+            foreach (var c in catalogo)
             {
                 sb.AppendLine("- \"" + c.Id + "\": " + c.Descripcion + ". Ejemplos: " +
-                    string.Join(" | ", c.Ejemplos));
+                    string.Join(" | ", c.Ejemplos) + (c.Filtro == null ? "" : ". Filtro: " + c.Filtro));
             }
             sb.AppendLine("Si la pregunta no corresponde a ninguna, usá \"ninguna\".");
             sb.AppendLine("Hoy es " + hoy.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) +
                 " (" + hoy.ToString("dddd", new CultureInfo("es-AR")) + ").");
             sb.AppendLine("Calculá el período que pide el usuario (\"este mes\", \"septiembre\", \"el año\", \"ayer\"...) " +
                 "con fechas completas. Si no dice período, usá el mes actual completo.");
+            var sinPeriodo = catalogo.Where(c => c.SinPeriodo).Select(c => "\"" + c.Id + "\"").ToList();
+            if (sinPeriodo.Count > 0)
+                sb.AppendLine("Las consultas " + string.Join(", ", sinPeriodo) +
+                    " no dependen del período: para ellas dejá \"desde\" y \"hasta\" vacíos.");
+            if (usaFiltro)
+                sb.AppendLine("En \"filtro\" va solo lo que indica la consulta elegida, copiado de la pregunta; " +
+                    "si la consulta no tiene filtro o la pregunta no lo nombra, dejalo vacío.");
             sb.AppendLine("Respondé SOLO con un JSON, sin texto adicional, con exactamente este formato:");
-            sb.Append("{\"consulta\": \"<id o ninguna>\", \"desde\": \"yyyy-MM-dd\", \"hasta\": \"yyyy-MM-dd\"}");
+            sb.Append(usaFiltro
+                ? "{\"consulta\": \"<id o ninguna>\", \"desde\": \"yyyy-MM-dd\", \"hasta\": \"yyyy-MM-dd\", \"filtro\": \"<texto o vacío>\"}"
+                : "{\"consulta\": \"<id o ninguna>\", \"desde\": \"yyyy-MM-dd\", \"hasta\": \"yyyy-MM-dd\"}");
             return sb.ToString();
         }
 

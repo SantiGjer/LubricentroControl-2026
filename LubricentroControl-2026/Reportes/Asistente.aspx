@@ -57,5 +57,56 @@
                 ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
         </Columns>
     </asp:GridView>
+
+    <div class="separador-secciones"></div>
+
+    <h2 class="con-subtitulo">Asistente de ventas y stock</h2>
+
+    <p class="text-muted">Preguntá en tus palabras por lo más vendido, quién te debe, el stock o lo que facturó
+        cada cajero. El asistente elige la consulta que corresponde y la responde con los datos reales del
+        sistema. La primera pregunta tarda más porque la IA carga el modelo.</p>
+
+    <asp:Panel ID="pnlMensajeVentas" runat="server" Visible="false" role="alert">
+        <asp:Literal ID="litMensajeVentas" runat="server" />
+    </asp:Panel>
+
+    <asp:Panel ID="pnlPreguntaVentas" runat="server" DefaultButton="btnPreguntarVentas">
+        <div class="row barra-busqueda">
+            <div class="col-9">
+                <asp:Label runat="server" AssociatedControlID="txtPreguntaVentas">Tu pregunta</asp:Label>
+                <br />
+                <asp:TextBox ID="txtPreguntaVentas" runat="server" MaxLength="300"
+                    placeholder="Por ejemplo: ¿qué cliente me debe más?" />
+            </div>
+            <div class="col-3 d-flex align-items-end gap-2">
+                <asp:Button ID="btnPreguntarVentas" runat="server" CssClass="boton-rojo" Text="Preguntar"
+                    OnClick="btnPreguntarVentas_Click" />
+                <%-- Solo con un resultado a la vista: lo muestra MostrarVentas y lo esconde Limpiar. --%>
+                <asp:Button ID="btnLimpiarVentas" runat="server" CssClass="boton-gris" Text="Limpiar"
+                    OnClick="btnLimpiarVentas_Click" Visible="false" />
+            </div>
+        </div>
+    </asp:Panel>
+
+    <div class="separador-asistente"><span>Consultas rápidas, sin IA (ventas del mes actual)</span></div>
+
+    <div class="mb-3">
+        <asp:Repeater ID="rptEjemplosVentas" runat="server" OnItemCommand="rptEjemplosVentas_ItemCommand">
+            <ItemTemplate>
+                <asp:Button runat="server" CssClass="boton-gris boton-ejemplo" CommandName="Ejemplo"
+                    CommandArgument='<%# Eval("Id") %>'
+                    Text='<%# ((BIZ.Modelo.ConsultaAsistente)Container.DataItem).Ejemplos[0] %>' />
+            </ItemTemplate>
+        </asp:Repeater>
+    </div>
+
+    <asp:Panel ID="pnlRespuestaVentas" runat="server" CssClass="alert alert-secondary" role="alert" Visible="false">
+        <asp:Literal ID="litRespuestaVentas" runat="server" Mode="Encode" />
+    </asp:Panel>
+
+    <%-- Cada consulta trae sus columnas, ya formateadas (AutoGenerateColumns); el orden y el filtro de
+         Lubricentro.js no hacen falta. --%>
+    <asp:GridView ID="gvResultadoVentas" runat="server" CssClass="tabla-abm" data-sin-filtro="true"
+        AutoGenerateColumns="true" GridLines="None" Visible="false" />
     </div>
 </asp:Content>

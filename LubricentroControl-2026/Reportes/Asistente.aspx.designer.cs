@@ -40,5 +40,35 @@ namespace LubricentroControl_2026.Reportes
 
         /// <summary>Control litModelo.</summary>
         protected global::System.Web.UI.WebControls.Literal litModelo;
+
+        /// <summary>Control pnlMensajeVentas.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlMensajeVentas;
+
+        /// <summary>Control litMensajeVentas.</summary>
+        protected global::System.Web.UI.WebControls.Literal litMensajeVentas;
+
+        /// <summary>Control pnlPreguntaVentas.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlPreguntaVentas;
+
+        /// <summary>Control txtPreguntaVentas.</summary>
+        protected global::System.Web.UI.WebControls.TextBox txtPreguntaVentas;
+
+        /// <summary>Control btnPreguntarVentas.</summary>
+        protected global::System.Web.UI.WebControls.Button btnPreguntarVentas;
+
+        /// <summary>Control btnLimpiarVentas.</summary>
+        protected global::System.Web.UI.WebControls.Button btnLimpiarVentas;
+
+        /// <summary>Control rptEjemplosVentas.</summary>
+        protected global::System.Web.UI.WebControls.Repeater rptEjemplosVentas;
+
+        /// <summary>Control pnlRespuestaVentas.</summary>
+        protected global::System.Web.UI.WebControls.Panel pnlRespuestaVentas;
+
+        /// <summary>Control litRespuestaVentas.</summary>
+        protected global::System.Web.UI.WebControls.Literal litRespuestaVentas;
+
+        /// <summary>Control gvResultadoVentas.</summary>
+        protected global::System.Web.UI.WebControls.GridView gvResultadoVentas;
     }
 }
