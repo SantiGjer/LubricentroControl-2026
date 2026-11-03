@@ -23,8 +23,7 @@ namespace BIZ.Data
     // Cliente de un modelo de lenguaje LOCAL (Ollama, LM Studio...) por el endpoint compatible
     // con OpenAI (/v1/chat/completions). La configuración vive en appSettings de Web.config:
     // IA.Url, IA.Modelo e IA.TimeoutSegundos. La IA solo interpreta la pregunta: elige una consulta
-    // del catálogo cerrado (el de la caja de preguntas que se usó), el período y el filtro. No escribe
-    // SQL ni arma la respuesta.
+    // del catálogo cerrado, el período y el filtro. No escribe SQL ni arma la respuesta.
     public static class ServicioIA
     {
         private const string MensajeNoDisponible =
@@ -61,14 +60,14 @@ namespace BIZ.Data
 
         // Pide a la IA que interprete la pregunta. Devuelve el error en vez de propagar la excepción:
         // que Ollama esté cerrado no debe tumbar la pantalla.
-        public static ResultadoOperacion Interpretar(string pregunta, GrupoAsistente grupo, out InterpretacionConsulta interpretacion)
+        public static ResultadoOperacion Interpretar(string pregunta, out InterpretacionConsulta interpretacion)
         {
             interpretacion = null;
 
             string contenido;
             try
             {
-                contenido = Llamar(pregunta, grupo);
+                contenido = Llamar(pregunta);
             }
             catch (TaskCanceledException)
             {
@@ -104,7 +103,7 @@ namespace BIZ.Data
         }
 
         // POST síncrono (Web Forms, sin async de página) con timeout. Devuelve el texto del mensaje del modelo.
-        private static string Llamar(string pregunta, GrupoAsistente grupo)
+        private static string Llamar(string pregunta)
         {
             var cuerpo = new JObject
             {
@@ -114,7 +113,7 @@ namespace BIZ.Data
                 ["response_format"] = new JObject { ["type"] = "json_object" },
                 ["messages"] = new JArray
                 {
-                    new JObject { ["role"] = "system", ["content"] = ArmarPromptSistema(grupo, DateTime.Today) },
+                    new JObject { ["role"] = "system", ["content"] = ArmarPromptSistema(DateTime.Today) },
                     new JObject { ["role"] = "user", ["content"] = pregunta }
                 }
             };
@@ -132,17 +131,15 @@ namespace BIZ.Data
             }
         }
 
-        // Prompt de sistema: sale del catálogo del grupo, así que una consulta nueva queda disponible
-        // sin tocar esto. El filtro y las consultas sin período solo se mencionan si el grupo las tiene.
-        internal static string ArmarPromptSistema(GrupoAsistente grupo, DateTime hoy)
+        // Prompt de sistema: sale del catálogo, así que una consulta nueva queda disponible sin tocar
+        // esto. El filtro y las consultas sin período solo se mencionan si el catálogo las tiene.
+        internal static string ArmarPromptSistema(DateTime hoy)
         {
-            var catalogo = ConsultaAsistente.CatalogoDe(grupo);
+            var catalogo = ConsultaAsistente.Catalogo;
             var usaFiltro = catalogo.Any(c => c.Filtro != null);
 
             var sb = new StringBuilder();
-            sb.AppendLine(grupo == GrupoAsistente.VentasStock
-                ? "Sos el intérprete de preguntas del asistente de ventas y stock de un lubricentro."
-                : "Sos el intérprete de preguntas de un sistema de gestión de un lubricentro.");
+            sb.AppendLine("Sos el intérprete de preguntas de un sistema de gestión de un lubricentro.");
             sb.AppendLine("Tu única tarea es elegir cuál de estas consultas corresponde a la pregunta del usuario:");
             foreach (var c in catalogo)
             {
@@ -159,8 +156,10 @@ namespace BIZ.Data
                 sb.AppendLine("Las consultas " + string.Join(", ", sinPeriodo) +
                     " no dependen del período: para ellas dejá \"desde\" y \"hasta\" vacíos.");
             if (usaFiltro)
-                sb.AppendLine("En \"filtro\" va solo lo que indica la consulta elegida, copiado de la pregunta; " +
-                    "si la consulta no tiene filtro o la pregunta no lo nombra, dejalo vacío.");
+                sb.AppendLine("En \"filtro\" va solo lo que indica la consulta elegida, copiado tal cual de la " +
+                    "pregunta (un nombre de persona, de producto o de insumo); nunca copies la explicación del " +
+                    "filtro. Si la consulta no tiene filtro o la pregunta no nombra a nadie ni nada en particular, " +
+                    "dejalo vacío (\"\").");
             sb.AppendLine("Respondé SOLO con un JSON, sin texto adicional, con exactamente este formato:");
             sb.Append(usaFiltro
                 ? "{\"consulta\": \"<id o ninguna>\", \"desde\": \"yyyy-MM-dd\", \"hasta\": \"yyyy-MM-dd\", \"filtro\": \"<texto o vacío>\"}"

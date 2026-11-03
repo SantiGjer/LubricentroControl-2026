@@ -10,11 +10,10 @@ using LubricentroControl_2026.Seguridad;
 namespace LubricentroControl_2026.Reportes
 {
     // Asistente de consultas: el usuario pregunta en lenguaje natural, una IA local elige una consulta
-    // del catálogo cerrado (ConsultaAsistente) y AsistenteDAL la responde con datos reales. Son dos
-    // cajas de preguntas independientes, una por grupo del catálogo: la de arriba (Negocio) y la de
-    // abajo, de ventas y stock (VentasStock, Requerimientos §9.21); cada una muestra y limpia solo su
-    // resultado. Pantalla de solo lectura: no escribe nada, así que EsSoloLectura no cambia su
-    // comportamiento.
+    // del catálogo cerrado (ConsultaAsistente) y AsistenteDAL la responde con datos reales. Una sola
+    // caja de preguntas para todo el catálogo; los botones de consultas rápidas se agrupan por tema
+    // (Negocio y VentasStock, Requerimientos §9.21). Pantalla de solo lectura: no escribe nada, así que
+    // EsSoloLectura no cambia su comportamiento.
     public partial class Asistente : PaginaSegura
     {
         protected void Page_Load(object sender, EventArgs e)
@@ -22,7 +21,6 @@ namespace LubricentroControl_2026.Reportes
             // El Literal guarda su texto en el ViewState: se oculta al principio para no repetir
             // el último aviso en cada postback.
             pnlMensaje.Visible = false;
-            pnlMensajeVentas.Visible = false;
 
             litModelo.Text = ServicioIA.Modelo;
 
@@ -37,10 +35,11 @@ namespace LubricentroControl_2026.Reportes
 
         protected void btnPreguntar_Click(object sender, EventArgs e)
         {
-            Mostrar(AsistenteDAL.Responder(txtPregunta.Text, GrupoAsistente.Negocio));
+            Mostrar(AsistenteDAL.Responder(txtPregunta.Text));
         }
 
-        // Botón de ejemplo: ejecuta la consulta del mes actual sin pasar por la IA.
+        // Botón de ejemplo (de cualquiera de los dos grupos): ejecuta la consulta del mes actual sin
+        // pasar por la IA.
         protected void rptEjemplos_ItemCommand(object source, RepeaterCommandEventArgs e)
         {
             if (e.CommandName != "Ejemplo") return;
@@ -80,56 +79,6 @@ namespace LubricentroControl_2026.Reportes
                 gvTop.DataBind();
                 AlinearNumeros(gvTop);
                 gvTop.Visible = true;
-            }
-        }
-
-        /* --- Asistente de ventas y stock (la caja de abajo) ------------------------ */
-
-        protected void btnPreguntarVentas_Click(object sender, EventArgs e)
-        {
-            MostrarVentas(AsistenteDAL.Responder(txtPreguntaVentas.Text, GrupoAsistente.VentasStock));
-        }
-
-        // Botón de ejemplo: la consulta del mes actual, sin pasar por la IA.
-        protected void rptEjemplosVentas_ItemCommand(object source, RepeaterCommandEventArgs e)
-        {
-            if (e.CommandName != "Ejemplo") return;
-
-            MostrarVentas(AsistenteDAL.EjecutarDirecto(Convert.ToString(e.CommandArgument)));
-        }
-
-        // Saca la respuesta (o el error) de esta caja y vacía su pregunta.
-        protected void btnLimpiarVentas_Click(object sender, EventArgs e)
-        {
-            gvResultadoVentas.Visible = false;
-            pnlRespuestaVentas.Visible = false;
-            btnLimpiarVentas.Visible = false;
-            txtPreguntaVentas.Text = "";
-        }
-
-        private void MostrarVentas(RespuestaAsistente respuesta)
-        {
-            gvResultadoVentas.Visible = false;
-            pnlRespuestaVentas.Visible = false;
-            btnLimpiarVentas.Visible = true;
-
-            if (!respuesta.Exito)
-            {
-                pnlMensajeVentas.CssClass = "alert alert-danger";
-                litMensajeVentas.Text = Server.HtmlEncode(respuesta.Texto);
-                pnlMensajeVentas.Visible = true;
-                return;
-            }
-
-            litRespuestaVentas.Text = respuesta.Texto;
-            pnlRespuestaVentas.Visible = true;
-
-            if (respuesta.Tabla != null && respuesta.Tabla.Rows.Count > 0)
-            {
-                gvResultadoVentas.DataSource = respuesta.Tabla;
-                gvResultadoVentas.DataBind();
-                AlinearNumeros(gvResultadoVentas);
-                gvResultadoVentas.Visible = true;
             }
         }
 

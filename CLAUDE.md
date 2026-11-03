@@ -132,7 +132,15 @@ sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\03_UsuariosDePrueba.sql
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\04_DatosDemo.sql"          # opcional, datos de ejemplo
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\05_ImagenesDemo.sql"       # opcional, imágenes de los productos de 04
 sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\06_ProcedimientosAlmacenados.sql" # opcional, procedimientos almacenados
+sqlcmd -S "(localdb)\MSSQLLocalDB" -f 65001 -i "Database\07_DatosDemoAsistente.sql"  # opcional, después de 03 y 04: datos para el asistente
 ```
+
+`07_DatosDemoAsistente.sql` (desde 2026-11-02) suma a los datos de `04` tres meses de ventas
+(facturas de los tres cajeros, pagos, dos notas de crédito, deuda en cuenta corriente y consumo de
+insumos) y dos meses de sesiones y pantallas abiertas, para que las 12 consultas del asistente
+tengan qué contestar. Arma el circuito con las mismas reglas que los DAL, fecha todo desde
+`GETDATE()` (el mes actual siempre tiene datos) y se corre una sola vez: la segunda avisa y no
+toca nada.
 
 Actualizar una base ya creada **sin perder sus datos** (restricciones del 2026-10-18, nota de
 crédito del 2026-10-20, y restricciones de la cuenta corriente de proveedores y vínculo de los
@@ -581,21 +589,23 @@ consulta parametrizada y arma el texto en C# (ningún número pasa por el modelo
 lectura. Si Ollama no responde, `ServicioIA` devuelve un error claro y los botones de ejemplo siguen
 andando (`AsistenteDAL.EjecutarDirecto`, mes actual, sin IA).
 
-**Una sola implementación, dos cajas de preguntas en la misma pantalla** (desde 2026-11-02; antes
-eran dos pantallas con clases duplicadas). El catálogo tiene 12 consultas partidas en dos grupos
-(`GrupoAsistente`): la caja de arriba usa `Negocio` y la de abajo, separada por una línea, usa
-`VentasStock` (Requerimientos §9.20 y §9.21). Cada caja tiene su pregunta, su Preguntar/Limpiar, sus
-consultas rápidas y su respuesta, y solo muestra y limpia lo suyo. `ServicioIA.Interpretar` recibe el
-grupo y arma el prompt solo con las consultas de ese grupo: `AsistenteDAL.Responder` busca la consulta
-con `ConsultaAsistente.Buscar(id, grupo)`, así que lo que la IA elija fuera del grupo de la caja no se
-ejecuta. Una sola clase de respuesta (`RespuestaAsistente`, texto + tabla opcional).
+**Una sola implementación y una sola caja de preguntas** (desde 2026-11-02; antes eran dos
+pantallas con clases duplicadas, y después dos cajas en la misma pantalla). El catálogo tiene 12
+consultas en dos grupos (`GrupoAsistente`: `Negocio` y `VentasStock`, Requerimientos §9.20 y
+§9.21), pero los grupos solo ordenan los botones de consultas rápidas: `ServicioIA.Interpretar` arma
+el prompt con el catálogo completo y `AsistenteDAL.Responder` busca la consulta con
+`ConsultaAsistente.Buscar(id)`. Los botones de consultas rápidas son tarjetas en grilla
+(`.grilla-ejemplos`/`.boton-ejemplo`) con la pregunta completa. Una sola clase de respuesta
+(`RespuestaAsistente`, texto + tabla opcional). Con las 12 consultas en un solo prompt, el modelo de
+3B llegó a copiar la explicación del filtro en vez de dejarlo vacío: el prompt le pide copiarlo
+tal cual de la pregunta y nunca la explicación.
 
 - **Grupo `Negocio`** (5): ticket promedio y marca y modelo más atendidos (sin filtro), y desde el
   2026-11-02 el uso del sistema, sobre el registro de uso: tiempo en sesión (total, sesiones,
   promedio y la más larga), páginas más visitadas (top 10, con el nombre de `Url.descripcion`) y
   usuarios que más ingresan (top 10, con rol y último ingreso). Las tres aceptan el nombre de un
   usuario como filtro. El tiempo de una sesión va de `inicio` a `fin` o, si venció sola, a
-  `ultimaActividad`. Las dos grillas de la pantalla generan sus columnas (`AutoGenerateColumns`).
+  `ultimaActividad`. La grilla de la pantalla genera sus columnas (`AutoGenerateColumns`).
 - **Grupo `VentasStock`** (7): más vendidos, deudores (o lo que debe un cliente), stock bajo, stock
   de un insumo (o de todos), reposición (consumo de los últimos 30 días), ventas por cajero y resumen
   de ventas (los mismos totales que `sp_VentasPorPeriodo`). Las de deuda y stock no dependen del

@@ -11,6 +11,24 @@ sesión está en `Docs/EstadoActual.md` y las decisiones de negocio en
 
 ---
 
+## 2026-11-02 — Asistente: una sola caja de preguntas y datos de ejemplo
+
+**No cambia el esquema.** Script nuevo y opcional, `Database\07_DatosDemoAsistente.sql`, que se
+corre después de `03` y `04` sobre la base que ya los tiene (no hace falta recrearla).
+
+- `07` carga 24 órdenes cerradas en el mes actual y los dos anteriores, con sus ventas, facturas de
+  los tres cajeros, pagos, dos notas de crédito, deuda en cuenta corriente y consumo de insumos, más
+  dos meses de sesiones y pantallas abiertas de los cuatro usuarios de prueba. Así las 12 consultas
+  del asistente tienen qué contestar, también en el mes en curso. Se corre una sola vez.
+
+- `~/Reportes/Asistente` tiene una sola caja de preguntas para las 12 consultas (antes, una por
+  grupo). La IA ve el catálogo completo.
+- Las consultas rápidas son tarjetas en grilla, con la pregunta completa, agrupadas en «Negocio y
+  uso del sistema» y «Ventas y stock».
+- La barra de la pregunta se acomoda en pantallas angostas.
+
+---
+
 ## 2026-11-02 — Asistente: uso del sistema (tiempo en sesión, páginas y usuarios)
 
 **Cambia el esquema:** tablas `RegistroSesion` y `VisitaPagina`. Una base existente se pone al día

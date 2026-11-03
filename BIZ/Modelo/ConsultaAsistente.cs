@@ -4,8 +4,8 @@ using System.Linq;
 
 namespace BIZ.Modelo
 {
-    // Cada grupo es una caja de preguntas de la pantalla (Reportes/Asistente). La IA recibe solo las
-    // consultas del grupo de la caja que se usó, así el prompt es más corto y no se mezclan temas.
+    // Los grupos solo ordenan los botones de consultas rápidas de la pantalla (Reportes/Asistente):
+    // hay una sola caja de preguntas y la IA recibe el catálogo completo.
     public enum GrupoAsistente
     {
         Negocio,
@@ -156,13 +156,6 @@ namespace BIZ.Modelo
             if (string.IsNullOrWhiteSpace(id)) return null;
             return _catalogo.FirstOrDefault(c =>
                 string.Equals(c.Id, id.Trim(), StringComparison.OrdinalIgnoreCase));
-        }
-
-        // Lista blanca de un grupo: lo que la IA elija fuera del grupo de la caja que se usó no se ejecuta.
-        public static ConsultaAsistente Buscar(string id, GrupoAsistente grupo)
-        {
-            var consulta = Buscar(id);
-            return consulta != null && consulta.Grupo == grupo ? consulta : null;
         }
     }
 }

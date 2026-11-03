@@ -66,23 +66,22 @@ namespace BIZ.Data
 
         /* --- Despachador ------------------------------------------------------- */
 
-        // Pregunta en lenguaje natural: la IA interpreta, C# valida y ejecuta. El grupo es el de la
-        // caja de preguntas de la pantalla: la IA solo ve las consultas de ese grupo.
-        public static RespuestaAsistente Responder(string pregunta, GrupoAsistente grupo)
+        // Pregunta en lenguaje natural: la IA interpreta, C# valida y ejecuta.
+        public static RespuestaAsistente Responder(string pregunta)
         {
             if (string.IsNullOrWhiteSpace(pregunta))
                 return RespuestaAsistente.Error("Escribí una pregunta.");
 
             InterpretacionConsulta interpretacion;
-            var interpretar = ServicioIA.Interpretar(pregunta.Trim(), grupo, out interpretacion);
+            var interpretar = ServicioIA.Interpretar(pregunta.Trim(), out interpretacion);
             if (!interpretar.Exito)
                 return RespuestaAsistente.Error(interpretar.Mensaje);
 
-            // Lista blanca: lo que la IA diga que no esté en el catálogo del grupo ("ninguna", un id
-            // inventado) no se ejecuta.
-            var consulta = ConsultaAsistente.Buscar(interpretacion.Consulta, grupo);
+            // Lista blanca: lo que la IA diga que no esté en el catálogo ("ninguna", un id inventado)
+            // no se ejecuta.
+            var consulta = ConsultaAsistente.Buscar(interpretacion.Consulta);
             if (consulta == null)
-                return RespuestaAsistente.Ok(MensajeNoSe(grupo));
+                return RespuestaAsistente.Ok(MensajeNoSe());
 
             DateTime desde, hasta;
             ResolverPeriodo(interpretacion.Desde, interpretacion.Hasta, out desde, out hasta);
@@ -95,7 +94,7 @@ namespace BIZ.Data
         {
             var consulta = ConsultaAsistente.Buscar(idConsulta);
             if (consulta == null)
-                return RespuestaAsistente.Ok(MensajeNoSe(GrupoAsistente.Negocio));
+                return RespuestaAsistente.Ok(MensajeNoSe());
 
             DateTime desde, hasta;
             MesActual(out desde, out hasta);
@@ -161,7 +160,7 @@ namespace BIZ.Data
                         return ResumenVentas(desde, hasta, periodo);
 
                     default:
-                        return RespuestaAsistente.Ok(MensajeNoSe(consulta.Grupo));
+                        return RespuestaAsistente.Ok(MensajeNoSe());
                 }
             }
             catch (Exception)
@@ -170,10 +169,10 @@ namespace BIZ.Data
             }
         }
 
-        private static string MensajeNoSe(GrupoAsistente grupo)
+        private static string MensajeNoSe()
         {
             return "Todavía no sé responder eso. Puedo responder: " +
-                string.Join("; ", ConsultaAsistente.CatalogoDe(grupo).Select(c => c.Descripcion)) + ".";
+                string.Join("; ", ConsultaAsistente.Catalogo.Select(c => c.Descripcion)) + ".";
         }
 
         // Fechas de la IA: si falta alguna o no es una fecha válida, se usa el mes actual; si vienen

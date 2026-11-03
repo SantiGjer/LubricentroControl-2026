@@ -263,6 +263,53 @@ Decisiones:
 Una base nueva las trae en `01_Esquema.sql`; una anterior se pone al día con
 `Actualizar_2026-11-02_RegistroDeUso.sql`, sin perder datos.
 
+### 2026-11-02 — Datos de ejemplo para el asistente (`07_DatosDemoAsistente.sql`)
+
+Con los datos de `04` casi todas las consultas del asistente contestaban «no hay datos»: las ventas
+de `04` quedan fechadas el día que se corre y el registro de uso arrancaba vacío. `07` suma, sobre
+una base con `01` a `04`:
+
+- **24 órdenes cerradas** repartidas en el mes actual y los dos anteriores (el día se recorta a hoy
+  en el mes actual y un domingo pasa al lunes), con su venta. El Corolla y la Hilux vuelven más que
+  el resto. 22 facturas emitidas por admin, encargado y empleado (letra A o B según el cliente,
+  numeración correlativa), pagos en efectivo, transferencia y tarjeta, dos ventas anuladas con nota
+  de crédito, y las de los clientes con cuenta corriente quedan debiendo.
+- **Consumo de insumos** en el kardex: algunos de los que ya estaban bajos llegan a cero, así que
+  reposición y stock bajo tienen qué mostrar.
+- **218 sesiones** en dos meses (sin domingos) de los cuatro usuarios de prueba, cada uno con su
+  frecuencia, duración y pantallas; 1 de cada 6 vence sin «Cerrar sesión». Las elecciones salen de
+  `CHECKSUM`: no cambian entre corridas del mismo día.
+
+El circuito se arma igual que en los DAL, en una sola transacción: el stock baja en relativo con su
+movimiento de kardex (una línea sin stock no se carga), el saldo de cuenta corriente se encadena con
+el anterior, la venta usa el saldo a favor del cliente, un pago cancela primero la deuda más vieja
+(una fila de `Pago` por venta) y factura y nota toman letra y número como `FacturaDAL` y
+`NotaCreditoDAL`. Verificado después de correrlo: ninguna cadena de saldos rota, el stock coincide
+con el último movimiento y con la suma del kardex, cada venta cierra con sus líneas y sus pagos, el
+saldo de cada cliente es lo que deben sus ventas, y ninguna fecha queda en el futuro. Una segunda
+corrida avisa y no toca nada. En la pantalla, los 12 botones y preguntas con IA sobre septiembre y
+octubre contestan con datos.
+
+Ojo: como en `04`, los movimientos con fecha vieja quedan con un id posterior a los de `04`, así que
+en el kardex el orden por fecha y el orden de carga no coinciden (los saldos se encadenan por id,
+como en la aplicación).
+
+### 2026-11-02 — Una sola caja de preguntas en el asistente
+
+Las dos cajas de preguntas de `~/Reportes/Asistente` (ver la entrada siguiente) se juntaron en una:
+una pregunta, Preguntar/Limpiar, una respuesta y una tabla. Cambio chico en `BIZ`: `ServicioIA.
+Interpretar` y `AsistenteDAL.Responder` ya no reciben el grupo, el prompt se arma con el catálogo
+completo (`ConsultaAsistente.Catalogo`), `Buscar(id, grupo)` se borró y la respuesta «no sé» lista las
+12 consultas. `GrupoAsistente` queda solo para ordenar los botones de consultas rápidas, que pasaron a
+tarjetas en grilla con la pregunta completa en varios renglones (antes, los de arriba se cortaban en
+280px por la regla general de `input`). La barra de la pregunta se acomoda en pantallas angostas.
+
+Probado en Chrome sin ventana contra IIS Express con `qwen2.5:3b`: 15 preguntas de los dos grupos
+fueron a la consulta correcta, y una ajena («¿cuál es la capital de Francia?») contestó con la lista.
+En la primera corrida, «¿qué cliente me debe más?» llegó con el filtro «el nombre del cliente»: con
+las 12 consultas en un prompt el modelo copió la explicación del filtro. Se corrigió en el texto del
+prompt (copiar tal cual de la pregunta, nunca la explicación) y la segunda corrida salió bien.
+
 ### 2026-11-02 — Un solo asistente con dos cajas de preguntas
 
 El asistente de ventas y stock (27/10) había nacido como pantalla y clases aparte del asistente de

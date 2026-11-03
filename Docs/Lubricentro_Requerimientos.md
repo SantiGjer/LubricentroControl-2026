@@ -592,8 +592,8 @@ en la PC (sin servicios en la nube) y que se pueda cambiar fácil.
 
 - **Alcance:** pantalla `~/Reportes/Asistente` (Reportes > Asistente IA), de solo lectura, para los
   roles que ven los reportes (Admin y Encargado de base; se ajusta desde Roles). Desde el 2026-11-02
-  comparte la pantalla con el asistente de ventas y stock (§9.21): son dos cajas de preguntas, una
-  debajo de la otra, sobre el mismo catálogo cerrado dividido en dos grupos.
+  comparte la pantalla con el asistente de ventas y stock (§9.21): una sola caja de preguntas para
+  todo el catálogo cerrado, con los botones de consultas rápidas agrupados por tema.
 - **Catálogo cerrado:** la IA solo interpreta la pregunta y elige una consulta de una lista que
   escribe el equipo (más el período). Hoy: ticket promedio (promedio de las ventas del período, sin
   las anuladas con nota de crédito) y marca y modelo más atendidos (top 5 de órdenes no canceladas).
@@ -616,13 +616,13 @@ y sumar algunas consultas más.
 - **Alcance:** de solo lectura, para los roles que ven los reportes (Admin y Encargado de base; se
   ajusta desde Roles). Nació el 2026-10-27 como pantalla aparte (`~/Reportes/AsistenteVentas`, con
   clases propias); el 2026-11-02 se unificó con el asistente de consultas (§9.20) para tener una sola
-  implementación: la misma pantalla `~/Reportes/Asistente` tiene dos cajas de preguntas independientes,
-  **«Asistente de consultas»** arriba y **«Asistente de ventas y stock»** abajo, separadas por una
-  línea. Cada una tiene su pregunta, sus consultas rápidas y su respuesta. La pantalla
+  implementación: la misma pantalla `~/Reportes/Asistente`, con **una sola caja de preguntas** para
+  todo (al principio eran dos cajas, una por grupo; se juntaron el mismo día). Las consultas rápidas
+  siguen agrupadas por tema: «Negocio y uso del sistema» y «Ventas y stock». La pantalla
   `~/Reportes/AsistenteVentas` dejó de existir (`Actualizar_2026-11-02_QuitarAsistenteVentas.sql` la
   saca del menú de una base existente).
-- **Un solo catálogo cerrado, 9 consultas en dos grupos.** Cada caja le muestra a la IA solo las
-  consultas de su grupo, y el sistema solo ejecuta una consulta del grupo de la caja usada.
+- **Un solo catálogo cerrado, en dos grupos** (12 consultas desde que se sumó el uso del sistema). La
+  IA ve el catálogo completo; los grupos solo ordenan los botones.
   - *Grupo de consultas del negocio (§9.20):* ticket promedio y marca y modelo más atendidos.
   - *Grupo de ventas y stock, 7 consultas:*
     - *Más vendidos:* ranking por cantidad vendida en el período, sin las ventas anuladas con nota de

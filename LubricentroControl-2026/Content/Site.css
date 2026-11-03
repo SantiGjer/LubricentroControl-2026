@@ -2167,15 +2167,47 @@ body.sin-menu .pie-pagina {
     }
 }
 
-/* Botones de ejemplo del asistente de ventas y stock (Reportes/Asistente): el botón es un input, y
-   la regla general de input lo cortaba en 280px y dejaba la pregunta a medias. */
-.pantalla-abm .boton-ejemplo {
-    max-width: 100%;
+/* Consultas rápidas del asistente (Reportes/Asistente): tarjetas de igual ancho en grilla, con la
+   pregunta completa en varios renglones. El botón es un input: sin max-width y white-space la regla
+   general de input lo cortaba en 280px y dejaba la pregunta a medias. */
+.pantalla-abm .titulo-ejemplos {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0.4rem 0 0.5rem;
 }
 
-/* Línea que separa las dos cajas de preguntas del asistente (Reportes/Asistente). */
-.pantalla-abm .separador-secciones {
-    height: 1px;
-    margin: 2.2rem 0 1.6rem;
-    background: #c4c8cc;
+.pantalla-abm .grilla-ejemplos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.6rem;
+    margin-bottom: 1.1rem;
+}
+
+.pantalla-abm .boton-ejemplo {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0.65rem 0.9rem;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: #212529;
+    background: #f2f3f4;
+    border: 1px solid #c4c8cc;
+    border-left: 3px solid var(--rojo);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.pantalla-abm .boton-ejemplo:hover,
+.pantalla-abm .boton-ejemplo:focus-visible {
+    background: #fff;
+    border-color: var(--rojo);
 }
